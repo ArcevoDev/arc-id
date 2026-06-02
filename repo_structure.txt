@@ -1,0 +1,348 @@
+arc-id/
+├── .husky/
+│   └── _/
+│       ├── .gitignore
+│       ├── applypatch-msg
+│       ├── commit-msg
+│       ├── h
+│       ├── husky.sh
+│       ├── post-applypatch
+│       ├── post-checkout
+│       ├── post-commit
+│       ├── post-merge
+│       ├── post-rewrite
+│       ├── pre-applypatch
+│       ├── pre-auto-gc
+│       ├── pre-commit
+│       ├── pre-merge-commit
+│       ├── pre-push
+│       ├── pre-rebase
+│       └── prepare-commit-msg
+├── .zhanlu/
+│   ├── spec/
+│   │   ├── scripts/
+│   │   │   ├── bash/
+│   │   │   │   ├── check-prerequisites.sh
+│   │   │   │   ├── common.sh
+│   │   │   │   ├── create-new-feature.sh
+│   │   │   │   ├── setup-plan.sh
+│   │   │   │   └── update-agent-context.sh
+│   │   │   └── powershell/
+│   │   │       ├── check-prerequisites.ps1
+│   │   │       ├── common.ps1
+│   │   │       ├── create-new-feature.ps1
+│   │   │       ├── setup-plan.ps1
+│   │   │       └── update-agent-context.ps1
+│   │   └── templates/
+│   │       ├── agent-file-template.md
+│   │       ├── checklist-template.md
+│   │       ├── plan-template.md
+│   │       ├── spec-template.md
+│   │       └── tasks-template.md
+│   └── .spec-state.json
+├── prisma/
+│   ├── generated/
+│   │   ├── runtime/
+│   │   │   ├── client.d.ts
+│   │   │   ├── client.js
+│   │   │   ├── index-browser.d.ts
+│   │   │   ├── index-browser.js
+│   │   │   └── wasm-compiler-edge.js
+│   │   ├── client.d.ts
+│   │   ├── client.js
+│   │   ├── default.d.ts
+│   │   ├── default.js
+│   │   ├── edge.d.ts
+│   │   ├── edge.js
+│   │   ├── index-browser.js
+│   │   ├── index.d.ts
+│   │   ├── index.js
+│   │   ├── package.json
+│   │   ├── query_compiler_fast_bg.js
+│   │   ├── query_compiler_fast_bg.wasm
+│   │   ├── query_compiler_fast_bg.wasm-base64.js
+│   │   ├── schema.prisma
+│   │   ├── wasm-edge-light-loader.mjs
+│   │   └── wasm-worker-loader.mjs
+│   ├── migrations/
+│   │   ├── 20260527200711_db_schema_lockedin/
+│   │   │   └── migration.sql
+│   │   ├── 20260528050032_add_signing_key_audit_actions/
+│   │   │   └── migration.sql
+│   │   ├── 20260528171740/
+│   │   │   └── migration.sql
+│   │   ├── 20260530044938/
+│   │   │   └── migration.sql
+│   │   ├── 20260530182359_final_schema/
+│   │   │   └── migration.sql
+│   │   └── migration_lock.toml
+│   ├── schema.prisma
+│   └── seed.ts
+├── public/
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── src/
+│   ├── api/
+│   │   ├── plugins/
+│   │   │   ├── auth-guard.plugin.ts
+│   │   │   ├── db.plugin.ts
+│   │   │   ├── jwt.plugin.ts
+│   │   │   ├── rate-limit.plugin.ts
+│   │   │   └── swagger.plugin.ts
+│   │   ├── routes/
+│   │   │   ├── did-document.route.ts
+│   │   │   ├── health.route.ts
+│   │   │   ├── mail-preview.route.ts
+│   │   │   └── openid-configuration.route.ts
+│   │   └── server.ts
+│   ├── app/
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components/
+│   ├── core/
+│   │   ├── config/
+│   │   │   ├── config.ts
+│   │   │   ├── env.validator.ts
+│   │   │   └── index.ts
+│   │   ├── db/
+│   │   │   ├── db-client.ts
+│   │   │   ├── index.ts
+│   │   │   ├── prisma-helpers.ts
+│   │   │   └── prisma.ts
+│   │   ├── errors/
+│   │   │   ├── api-error.ts
+│   │   │   ├── error-handler.ts
+│   │   │   ├── flow-error.ts
+│   │   │   └── index.ts
+│   │   ├── flows/
+│   │   │   ├── flow-context.ts
+│   │   │   ├── flow-error.ts
+│   │   │   ├── flow-executor.ts
+│   │   │   ├── flow.ts
+│   │   │   └── index.ts
+│   │   └── mail/
+│   │       ├── components/
+│   │       │   ├── MailButton.tsx
+│   │       │   ├── MailCodeBlock.tsx
+│   │       │   ├── MailDivider.tsx
+│   │       │   ├── MailLayout.tsx
+│   │       │   ├── MailLinkFallback.tsx
+│   │       │   ├── MailSecurityNotice.tsx
+│   │       │   ├── MailText.tsx
+│   │       │   └── tokens.ts
+│   │       ├── preview/
+│   │       │   ├── mail-preview.route.ts
+│   │       │   └── template-registry.ts
+│   │       ├── templates/
+│   │       │   ├── AccountDeletionMail.tsx
+│   │       │   ├── AccountSuspendedMail.tsx
+│   │       │   ├── CredentialIssuedMail.tsx
+│   │       │   ├── MagicLinkMail.tsx
+│   │       │   ├── MfaCodeMail.tsx
+│   │       │   ├── MfaDisabledAlertMail.tsx
+│   │       │   ├── NewDeviceLoginMail.tsx
+│   │       │   ├── PasswordChangedMail.tsx
+│   │       │   ├── PasswordResetMail.tsx
+│   │       │   ├── RecoveryCodesIssuedMail.tsx
+│   │       │   ├── TenantInviteMail.tsx
+│   │       │   ├── VerifyEmailMail.tsx
+│   │       │   └── WelcomeMail.tsx
+│   │       └── mail.engine.ts
+│   ├── jobs/
+│   │   └── webhook-worker.ts
+│   ├── lib/
+│   │   ├── crypto/
+│   │   │   └── index.ts
+│   │   ├── jwt/
+│   │   │   ├── index.ts
+│   │   │   └── jose.ts
+│   │   ├── logger/
+│   │   │   ├── flow-logger.ts
+│   │   │   ├── index.ts
+│   │   │   └── pino.ts
+│   │   ├── notifications/
+│   │   │   └── notification.service.ts
+│   │   ├── api-response.ts
+│   │   ├── challenge-store.ts
+│   │   ├── db-client.ts
+│   │   └── response.ts
+│   └── modules/
+│       ├── audit/
+│       │   ├── presenters/
+│       │   │   └── audit.presenter.ts
+│       │   ├── repositories/
+│       │   │   └── audit.repository.ts
+│       │   ├── routes/
+│       │   │   └── audit.route.ts
+│       │   ├── services/
+│       │   │   └── audit.service.ts
+│       │   ├── validators/
+│       │   │   └── audit.schemas.ts
+│       │   └── audit.plugin.ts
+│       ├── auth/
+│       │   ├── flows/
+│       │   │   ├── email-verify.flow.ts
+│       │   │   ├── login.flow.ts
+│       │   │   ├── logout.flow.ts
+│       │   │   ├── magic-link.flow.ts
+│       │   │   ├── mfa-setup.flow.ts
+│       │   │   ├── mfa-verify.flow.ts
+│       │   │   ├── passkey-authenticate.flow.ts
+│       │   │   ├── passkey-register.flow.ts
+│       │   │   ├── password-reset-confirm.flow.ts
+│       │   │   ├── password-reset-request.flow.ts
+│       │   │   ├── register.flow.ts
+│       │   │   └── switch-context.flow.ts
+│       │   ├── presenters/
+│       │   │   ├── identity.presenter.ts
+│       │   │   └── session.presenter.ts
+│       │   ├── repositories/
+│       │   │   ├── identity.repository.ts
+│       │   │   └── session.repository.ts
+│       │   ├── routes/
+│       │   │   ├── email-verify.route.ts
+│       │   │   ├── login.route.ts
+│       │   │   ├── logout.route.ts
+│       │   │   ├── magic-link.route.ts
+│       │   │   ├── mfa.route.ts
+│       │   │   ├── passkey.route.ts
+│       │   │   ├── password.route.ts
+│       │   │   ├── register.route.ts
+│       │   │   ├── session.route.ts
+│       │   │   └── switch-context.route.ts
+│       │   ├── services/
+│       │   │   ├── email-token.service.ts
+│       │   │   ├── mfa.service.ts
+│       │   │   ├── passkey.service.ts
+│       │   │   ├── password.service.ts
+│       │   │   └── session.service.ts
+│       │   ├── validators/
+│       │   │   └── auth.schemas.ts
+│       │   └── auth.plugin.ts
+│       ├── billing/
+│       │   ├── flows/
+│       │   │   └── upgrade-plan.flow.ts
+│       │   ├── presenters/
+│       │   │   └── subscription.presenter.ts
+│       │   ├── routes/
+│       │   │   └── subscription.route.ts
+│       │   ├── services/
+│       │   │   └── subscription.service.ts
+│       │   ├── validators/
+│       │   │   └── billing.schemas.ts
+│       │   └── billing.plugin.ts
+│       ├── credentials/
+│       │   ├── flows/
+│       │   │   ├── issue-credential.flow.ts
+│       │   │   ├── revoke-credential.flow.ts
+│       │   │   └── verify-credential.flow.ts
+│       │   ├── presenters/
+│       │   │   └── credential.presenter.ts
+│       │   ├── repositories/
+│       │   │   └── credential.repository.ts
+│       │   ├── routes/
+│       │   │   ├── did.route.ts
+│       │   │   ├── issue.route.ts
+│       │   │   ├── revoke.route.ts
+│       │   │   ├── status.route.ts
+│       │   │   └── verify.route.ts
+│       │   ├── services/
+│       │   │   ├── did.service.ts
+│       │   │   ├── signing.service.ts
+│       │   │   └── status-list.service.ts
+│       │   ├── validators/
+│       │   │   └── credential.schemas.ts
+│       │   └── credentials.plugin.ts
+│       ├── identity/
+│       │   ├── flows/
+│       │   │   ├── delete-account.flow.ts
+│       │   │   └── update-profile.flow.ts
+│       │   ├── presenters/
+│       │   │   ├── device.presenter.ts
+│       │   │   └── identity.presenter.ts
+│       │   ├── routes/
+│       │   │   ├── admin.route.ts
+│       │   │   ├── delegation.route.ts
+│       │   │   ├── device.route.ts
+│       │   │   ├── oauth-link.route.ts
+│       │   │   └── profile.route.ts
+│       │   ├── services/
+│       │   │   └── profile.service.ts
+│       │   ├── validators/
+│       │   │   └── identity.schemas.ts
+│       │   └── identity.plugin.ts
+│       ├── oauth/
+│       │   ├── flows/
+│       │   │   ├── authorize.flow.ts
+│       │   │   ├── token-exchange.flow.ts
+│       │   │   ├── token-refresh.flow.ts
+│       │   │   └── token-revoke.flow.ts
+│       │   ├── presenters/
+│       │   │   └── token.presenter.ts
+│       │   ├── repositories/
+│       │   │   ├── client.repository.ts
+│       │   │   └── token.repository.ts
+│       │   ├── routes/
+│       │   │   ├── authorize.route.ts
+│       │   │   ├── clients.route.ts
+│       │   │   ├── consent.route.ts
+│       │   │   ├── introspect.route.ts
+│       │   │   ├── jwks.route.ts
+│       │   │   ├── revoke.route.ts
+│       │   │   ├── token.route.ts
+│       │   │   └── userinfo.route.ts
+│       │   ├── services/
+│       │   │   ├── consent.service.ts
+│       │   │   ├── pkce.service.ts
+│       │   │   └── token.service.ts
+│       │   ├── validators/
+│       │   │   └── oauth.schemas.ts
+│       │   └── oauth.plugin.ts
+│       └── tenant/
+│           ├── flows/
+│           │   ├── add-member.flow.ts
+│           │   ├── create-tenant.flow.ts
+│           │   └── remove-member.flow.ts
+│           ├── presenters/
+│           │   ├── membership.presenter.ts
+│           │   └── tenant.presenter.ts
+│           ├── routes/
+│           │   ├── did.route.ts
+│           │   ├── membership.route.ts
+│           │   ├── policy.route.ts
+│           │   ├── signing-key.route.ts
+│           │   └── tenant.route.ts
+│           ├── services/
+│           │   ├── membership.service.ts
+│           │   └── tenant.service.ts
+│           ├── validators/
+│           │   └── tenant.schemas.ts
+│           └── tenant.plugin.ts
+├── .env
+├── .gitignore
+├── AGENTS.md
+├── CLAUDE.md
+├── codebase_snapshot.txt
+├── eslint.config.mjs
+├── fix-core.js
+├── gen-snapshot.js
+├── gen-structure.js
+├── Mail.md
+├── next-env.d.ts
+├── next.config.ts
+├── package.json
+├── patch-logger.js
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── postcss.config.mjs
+├── prisma.config.ts
+├── README.md
+├── scaffold.js
+├── tsconfig.api.json
+├── tsconfig.json
+└── tsconfig.tsbuildinfo

@@ -1,0 +1,802 @@
+// GENERATOR & DATASOURCE
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "./generated"
+  binaryTargets   = ["native"]
+  previewFeatures = ["partialIndexes"]
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum MfaType {
+  TOTP
+  EMAIL
+  SMS
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  VERIFIED
+  SUSPENDED
+  BANNED
+  DELETED
+  PENDING
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELED
+  EXPIRED
+}
+
+enum TokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+  MAGIC_LINK
+}
+
+enum KeyType {
+  Ed25519VerificationKey2020
+  X25519KeyAgreementKey2020
+  JsonWebKey2020
+  Multikey
+}
+
+enum KeyStatus {
+  ACTIVE
+  ARCHIVED
+  REVOKED
+}
+
+enum IdpProtocol {
+  SAML2
+  OIDC
+  OAUTH2
+}
+
+enum StatusPurpose {
+  REVOCATION
+  SUSPENSION
+}
+
+enum VcFormat {
+  JWT
+  SD_JWT
+  JSON_LD
+  DataIntegrity
+}
+
+enum AuditLogAction {
+  USER_LOGIN_SUCCESS
+  USER_LOGIN_FAILED
+  USER_REGISTERED
+  PASSWORD_CHANGED
+  MFA_ENABLED
+  MFA_DISABLED
+  MFA_RECOVERY_USED
+  TOKEN_REVOKED
+  SESSION_CREATED
+  SESSION_REVOKED
+  PASSKEY_REGISTERED
+  PASSKEY_USED
+  CREDENTIAL_ISSUED
+  CREDENTIAL_REVOKED
+  OAUTH_CONSENT_GRANTED
+  OAUTH_CONSENT_REVOKED
+  TENANT_MEMBER_ADDED
+  TENANT_MEMBER_REMOVED
+  SIGNING_KEY_CREATED
+  SIGNING_KEY_REVOKED
+  IDENTITY_CREATED
+  IDENTITY_SUSPENDED
+  IDENTITY_DELETED
+  IDP_CONNECTION_CREATED
+  IDP_CONNECTION_UPDATED
+}
+
+// ==========================================
+// CENTRAL CORE: IDENTITY
+// ==========================================
+
+model Identity {
+  id            String     @id @default(cuid())
+  primaryEmail  String?    @unique
+  emailVerified Boolean    @default(false)
+  name          String?
+  picture       String?
+  status        UserStatus @default(PENDING)
+  metadata      Json?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  localAccount     LocalAccount?
+  passkeys         Passkey[]
+  mfas             Mfa[]
+  mfaRecoveryCodes MfaRecoveryCode[]
+  sessions         Session[]
+  devices          Device[]
+  emailTokens      EmailToken[]
+
+  memberships TenantMembership[]
+
+  dids                DecentralizedIdentifier[] @relation("IdentityDids")
+  heldCredentials     VerifiableCredential[]    @relation("CredentialHolder")
+  oauthAccounts       OAuthAccount[]
+  wallets             Wallet[]
+  externalIdentifiers ExternalIdentifier[]
+
+  authorizationCodes AuthorizationCode[]
+  accessTokens       AccessToken[]
+  refreshTokens      RefreshToken[]
+  idTokens           IdToken[]
+  oauthConsents      OAuthConsent[]
+  legalConsents      LegalConsent[]
+
+  delegationsGranted  AccessDelegation[] @relation("DelegationGrantor")
+  delegationsReceived AccessDelegation[] @relation("DelegationGrantee")
+
+  subscriptions Subscription[]
+  auditLogs     AuditLog[]
+
+  @@index([primaryEmail])
+  @@index([status])
+}
+
+// ==========================================
+// DECENTRALIZED IDENTIFIER (DID) LAYER
+// ==========================================
+
+model DecentralizedIdentifier {
+  id         String    @id
+  identityId String?
+  identity   Identity? @relation("IdentityDids", fields: [identityId], references: [id], onDelete: Cascade)
+  tenantId   String?   @unique
+  tenant     Tenant?   @relation("TenantDid", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  publicKeyBytes Bytes
+  keyType        KeyType
+  didDocument    Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  issuedCredentials  VerifiableCredential[] @relation("CredentialIssuer")
+  subjectCredentials VerifiableCredential[] @relation("CredentialSubject")
+
+  @@index([identityId])
+}
+
+// ==========================================
+// W3C VERIFIABLE CREDENTIAL MODULE
+// ==========================================
+
+model VerifiableCredential {
+  id      String   @id
+  context Json
+  type    Json
+  format  VcFormat @default(JWT)
+
+  issuerDid  String
+  issuer     DecentralizedIdentifier @relation("CredentialIssuer", fields: [issuerDid], references: [id])
+  subjectDid String
+  subject    DecentralizedIdentifier @relation("CredentialSubject", fields: [subjectDid], references: [id])
+
+  holderId String?
+  holder   Identity? @relation("CredentialHolder", fields: [holderId], references: [id], onDelete: SetNull)
+
+  credentialSubject Json
+  proof             Json?
+
+  statusListIndex Int?
+  statusListId    String?
+  statusList      BitstringStatusList? @relation(fields: [statusListId], references: [id])
+
+  schemaId String?
+  schema   CredentialSchema? @relation(fields: [schemaId], references: [id])
+
+  issuedAt  DateTime
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([holderId])
+  @@index([issuerDid])
+  @@index([subjectDid])
+}
+
+model CredentialSchema {
+  id          String                 @id
+  type        String                 @default("JsonSchema")
+  jsonSchema  Json
+  version     String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  credentials VerifiableCredential[]
+}
+
+model BitstringStatusList {
+  id            String                 @id
+  type          String                 @default("BitstringStatusListEntry")
+  statusPurpose StatusPurpose
+  encodedList   Bytes
+  maxSize       Int                    @default(131072)
+  issuedCount   Int                    @default(0)
+  entries       StatusListEntry[]
+  credentials   VerifiableCredential[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+}
+
+model StatusListEntry {
+  id           String              @id @default(cuid())
+  statusListId String
+  statusList   BitstringStatusList @relation(fields: [statusListId], references: [id], onDelete: Cascade)
+  index        Int
+  value        Int
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([statusListId, index])
+}
+
+// ==========================================
+// MULTI-TENANCY, B2B & ENTERPRISE SSO
+// ==========================================
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  sector    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  did               DecentralizedIdentifier? @relation("TenantDid")
+  clients           Client[]
+  memberships       TenantMembership[]
+  projects          Project[]
+  policies          TenantPolicy[]
+  accessDelegations AccessDelegation[]       @relation("TenantDelegations")
+  signingKeys       TenantSigningKey[]
+  idpConnections    IdpConnection[]
+  branding          TenantBranding?
+  roles             Role[]
+  auditLogs         AuditLog[]
+
+  @@index([slug])
+}
+
+model TenantBranding {
+  id             String   @id @default(cuid())
+  tenantId       String   @unique
+  customDomain   String?  @unique
+  primaryColor   String?
+  logoUrl        String?
+  companyName    String?
+  emailTemplates Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model TenantSigningKey {
+  id          String    @id @default(cuid())
+  tenantId    String
+  kid         String    @unique
+  privateKey  Bytes
+  publicKey   Bytes
+  algorithm   String
+  kmsProvider String?
+  status      KeyStatus @default(ACTIVE)
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+model IdpConnection {
+  id           String      @id @default(cuid())
+  tenantId     String
+  name         String
+  protocol     IdpProtocol
+  enabled      Boolean     @default(true)
+  clientId     String?
+  clientSecret String?
+  entryPoint   String? // SAML SingleSignOnService URL
+  issuer       String? // SAML Issuer identity string or OIDC provider metadata domain
+  cert         String? // Public certificate signature verification mapping
+  metadataUrl  String? // Dynamic configuration endpoint mapping
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// ==========================================
+// DYNAMIC Authorization (RBAC / FINE-GRAINED)
+// ==========================================
+
+model Role {
+  id          String   @id @default(cuid())
+  tenantId    String   @default("SYSTEM")
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  memberships TenantMembership[]
+
+  @@unique([tenantId, name])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  action      String   @unique // e.g., "credential:issue", "client:create"
+  description String?
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model TenantMembership {
+  id         String     @id @default(cuid())
+  identityId String
+  tenantId   String
+  roleId     String // Tied to dynamic role infrastructure instead of hardcoded enum
+  status     UserStatus @default(ACTIVE)
+  profile    Json?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role     Role     @relation(fields: [roleId], references: [id])
+
+  @@unique([identityId, tenantId])
+  @@index([tenantId])
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model TenantPolicy {
+  id            String   @id @default(cuid())
+  tenantId      String   @unique
+  requireMfa    Boolean  @default(false)
+  passwordRules Json?
+  loginMethods  Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// AUTHENTICATION SECURITY VECTORS
+// ==========================================
+
+model LocalAccount {
+  id                String    @id @default(cuid())
+  identityId        String    @unique
+  email             String    @unique
+  passwordHash      String
+  passwordAlgorithm String    @default("argon2id")
+  passwordUpdatedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  identity Identity  @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  devices  Device[]  @relation("LocalAccountDevices")
+  sessions Session[] @relation("LocalAccountSessions")
+}
+
+model Passkey {
+  id           String   @id @default(cuid())
+  identityId   String
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      Int      @default(0)
+  deviceType   String
+  transports   Json?
+  backedUp     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+  name         String?
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId])
+}
+
+model Mfa {
+  id         String   @id @default(cuid())
+  identityId String
+  type       MfaType
+  secret     String?
+  enabled    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([identityId, type])
+}
+
+model MfaRecoveryCode {
+  id         String    @id @default(cuid())
+  identityId String
+  codeHash   String
+  used       Boolean   @default(false)
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId])
+}
+
+// ==========================================
+// OAUTH2 / OIDC PROVIDER LAYER
+// ==========================================
+
+model Client {
+  id                    String   @id @default(cuid())
+  tenantId              String?
+  name                  String
+  clientId              String   @unique
+  clientSecret          String?
+  grantTypes            Json
+  scopes                Json
+  public                Boolean  @default(false)
+  requirePkce           Boolean  @default(false)
+  frontChannelLogoutUri String?
+  backChannelLogoutUri  String?
+  logoUri               String?
+  tosUri                String?
+  policyUri             String?
+  createdAt             DateTime @default(now())
+
+  tenant        Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  redirectUris  ClientRedirectUri[]
+  authCodes     AuthorizationCode[]
+  accessTokens  AccessToken[]
+  refreshTokens RefreshToken[]
+  idTokens      IdToken[]
+  oauthConsents OAuthConsent[]
+
+  @@unique([tenantId, clientId])
+  @@index([tenantId])
+}
+
+model ClientRedirectUri {
+  id        String   @id @default(cuid())
+  clientId  String
+  uri       String
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, uri])
+}
+
+model AuthorizationCode {
+  id                  String   @id @default(cuid())
+  code                String   @unique
+  clientId            String
+  identityId          String
+  redirectUri         String?
+  scopes              Json
+  nonce               String?
+  codeChallenge       String?
+  codeChallengeMethod String?
+  createdAt           DateTime @default(now())
+  expiresAt           DateTime
+  consumed            Boolean  @default(false)
+
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId])
+  @@index([expiresAt])
+}
+
+model AccessToken {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  clientId   String
+  identityId String
+  scopes     Json
+  audience   Json?
+  issuedAt   DateTime @default(now())
+  expiresAt  DateTime
+  revoked    Boolean  @default(false)
+  jti        String?  @unique
+
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([token, revoked])
+  @@index([identityId, clientId])
+  @@index([expiresAt])
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  token      String    @unique
+  clientId   String
+  identityId String
+  sessionId  String?
+  issuedAt   DateTime  @default(now())
+  expiresAt  DateTime
+  rotatedAt  DateTime?
+  revoked    Boolean   @default(false)
+  rotation   Int       @default(0)
+
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([token, revoked])
+  @@index([identityId])
+  @@index([sessionId])
+  @@index([expiresAt])
+}
+
+model IdToken {
+  id         String   @id @default(cuid())
+  jti        String   @unique
+  clientId   String
+  identityId String
+  claims     Json?
+  issuedAt   DateTime @default(now())
+  expiresAt  DateTime
+
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId])
+  @@index([expiresAt])
+}
+
+// ==========================================
+// SYSTEM BRIDGES & UTILITIES
+// ==========================================
+
+model AccessDelegation {
+  id        String    @id @default(cuid())
+  grantorId String
+  granteeId String
+  tenantId  String?
+  scopes    Json
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  grantor Identity @relation("DelegationGrantor", fields: [grantorId], references: [id], onDelete: Cascade)
+  grantee Identity @relation("DelegationGrantee", fields: [granteeId], references: [id], onDelete: Cascade)
+  tenant  Tenant?  @relation("TenantDelegations", fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Device {
+  id             String   @id @default(cuid())
+  identityId     String
+  localAccountId String?
+  fingerprint    String   @unique
+  platform       String?
+  browser        String?
+  createdAt      DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+
+  identity     Identity      @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  localAccount LocalAccount? @relation("LocalAccountDevices", fields: [localAccountId], references: [id])
+  sessions     Session[]
+
+  @@index([identityId])
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  identityId     String
+  localAccountId String?
+  ip             String?
+  userAgent      String?
+  deviceId       String?
+  refreshTokenId String?
+  riskSignals    Json?
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+  valid          Boolean  @default(true)
+
+  identity     Identity      @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  localAccount LocalAccount? @relation("LocalAccountSessions", fields: [localAccountId], references: [id])
+  device       Device?       @relation(fields: [deviceId], references: [id])
+
+  @@index([identityId])
+  @@index([expiresAt])
+  @@index([valid])
+}
+
+model OAuthAccount {
+  id             String    @id @default(cuid())
+  identityId     String
+  provider       String
+  providerUserId String
+  accessToken    String?
+  refreshToken   String?
+  expiresAt      DateTime?
+  linkedAt       DateTime  @default(now())
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([identityId])
+}
+
+model Wallet {
+  id               String   @id @default(cuid())
+  identityId       String
+  provider         String
+  providerWalletId String
+  createdAt        DateTime @default(now())
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerWalletId])
+  @@index([identityId])
+}
+
+model ExternalIdentifier {
+  id           String   @id @default(cuid())
+  identityId   String
+  type         String
+  valueHash    String
+  displayValue String?
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([type, valueHash])
+  @@index([identityId])
+}
+
+model OAuthConsent {
+  id         String    @id @default(cuid())
+  identityId String
+  clientId   String
+  scopes     Json
+  grantedAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([identityId, clientId])
+}
+
+model LegalConsent {
+  id         String   @id @default(cuid())
+  identityId String
+  documentId String
+  version    String   @default("1.0")
+  acceptedAt DateTime @default(now())
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([identityId, documentId])
+}
+
+model EmailToken {
+  id         String    @id @default(cuid())
+  identityId String
+  type       TokenType
+  token      String    @unique
+  expiresAt  DateTime
+  consumed   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId, type])
+  @@index([expiresAt])
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  identityId         String
+  plan               SubscriptionPlan   @default(FREE)
+  status             SubscriptionStatus @default(ACTIVE)
+  externalCustomerId String?
+  externalSubId      String?
+  startedAt          DateTime           @default(now())
+  endsAt             DateTime?
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId])
+  @@index([status])
+}
+
+model AuditLog {
+  id         String         @id @default(cuid())
+  identityId String?
+  tenantId   String?
+  actionId   AuditLogAction
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime       @default(now())
+
+  identity Identity? @relation(fields: [identityId], references: [id], onDelete: SetNull)
+  tenant   Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([identityId])
+  @@index([tenantId])
+  @@index([actionId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model RevokedJti {
+  id        String   @id @default(cuid())
+  jti       String   @unique
+  revokedAt DateTime @default(now())
+
+  @@index([revokedAt])
+}
+
+model WebhookEvent {
+  id          String         @id @default(cuid())
+  eventType   AuditLogAction
+  identityId  String?
+  tenantId    String?
+  payload     Json
+  targetUrl   String
+  attempts    Int            @default(0)
+  maxAttempts Int            @default(5)
+  deliveredAt DateTime?
+  lastError   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
+  nextRetryAt DateTime?      @default(now()) // Now nullable
+
+  // Partial Index: Only index rows that are NOT delivered.
+  @@index([nextRetryAt], map: "idx_webhook_processing", where: { deliveredAt: null })
+  @@index([identityId])
+}
