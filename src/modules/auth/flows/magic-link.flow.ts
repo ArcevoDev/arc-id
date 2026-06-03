@@ -9,13 +9,21 @@ import { config } from "@/core/config";
 
 const MagicLinkSchema = z.object({ token: z.string().min(1) });
 
+type Output = {
+  sessionId: string;
+  accessToken: string;
+  refreshToken: string;
+  idToken: string | null;
+  expiresIn: number;
+};
+
 const DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"];
 
-export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>> = {
+export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>, Output> = {
   name: "auth:magic-link",
   inputSchema: MagicLinkSchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Output> {
     const emailTokenService = new EmailTokenService(ctx.db);
     const tokenRecord = await emailTokenService.consume(
       input.token,
@@ -44,7 +52,7 @@ export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>> = {
       sessionId: session.id,
       scopes: DEFAULT_SCOPES,
       audience: [config.oauth.directClientId],
-      tenantId: ctx.tenantId,
+      tenantId: ctx.tenantId || "SYSTEM",
     });
 
     return {

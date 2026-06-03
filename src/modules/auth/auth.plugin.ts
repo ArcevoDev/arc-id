@@ -16,20 +16,6 @@ import { switchContextRoute } from "./routes/switch-context.route";
 
 export const authPlugin = fp(
   async (fastify: FastifyInstance) => {
-    /**
-     * All authentication routes are mounted under /auth.
-     * Canonical paths:
-     *   POST /auth/register
-     *   POST /auth/login
-     *   POST /auth/logout
-     *   GET  /auth/sessions
-     *   POST /auth/mfa/setup | /auth/mfa/confirm | /auth/mfa/verify
-     *   POST /auth/passkey/options/register | /auth/passkey/options/authenticate
-     *   POST /auth/password/reset | /auth/password/reset/confirm
-     *   POST /auth/email/verify
-     *   POST /auth/magic-link/request | /auth/magic-link
-     *   POST /auth/switch-context
-     */
     fastify.register(
       async (authScope) => {
         const withZod = authScope.withTypeProvider<ZodTypeProvider>();

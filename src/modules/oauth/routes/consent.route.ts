@@ -45,7 +45,7 @@ export async function consentRoute(fastify: FastifyInstance) {
             clientId: client.id,
           },
         },
-        update: {
+        update: { 
           scopes: allowed,
           updatedAt: new Date(),
         },

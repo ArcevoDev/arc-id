@@ -24,7 +24,7 @@
     "prisma:migrate": "prisma migrate dev --schema=prisma/schema.prisma",
     "seed": "tsx prisma/seed.ts",
     "prisma:generate": "prisma generate",
-    "prisma:run": "npx prisma validate && pnpm prisma:format && pnpm prisma:generate && pnpm prisma:migrate",
+    "prisma:run": "npx prisma validate && pnpm prisma:format && pnpm prisma:migrate && pnpm prisma:generate",
     "prepare": "husky"
   },
   "dependencies": {

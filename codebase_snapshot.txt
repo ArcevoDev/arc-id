@@ -46,19 +46,7 @@ arc-id/
 │   └── public.pem
 ├── prisma/
 │   ├── migrations/
-│   │   ├── 20260527200711_db_schema_lockedin/
-│   │   │   └── migration.sql
-│   │   ├── 20260528050032_add_signing_key_audit_actions/
-│   │   │   └── migration.sql
-│   │   ├── 20260528171740/
-│   │   │   └── migration.sql
-│   │   ├── 20260530044938/
-│   │   │   └── migration.sql
-│   │   ├── 20260530182359_final_schema/
-│   │   │   └── migration.sql
-│   │   ├── 20260531234210_locked_in/
-│   │   │   └── migration.sql
-│   │   ├── 20260601124942_fix_webhook_model/
+│   │   ├── 20260603120005_make_oauth_consent_compound_unique/
 │   │   │   └── migration.sql
 │   │   └── migration_lock.toml
 │   ├── schema.prisma
@@ -88,7 +76,6 @@ arc-id/
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx
-│   ├── components/
 │   ├── core/
 │   │   ├── config/
 │   │   │   ├── config.ts
@@ -102,6 +89,7 @@ arc-id/
 │   │   ├── errors/
 │   │   │   ├── api-error.ts
 │   │   │   ├── error-handler.ts
+│   │   │   ├── error-schemas.ts
 │   │   │   ├── flow-error.ts
 │   │   │   └── index.ts
 │   │   ├── flows/
@@ -309,6 +297,8 @@ arc-id/
 │           ├── validators/
 │           │   └── tenant.schemas.ts
 │           └── tenant.plugin.ts
+├── tools/
+│   └── arcid-cli.js
 ├── .env
 ├── .gitignore
 ├── AGENTS.md
@@ -629,7 +619,7 @@ FILE: .zhanlu\.spec-state.json
 ```json
 {
   "initialized": true,
-  "lastUpdate": 1780440349228,
+  "lastUpdate": 1780487672699,
   "version": "1.0.0",
   "scriptCount": 10,
   "templateCount": 5,
@@ -639,7 +629,7 @@ FILE: .zhanlu\.spec-state.json
     "missingFiles": []
   },
   "metadata": {
-    "initializedAt": 1779655253339,
+    "initializedAt": 1780411708211,
     "platform": "win32",
     "extensionVersion": "1.0.0"
   }
@@ -4575,7 +4565,8 @@ FILE: package.json
     "dev:api": "tsx watch --tsconfig tsconfig.api.json src/api/server.ts",
     "build:api": "tsc -p tsconfig.api.json",
     "start:api": "node dist/api/server.js",
-    "dev": "pnpm run /^dev:.*/",
+    "dev": "pnpm run dev:all",
+    "dev:all": "concurrently \"pnpm run dev:web\" \"pnpm run dev:api\" ",
     "mail:preview": "email dev --dir src/core/mail/templates",
     "lint": "eslint",
     "format": "prettier --write .",
@@ -4584,7 +4575,7 @@ FILE: package.json
     "prisma:migrate": "prisma migrate dev --schema=prisma/schema.prisma",
     "seed": "tsx prisma/seed.ts",
     "prisma:generate": "prisma generate",
-    "prisma:run": "npx prisma validate && pnpm prisma:format && pnpm prisma:generate && pnpm prisma:migrate",
+    "prisma:run": "npx prisma validate && pnpm prisma:format && pnpm prisma:migrate && pnpm prisma:generate",
     "prepare": "husky"
   },
   "dependencies": {
@@ -4629,6 +4620,7 @@ FILE: package.json
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.3",
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
@@ -4724,14 +4716,11 @@ export default config;
 
 
 ==================================================
-FILE: prisma\migrations\20260527200711_db_schema_lockedin\migration.sql
+FILE: prisma\migrations\20260603120005_make_oauth_consent_compound_unique\migration.sql
 ==================================================
 ```sql
 -- CreateEnum
 CREATE TYPE "MfaType" AS ENUM ('TOTP', 'EMAIL', 'SMS');
-
--- CreateEnum
-CREATE TYPE "Role" AS ENUM ('ADMIN', 'USER', 'GUEST', 'MEMBER', 'CUSTOM');
 
 -- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'VERIFIED', 'SUSPENDED', 'BANNED', 'DELETED', 'PENDING');
@@ -4749,13 +4738,19 @@ CREATE TYPE "TokenType" AS ENUM ('VERIFY_EMAIL', 'RESET_PASSWORD', 'MAGIC_LINK')
 CREATE TYPE "KeyType" AS ENUM ('Ed25519VerificationKey2020', 'X25519KeyAgreementKey2020', 'JsonWebKey2020', 'Multikey');
 
 -- CreateEnum
+CREATE TYPE "KeyStatus" AS ENUM ('ACTIVE', 'ARCHIVED', 'REVOKED');
+
+-- CreateEnum
+CREATE TYPE "IdpProtocol" AS ENUM ('SAML2', 'OIDC', 'OAUTH2');
+
+-- CreateEnum
 CREATE TYPE "StatusPurpose" AS ENUM ('REVOCATION', 'SUSPENSION');
 
 -- CreateEnum
 CREATE TYPE "VcFormat" AS ENUM ('JWT', 'SD_JWT', 'JSON_LD', 'DataIntegrity');
 
 -- CreateEnum
-CREATE TYPE "AuditLogAction" AS ENUM ('USER_LOGIN_SUCCESS', 'USER_LOGIN_FAILED', 'USER_REGISTERED', 'PASSWORD_CHANGED', 'MFA_ENABLED', 'MFA_DISABLED', 'MFA_RECOVERY_USED', 'TOKEN_REVOKED', 'SESSION_CREATED', 'SESSION_REVOKED', 'CREDENTIAL_ISSUED', 'CREDENTIAL_REVOKED', 'OAUTH_CONSENT_GRANTED', 'OAUTH_CONSENT_REVOKED', 'TENANT_MEMBER_ADDED', 'TENANT_MEMBER_REMOVED');
+CREATE TYPE "AuditLogAction" AS ENUM ('USER_LOGIN_SUCCESS', 'USER_LOGIN_FAILED', 'USER_REGISTERED', 'USER_DELETED', 'PROFILE_UPDATED', 'PASSWORD_CHANGED', 'MFA_ENABLED', 'MFA_DISABLED', 'MFA_RECOVERY_USED', 'TOKEN_REVOKED', 'SESSION_CREATED', 'SESSION_REVOKED', 'PASSKEY_REGISTERED', 'PASSKEY_USED', 'CREDENTIAL_ISSUED', 'CREDENTIAL_REVOKED', 'OAUTH_CONSENT_GRANTED', 'OAUTH_CONSENT_REVOKED', 'TENANT_MEMBER_ADDED', 'TENANT_MEMBER_REMOVED', 'TENANT_POLICY_UPDATED', 'SIGNING_KEY_CREATED', 'SIGNING_KEY_REVOKED', 'IDENTITY_CREATED', 'IDENTITY_SUSPENDED', 'IDENTITY_DELETED', 'IDP_CONNECTION_CREATED', 'IDP_CONNECTION_UPDATED');
 
 -- CreateTable
 CREATE TABLE "Identity" (
@@ -4764,7 +4759,6 @@ CREATE TABLE "Identity" (
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
     "name" TEXT,
     "picture" TEXT,
-    "globalRole" "Role" NOT NULL DEFAULT 'USER',
     "status" "UserStatus" NOT NULL DEFAULT 'PENDING',
     "metadata" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -4858,6 +4852,21 @@ CREATE TABLE "Tenant" (
 );
 
 -- CreateTable
+CREATE TABLE "TenantBranding" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "customDomain" TEXT,
+    "primaryColor" TEXT,
+    "logoUrl" TEXT,
+    "companyName" TEXT,
+    "emailTemplates" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "TenantBranding_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "TenantSigningKey" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
@@ -4866,7 +4875,7 @@ CREATE TABLE "TenantSigningKey" (
     "publicKey" BYTEA NOT NULL,
     "algorithm" TEXT NOT NULL,
     "kmsProvider" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "status" "KeyStatus" NOT NULL DEFAULT 'ACTIVE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expiresAt" TIMESTAMP(3),
 
@@ -4874,11 +4883,60 @@ CREATE TABLE "TenantSigningKey" (
 );
 
 -- CreateTable
+CREATE TABLE "IdpConnection" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "protocol" "IdpProtocol" NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "clientId" TEXT,
+    "clientSecret" TEXT,
+    "entryPoint" TEXT,
+    "issuer" TEXT,
+    "cert" TEXT,
+    "metadataUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "IdpConnection_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Role" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL DEFAULT 'SYSTEM',
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Permission" (
+    "id" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RolePermission" (
+    "roleId" TEXT NOT NULL,
+    "permissionId" TEXT NOT NULL,
+
+    CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("roleId","permissionId")
+);
+
+-- CreateTable
 CREATE TABLE "TenantMembership" (
     "id" TEXT NOT NULL,
     "identityId" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
-    "tenantRole" "Role" NOT NULL DEFAULT 'USER',
+    "roleId" TEXT NOT NULL,
     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "profile" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -4903,9 +4961,14 @@ CREATE TABLE "TenantPolicy" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "requireMfa" BOOLEAN NOT NULL DEFAULT false,
+    "sessionTtlMinutes" INTEGER NOT NULL DEFAULT 10080,
+    "allowedEmailDomains" TEXT[],
+    "maxSessionsPerUser" INTEGER NOT NULL DEFAULT 10,
+    "allowPasskeys" BOOLEAN NOT NULL DEFAULT true,
     "passwordRules" JSONB,
-    "loginMethods" JSONB NOT NULL,
+    "loginMethods" JSONB NOT NULL DEFAULT '{}',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "TenantPolicy_pkey" PRIMARY KEY ("id")
 );
@@ -4936,6 +4999,7 @@ CREATE TABLE "Passkey" (
     "backedUp" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastUsedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "name" TEXT,
 
     CONSTRAINT "Passkey_pkey" PRIMARY KEY ("id")
 );
@@ -4978,6 +5042,9 @@ CREATE TABLE "Client" (
     "requirePkce" BOOLEAN NOT NULL DEFAULT false,
     "frontChannelLogoutUri" TEXT,
     "backChannelLogoutUri" TEXT,
+    "logoUri" TEXT,
+    "tosUri" TEXT,
+    "policyUri" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Client_pkey" PRIMARY KEY ("id")
@@ -5106,6 +5173,9 @@ CREATE TABLE "OAuthAccount" (
     "identityId" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
     "providerUserId" TEXT NOT NULL,
+    "accessToken" TEXT,
+    "refreshToken" TEXT,
+    "expiresAt" TIMESTAMP(3),
     "linkedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "OAuthAccount_pkey" PRIMARY KEY ("id")
@@ -5143,6 +5213,7 @@ CREATE TABLE "OAuthConsent" (
     "clientId" TEXT NOT NULL,
     "scopes" JSONB NOT NULL,
     "grantedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "revokedAt" TIMESTAMP(3),
 
     CONSTRAINT "OAuthConsent_pkey" PRIMARY KEY ("id")
@@ -5153,6 +5224,7 @@ CREATE TABLE "LegalConsent" (
     "id" TEXT NOT NULL,
     "identityId" TEXT NOT NULL,
     "documentId" TEXT NOT NULL,
+    "version" TEXT NOT NULL DEFAULT '1.0',
     "acceptedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "LegalConsent_pkey" PRIMARY KEY ("id")
@@ -5176,7 +5248,10 @@ CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL,
     "identityId" TEXT NOT NULL,
     "plan" "SubscriptionPlan" NOT NULL DEFAULT 'FREE',
+    "provider" TEXT,
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'ACTIVE',
+    "externalCustomerId" TEXT,
+    "externalSubId" TEXT,
     "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endsAt" TIMESTAMP(3),
 
@@ -5191,6 +5266,7 @@ CREATE TABLE "AuditLog" (
     "actionId" "AuditLogAction" NOT NULL,
     "metadata" JSONB,
     "ip" TEXT,
+    "userAgent" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
@@ -5205,11 +5281,33 @@ CREATE TABLE "RevokedJti" (
     CONSTRAINT "RevokedJti_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "WebhookEvent" (
+    "id" TEXT NOT NULL,
+    "eventType" "AuditLogAction" NOT NULL,
+    "identityId" TEXT,
+    "tenantId" TEXT,
+    "payload" JSONB NOT NULL,
+    "targetUrl" TEXT NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "maxAttempts" INTEGER NOT NULL DEFAULT 5,
+    "deliveredAt" TIMESTAMP(3),
+    "lastError" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "nextRetryAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "WebhookEvent_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Identity_primaryEmail_key" ON "Identity"("primaryEmail");
 
 -- CreateIndex
 CREATE INDEX "Identity_primaryEmail_idx" ON "Identity"("primaryEmail");
+
+-- CreateIndex
+CREATE INDEX "Identity_status_idx" ON "Identity"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "DecentralizedIdentifier_tenantId_key" ON "DecentralizedIdentifier"("tenantId");
@@ -5236,10 +5334,28 @@ CREATE UNIQUE INDEX "Tenant_slug_key" ON "Tenant"("slug");
 CREATE INDEX "Tenant_slug_idx" ON "Tenant"("slug");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "TenantBranding_tenantId_key" ON "TenantBranding"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TenantBranding_customDomain_key" ON "TenantBranding"("customDomain");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "TenantSigningKey_kid_key" ON "TenantSigningKey"("kid");
 
 -- CreateIndex
 CREATE INDEX "TenantSigningKey_tenantId_idx" ON "TenantSigningKey"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "TenantSigningKey_status_idx" ON "TenantSigningKey"("status");
+
+-- CreateIndex
+CREATE INDEX "IdpConnection_tenantId_idx" ON "IdpConnection"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Role_tenantId_name_key" ON "Role"("tenantId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Permission_action_key" ON "Permission"("action");
 
 -- CreateIndex
 CREATE INDEX "TenantMembership_tenantId_idx" ON "TenantMembership"("tenantId");
@@ -5254,7 +5370,7 @@ CREATE UNIQUE INDEX "Project_slug_key" ON "Project"("slug");
 CREATE INDEX "Project_tenantId_idx" ON "Project"("tenantId");
 
 -- CreateIndex
-CREATE INDEX "TenantPolicy_tenantId_idx" ON "TenantPolicy"("tenantId");
+CREATE UNIQUE INDEX "TenantPolicy_tenantId_key" ON "TenantPolicy"("tenantId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "LocalAccount_identityId_key" ON "LocalAccount"("identityId");
@@ -5269,7 +5385,13 @@ CREATE UNIQUE INDEX "Passkey_credentialId_key" ON "Passkey"("credentialId");
 CREATE INDEX "Passkey_identityId_idx" ON "Passkey"("identityId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Mfa_identityId_type_key" ON "Mfa"("identityId", "type");
+
+-- CreateIndex
 CREATE INDEX "MfaRecoveryCode_identityId_idx" ON "MfaRecoveryCode"("identityId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Client_clientId_key" ON "Client"("clientId");
 
 -- CreateIndex
 CREATE INDEX "Client_tenantId_idx" ON "Client"("tenantId");
@@ -5278,10 +5400,16 @@ CREATE INDEX "Client_tenantId_idx" ON "Client"("tenantId");
 CREATE UNIQUE INDEX "Client_tenantId_clientId_key" ON "Client"("tenantId", "clientId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ClientRedirectUri_uri_key" ON "ClientRedirectUri"("uri");
+CREATE UNIQUE INDEX "ClientRedirectUri_clientId_uri_key" ON "ClientRedirectUri"("clientId", "uri");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AuthorizationCode_code_key" ON "AuthorizationCode"("code");
+
+-- CreateIndex
+CREATE INDEX "AuthorizationCode_identityId_idx" ON "AuthorizationCode"("identityId");
+
+-- CreateIndex
+CREATE INDEX "AuthorizationCode_expiresAt_idx" ON "AuthorizationCode"("expiresAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AccessToken_token_key" ON "AccessToken"("token");
@@ -5326,19 +5454,37 @@ CREATE INDEX "IdToken_expiresAt_idx" ON "IdToken"("expiresAt");
 CREATE UNIQUE INDEX "Device_fingerprint_key" ON "Device"("fingerprint");
 
 -- CreateIndex
+CREATE INDEX "Device_identityId_idx" ON "Device"("identityId");
+
+-- CreateIndex
 CREATE INDEX "Session_identityId_idx" ON "Session"("identityId");
 
 -- CreateIndex
 CREATE INDEX "Session_expiresAt_idx" ON "Session"("expiresAt");
 
 -- CreateIndex
+CREATE INDEX "Session_valid_idx" ON "Session"("valid");
+
+-- CreateIndex
+CREATE INDEX "OAuthAccount_identityId_idx" ON "OAuthAccount"("identityId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "OAuthAccount_provider_providerUserId_key" ON "OAuthAccount"("provider", "providerUserId");
+
+-- CreateIndex
+CREATE INDEX "Wallet_identityId_idx" ON "Wallet"("identityId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Wallet_provider_providerWalletId_key" ON "Wallet"("provider", "providerWalletId");
 
 -- CreateIndex
+CREATE INDEX "ExternalIdentifier_identityId_idx" ON "ExternalIdentifier"("identityId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "ExternalIdentifier_type_valueHash_key" ON "ExternalIdentifier"("type", "valueHash");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "OAuthConsent_identityId_clientId_key" ON "OAuthConsent"("identityId", "clientId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "LegalConsent_identityId_documentId_key" ON "LegalConsent"("identityId", "documentId");
@@ -5347,10 +5493,25 @@ CREATE UNIQUE INDEX "LegalConsent_identityId_documentId_key" ON "LegalConsent"("
 CREATE UNIQUE INDEX "EmailToken_token_key" ON "EmailToken"("token");
 
 -- CreateIndex
+CREATE INDEX "EmailToken_identityId_type_idx" ON "EmailToken"("identityId", "type");
+
+-- CreateIndex
+CREATE INDEX "EmailToken_expiresAt_idx" ON "EmailToken"("expiresAt");
+
+-- CreateIndex
+CREATE INDEX "Subscription_identityId_idx" ON "Subscription"("identityId");
+
+-- CreateIndex
+CREATE INDEX "Subscription_status_idx" ON "Subscription"("status");
+
+-- CreateIndex
 CREATE INDEX "AuditLog_identityId_idx" ON "AuditLog"("identityId");
 
 -- CreateIndex
 CREATE INDEX "AuditLog_tenantId_idx" ON "AuditLog"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_actionId_idx" ON "AuditLog"("actionId");
 
 -- CreateIndex
 CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt" DESC);
@@ -5360,6 +5521,12 @@ CREATE UNIQUE INDEX "RevokedJti_jti_key" ON "RevokedJti"("jti");
 
 -- CreateIndex
 CREATE INDEX "RevokedJti_revokedAt_idx" ON "RevokedJti"("revokedAt");
+
+-- CreateIndex
+CREATE INDEX "idx_webhook_processing" ON "WebhookEvent"("nextRetryAt") WHERE ("deliveredAt" IS NULL);
+
+-- CreateIndex
+CREATE INDEX "WebhookEvent_identityId_idx" ON "WebhookEvent"("identityId");
 
 -- AddForeignKey
 ALTER TABLE "DecentralizedIdentifier" ADD CONSTRAINT "DecentralizedIdentifier_identityId_fkey" FOREIGN KEY ("identityId") REFERENCES "Identity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -5386,13 +5553,31 @@ ALTER TABLE "VerifiableCredential" ADD CONSTRAINT "VerifiableCredential_schemaId
 ALTER TABLE "StatusListEntry" ADD CONSTRAINT "StatusListEntry_statusListId_fkey" FOREIGN KEY ("statusListId") REFERENCES "BitstringStatusList"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "TenantBranding" ADD CONSTRAINT "TenantBranding_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "TenantSigningKey" ADD CONSTRAINT "TenantSigningKey_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "IdpConnection" ADD CONSTRAINT "IdpConnection_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Role" ADD CONSTRAINT "Role_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TenantMembership" ADD CONSTRAINT "TenantMembership_identityId_fkey" FOREIGN KEY ("identityId") REFERENCES "Identity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TenantMembership" ADD CONSTRAINT "TenantMembership_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TenantMembership" ADD CONSTRAINT "TenantMembership_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Project" ADD CONSTRAINT "Project_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -5499,358 +5684,6 @@ ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_tenantId_fkey" FOREIGN KEY ("ten
 
 
 ==================================================
-FILE: prisma\migrations\20260528050032_add_signing_key_audit_actions\migration.sql
-==================================================
-```sql
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
-
-
-ALTER TYPE "AuditLogAction" ADD VALUE 'SIGNING_KEY_CREATED';
-ALTER TYPE "AuditLogAction" ADD VALUE 'SIGNING_KEY_REVOKED';
-ALTER TYPE "AuditLogAction" ADD VALUE 'PASSKEY_REGISTERED';
-ALTER TYPE "AuditLogAction" ADD VALUE 'PASSKEY_USED';
-```
-
-
-==================================================
-FILE: prisma\migrations\20260528171740\migration.sql
-==================================================
-```sql
-/*
-  Warnings:
-
-  - A unique constraint covering the columns `[clientId,uri]` on the table `ClientRedirectUri` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[identityId,type]` on the table `Mfa` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[tenantId]` on the table `TenantPolicy` will be added. If there are existing duplicate values, this will fail.
-  - Added the required column `updatedAt` to the `TenantPolicy` table without a default value. This is not possible if the table is not empty.
-
-*/
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
-
-
-ALTER TYPE "AuditLogAction" ADD VALUE 'IDENTITY_CREATED';
-ALTER TYPE "AuditLogAction" ADD VALUE 'IDENTITY_SUSPENDED';
-ALTER TYPE "AuditLogAction" ADD VALUE 'IDENTITY_DELETED';
-
--- DropIndex
-DROP INDEX "ClientRedirectUri_uri_key";
-
--- DropIndex
-DROP INDEX "TenantPolicy_tenantId_idx";
-
--- AlterTable
-ALTER TABLE "AuditLog" ADD COLUMN     "userAgent" TEXT;
-
--- AlterTable
-ALTER TABLE "Client" ADD COLUMN     "logoUri" TEXT,
-ADD COLUMN     "policyUri" TEXT,
-ADD COLUMN     "tosUri" TEXT;
-
--- AlterTable
-ALTER TABLE "LegalConsent" ADD COLUMN     "version" TEXT NOT NULL DEFAULT '1.0';
-
--- AlterTable
-ALTER TABLE "OAuthAccount" ADD COLUMN     "accessToken" TEXT,
-ADD COLUMN     "expiresAt" TIMESTAMP(3),
-ADD COLUMN     "refreshToken" TEXT;
-
--- AlterTable
-ALTER TABLE "Passkey" ADD COLUMN     "name" TEXT;
-
--- AlterTable
-ALTER TABLE "Subscription" ADD COLUMN     "externalCustomerId" TEXT,
-ADD COLUMN     "externalSubId" TEXT;
-
--- AlterTable
-ALTER TABLE "TenantPolicy" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
-
--- CreateTable
-CREATE TABLE "WebhookEvent" (
-    "id" TEXT NOT NULL,
-    "eventType" "AuditLogAction" NOT NULL,
-    "identityId" TEXT,
-    "tenantId" TEXT,
-    "payload" JSONB NOT NULL,
-    "targetUrl" TEXT NOT NULL,
-    "attempts" INTEGER NOT NULL DEFAULT 0,
-    "maxAttempts" INTEGER NOT NULL DEFAULT 5,
-    "deliveredAt" TIMESTAMP(3),
-    "lastError" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "nextRetryAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "WebhookEvent_pkey" PRIMARY KEY ("id")
-);
-
--- CreateIndex
-CREATE INDEX "WebhookEvent_deliveredAt_nextRetryAt_idx" ON "WebhookEvent"("deliveredAt", "nextRetryAt");
-
--- CreateIndex
-CREATE INDEX "WebhookEvent_identityId_idx" ON "WebhookEvent"("identityId");
-
--- CreateIndex
-CREATE INDEX "AuditLog_actionId_idx" ON "AuditLog"("actionId");
-
--- CreateIndex
-CREATE INDEX "AuthorizationCode_identityId_idx" ON "AuthorizationCode"("identityId");
-
--- CreateIndex
-CREATE INDEX "AuthorizationCode_expiresAt_idx" ON "AuthorizationCode"("expiresAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "ClientRedirectUri_clientId_uri_key" ON "ClientRedirectUri"("clientId", "uri");
-
--- CreateIndex
-CREATE INDEX "Device_identityId_idx" ON "Device"("identityId");
-
--- CreateIndex
-CREATE INDEX "EmailToken_identityId_type_idx" ON "EmailToken"("identityId", "type");
-
--- CreateIndex
-CREATE INDEX "EmailToken_expiresAt_idx" ON "EmailToken"("expiresAt");
-
--- CreateIndex
-CREATE INDEX "ExternalIdentifier_identityId_idx" ON "ExternalIdentifier"("identityId");
-
--- CreateIndex
-CREATE INDEX "Identity_status_idx" ON "Identity"("status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Mfa_identityId_type_key" ON "Mfa"("identityId", "type");
-
--- CreateIndex
-CREATE INDEX "OAuthAccount_identityId_idx" ON "OAuthAccount"("identityId");
-
--- CreateIndex
-CREATE INDEX "OAuthConsent_identityId_clientId_idx" ON "OAuthConsent"("identityId", "clientId");
-
--- CreateIndex
-CREATE INDEX "Session_valid_idx" ON "Session"("valid");
-
--- CreateIndex
-CREATE INDEX "Subscription_identityId_idx" ON "Subscription"("identityId");
-
--- CreateIndex
-CREATE INDEX "Subscription_status_idx" ON "Subscription"("status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "TenantPolicy_tenantId_key" ON "TenantPolicy"("tenantId");
-
--- CreateIndex
-CREATE INDEX "TenantSigningKey_isActive_idx" ON "TenantSigningKey"("isActive");
-
--- CreateIndex
-CREATE INDEX "Wallet_identityId_idx" ON "Wallet"("identityId");
-```
-
-
-==================================================
-FILE: prisma\migrations\20260530044938\migration.sql
-==================================================
-```sql
-/*
-  Warnings:
-
-  - A unique constraint covering the columns `[clientId]` on the table `Client` will be added. If there are existing duplicate values, this will fail.
-
-*/
--- CreateIndex
-CREATE UNIQUE INDEX "Client_clientId_key" ON "Client"("clientId");
-```
-
-
-==================================================
-FILE: prisma\migrations\20260530182359_final_schema\migration.sql
-==================================================
-```sql
-/*
-  Warnings:
-
-  - You are about to drop the column `globalRole` on the `Identity` table. All the data in the column will be lost.
-  - You are about to drop the column `tenantRole` on the `TenantMembership` table. All the data in the column will be lost.
-  - You are about to drop the column `isActive` on the `TenantSigningKey` table. All the data in the column will be lost.
-  - Added the required column `roleId` to the `TenantMembership` table without a default value. This is not possible if the table is not empty.
-
-*/
--- CreateEnum
-CREATE TYPE "KeyStatus" AS ENUM ('ACTIVE', 'ARCHIVED', 'REVOKED');
-
--- CreateEnum
-CREATE TYPE "IdpProtocol" AS ENUM ('SAML2', 'OIDC', 'OAUTH2');
-
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
-
-
-ALTER TYPE "AuditLogAction" ADD VALUE 'IDP_CONNECTION_CREATED';
-ALTER TYPE "AuditLogAction" ADD VALUE 'IDP_CONNECTION_UPDATED';
-
--- DropIndex
-DROP INDEX "TenantSigningKey_isActive_idx";
-
--- AlterTable
-ALTER TABLE "Identity" DROP COLUMN "globalRole";
-
--- AlterTable
-ALTER TABLE "TenantMembership" DROP COLUMN "tenantRole",
-ADD COLUMN     "roleId" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "TenantSigningKey" DROP COLUMN "isActive",
-ADD COLUMN     "status" "KeyStatus" NOT NULL DEFAULT 'ACTIVE';
-
--- DropEnum
-DROP TYPE "Role";
-
--- CreateTable
-CREATE TABLE "TenantBranding" (
-    "id" TEXT NOT NULL,
-    "tenantId" TEXT NOT NULL,
-    "customDomain" TEXT,
-    "primaryColor" TEXT,
-    "logoUrl" TEXT,
-    "companyName" TEXT,
-    "emailTemplates" JSONB,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "TenantBranding_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "IdpConnection" (
-    "id" TEXT NOT NULL,
-    "tenantId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "protocol" "IdpProtocol" NOT NULL,
-    "enabled" BOOLEAN NOT NULL DEFAULT true,
-    "clientId" TEXT,
-    "clientSecret" TEXT,
-    "entryPoint" TEXT,
-    "issuer" TEXT,
-    "cert" TEXT,
-    "metadataUrl" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "IdpConnection_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Role" (
-    "id" TEXT NOT NULL,
-    "tenantId" TEXT,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Permission" (
-    "id" TEXT NOT NULL,
-    "action" TEXT NOT NULL,
-    "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RolePermission" (
-    "roleId" TEXT NOT NULL,
-    "permissionId" TEXT NOT NULL,
-
-    CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("roleId","permissionId")
-);
-
--- CreateIndex
-CREATE UNIQUE INDEX "TenantBranding_tenantId_key" ON "TenantBranding"("tenantId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "TenantBranding_customDomain_key" ON "TenantBranding"("customDomain");
-
--- CreateIndex
-CREATE INDEX "IdpConnection_tenantId_idx" ON "IdpConnection"("tenantId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Role_tenantId_name_key" ON "Role"("tenantId", "name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Permission_action_key" ON "Permission"("action");
-
--- CreateIndex
-CREATE INDEX "TenantSigningKey_status_idx" ON "TenantSigningKey"("status");
-
--- AddForeignKey
-ALTER TABLE "TenantBranding" ADD CONSTRAINT "TenantBranding_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "IdpConnection" ADD CONSTRAINT "IdpConnection_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Role" ADD CONSTRAINT "Role_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "TenantMembership" ADD CONSTRAINT "TenantMembership_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-```
-
-
-==================================================
-FILE: prisma\migrations\20260531234210_locked_in\migration.sql
-==================================================
-```sql
-/*
-  Warnings:
-
-  - Made the column `tenantId` on table `Role` required. This step will fail if there are existing NULL values in that column.
-
-*/
--- AlterTable
-ALTER TABLE "Role" ALTER COLUMN "tenantId" SET NOT NULL,
-ALTER COLUMN "tenantId" SET DEFAULT 'SYSTEM';
-```
-
-
-==================================================
-FILE: prisma\migrations\20260601124942_fix_webhook_model\migration.sql
-==================================================
-```sql
--- DropIndex
-DROP INDEX "WebhookEvent_deliveredAt_nextRetryAt_idx";
-
--- AlterTable
-ALTER TABLE "WebhookEvent" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ALTER COLUMN "nextRetryAt" DROP NOT NULL;
-
--- CreateIndex
-CREATE INDEX "idx_webhook_processing" ON "WebhookEvent"("nextRetryAt") WHERE ("deliveredAt" IS NULL);
-```
-
-
-==================================================
 FILE: prisma\migrations\migration_lock.toml
 ==================================================
 ```toml
@@ -5950,6 +5783,8 @@ enum AuditLogAction {
   USER_LOGIN_SUCCESS
   USER_LOGIN_FAILED
   USER_REGISTERED
+  USER_DELETED
+  PROFILE_UPDATED
   PASSWORD_CHANGED
   MFA_ENABLED
   MFA_DISABLED
@@ -5965,6 +5800,7 @@ enum AuditLogAction {
   OAUTH_CONSENT_REVOKED
   TENANT_MEMBER_ADDED
   TENANT_MEMBER_REMOVED
+  TENANT_POLICY_UPDATED
   SIGNING_KEY_CREATED
   SIGNING_KEY_REVOKED
   IDENTITY_CREATED
@@ -6264,13 +6100,17 @@ model Project {
 }
 
 model TenantPolicy {
-  id            String   @id @default(cuid())
-  tenantId      String   @unique
-  requireMfa    Boolean  @default(false)
-  passwordRules Json?
-  loginMethods  Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  tenantId            String   @unique
+  requireMfa          Boolean  @default(false)
+  sessionTtlMinutes   Int      @default(10080)
+  allowedEmailDomains String[]
+  maxSessionsPerUser  Int      @default(10)
+  allowPasskeys       Boolean  @default(true)
+  passwordRules       Json?
+  loginMethods        Json     @default("{}")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
@@ -6569,12 +6409,13 @@ model OAuthConsent {
   clientId   String
   scopes     Json
   grantedAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   revokedAt  DateTime?
 
   identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
   client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
-  @@index([identityId, clientId])
+  @@unique([identityId, clientId])
 }
 
 model LegalConsent {
@@ -6608,6 +6449,7 @@ model Subscription {
   id                 String             @id @default(cuid())
   identityId         String
   plan               SubscriptionPlan   @default(FREE)
+  provider           String? // "stripe" | "paystack" | "flutterwave"
   status             SubscriptionStatus @default(ACTIVE)
   externalCustomerId String?
   externalSubId      String?
@@ -6679,65 +6521,97 @@ import { prisma } from "@/core/db";
 import { config } from "@/core/config";
 
 async function main() {
-  console.log("Starting database seeding...");
+  console.log("🌱 ArcID seed starting...");
 
   const SYSTEM_TENANT_ID = "SYSTEM";
 
-  // 1. Ensure the System Tenant exists
+  // ── 1. System Tenant ──────────────────────────────────────────────────────
   await prisma.tenant.upsert({
     where: { id: SYSTEM_TENANT_ID },
     update: {},
     create: {
       id: SYSTEM_TENANT_ID,
-      name: "System Global",
+      name: "ArcevoCirqle System",
       slug: "system-global",
+      sector: "Technology",
     },
   });
 
-  // 2. Upsert Client (associated with system tenant or keep null if your logic allows)
-  const directClientId = config.oauth.directClientId || "arcid-direct";
+  console.log("✅ System tenant provisioned");
+
+  // ── 2. Global Roles (ADMIN, MEMBER, GUEST) ─────────────────────────────────
+  const globalRoles = [
+    { name: "ADMIN", description: "Full administrative access across all tenant resources" },
+    { name: "MEMBER", description: "Standard member access — default role for new registrations" },
+    { name: "GUEST", description: "Read-only limited access for federated or unverified identities" },
+  ];
+
+  for (const roleData of globalRoles) {
+    await prisma.role.upsert({
+      where: { tenantId_name: { tenantId: SYSTEM_TENANT_ID, name: roleData.name } },
+      update: {},
+      create: { name: roleData.name, description: roleData.description, tenantId: SYSTEM_TENANT_ID },
+    });
+  }
+
+  console.log("✅ Global roles provisioned (ADMIN, MEMBER, GUEST)");
+
+  // ── 3. ArcID Direct Client ─────────────────────────────────────────────────
+  //    The native first-party client used when there's no external OAuth client.
+  //    Every user token in the default space is issued to this client.
+  const directClientId = config.oauth.directClientId ?? "arcid-direct";
+  const apiBase = config.base.apiUrl;
+
   await prisma.client.upsert({
     where: { clientId: directClientId },
-    update: {},
+    update: {
+      // Keep redirect URIs fresh on every seed
+      grantTypes: ["authorization_code", "refresh_token", "client_credentials", "password"],
+      scopes: ["openid", "profile", "email", "offline_access"],
+    },
     create: {
       clientId: directClientId,
-      tenantId: SYSTEM_TENANT_ID, // Associate with system
-      name: "ArcID Native Core Authentication Portal",
+      tenantId: SYSTEM_TENANT_ID,
+      name: "ArcID Native Authentication Portal",
       public: false,
       requirePkce: true,
-      grantTypes: ["password", "refresh_token", "client_credentials"],
+      grantTypes: ["authorization_code", "refresh_token", "client_credentials", "password"],
       scopes: ["openid", "profile", "email", "offline_access"],
       redirectUris: {
         create: [
-          { uri: `${config.base.apiUrl}/api/auth/callback` },
-          { uri: `${config.base.apiUrl}/api/oauth/callback` },
+          { uri: `${apiBase}/api/auth/callback` },
+          { uri: `${apiBase}/api/oauth/callback` },
+          { uri: "http://localhost:3000/api/auth/callback" },
+          { uri: "http://localhost:3000/api/oauth/callback" },
+          // Mobile / app scheme for ArcWallet
+          { uri: "arcid://oauth/callback" },
         ],
       },
     },
   });
 
-  // 3. Upsert Global Roles
-  const globalRoles = ["ADMIN", "MEMBER", "GUEST"];
-  for (const name of globalRoles) {
-    await prisma.role.upsert({
-      where: {
-        tenantId_name: {
-          tenantId: SYSTEM_TENANT_ID,
-          name,
-        },
-      },
-      update: {},
-      create: {
-        name,
-        description: `Global ${name.toLowerCase()} role`,
-        tenantId: SYSTEM_TENANT_ID,
-      },
-    });
-  }
+  console.log(`✅ Direct client '${directClientId}' provisioned on SYSTEM tenant`);
 
-  console.log(
-    "Seed complete: System tenant, client, and global roles provisioned.",
-  );
+  // ── 4. Tenant Policy defaults for SYSTEM ───────────────────────────────────
+  await prisma.tenantPolicy.upsert({
+    where: { tenantId: SYSTEM_TENANT_ID },
+    update: {},
+    create: {
+      tenantId: SYSTEM_TENANT_ID,
+      requireMfa: false,
+      sessionTtlMinutes: 10080, // 7 days
+      allowPasskeys: true,
+    },
+  }).catch(() => {
+    // TenantPolicy might not exist yet — non-fatal if schema migration is pending
+    console.warn("⚠️  TenantPolicy upsert skipped — run prisma migrate dev first");
+  });
+
+  console.log("\n🎉 Seed complete:");
+  console.log(`   • SYSTEM tenant: ${SYSTEM_TENANT_ID}`);
+  console.log(`   • Roles: ADMIN, MEMBER, GUEST`);
+  console.log(`   • Direct client: ${directClientId}`);
+  console.log(`   • Every new user auto-joins SYSTEM as MEMBER (via register.flow.ts)`);
 }
 
 main()
@@ -8584,8 +8458,12 @@ declare module "fastify" {
   interface FastifyInstance {
     auth: {
       requireUser: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
-      requireScope: (scope: string) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
-      requirePlan: (minPlan: SubscriptionPlan) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
+      requireScope: (
+        scope: string,
+      ) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
+      requirePlan: (
+        minPlan: SubscriptionPlan,
+      ) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
     };
   }
 }
@@ -8755,7 +8633,9 @@ export const jwtPlugin = fp(
     const useRsa = Boolean(privateKeyPem && publicKeyPem);
 
     if (useRsa) {
-      fastify.log.info("[JWT] Using RS256 asymmetric key pair for token verification");
+      fastify.log.info(
+        "[JWT] Using RS256 asymmetric key pair for token verification",
+      );
       await fastify.register(fastifyJwt, {
         secret: {
           private: privateKeyPem,
@@ -8768,7 +8648,9 @@ export const jwtPlugin = fp(
         },
       });
     } else {
-      fastify.log.info("[JWT] Using HS256 symmetric secret for token verification");
+      fastify.log.info(
+        "[JWT] Using HS256 symmetric secret for token verification",
+      );
       await fastify.register(fastifyJwt, {
         secret: config.jwt.secret,
         sign: { algorithm: "HS256" },
@@ -9302,6 +9184,7 @@ export default function Home() {
 FILE: src\core\config\config.ts
 ==================================================
 ```ts
+// src/core/config/config.ts
 import { rawEnv } from "./env.validator";
 
 export const config = {
@@ -9338,8 +9221,8 @@ export const config = {
     refreshTtl: rawEnv.JWT_REFRESH_TTL,
   },
   redis: {
-    url: rawEnv.UPSTASH_REDIS_REST_URL || null,
-    token: rawEnv.UPSTASH_REDIS_REST_TOKEN || null,
+    url: rawEnv.UPSTASH_REDIS_REST_URL ?? null,
+    token: rawEnv.UPSTASH_REDIS_REST_TOKEN ?? null,
     enabled: Boolean(
       rawEnv.UPSTASH_REDIS_REST_URL && rawEnv.UPSTASH_REDIS_REST_TOKEN,
     ),
@@ -9356,21 +9239,38 @@ export const config = {
     from: rawEnv.EMAIL_FROM,
   },
   sms: {
-    apiKey: rawEnv.BREVO_API_KEY || null,
+    // Skipped at MVP — Brevo costs not justified yet
+    apiKey: rawEnv.BREVO_API_KEY ?? null,
     sender: rawEnv.SMS_SENDER,
   },
   webhooks: {
     signingSecret: rawEnv.WEBHOOK_SIGNING_SECRET,
   },
   billing: {
-    secretKey: rawEnv.STRIPE_SECRET_KEY,
-    webhookSecret: rawEnv.STRIPE_WEBHOOK_SECRET,
+    // Stripe — global
+    stripe: {
+      secretKey: rawEnv.STRIPE_SECRET_KEY,
+      webhookSecret: rawEnv.STRIPE_WEBHOOK_SECRET,
+      enabled: Boolean(rawEnv.STRIPE_SECRET_KEY),
+    },
+    // Paystack — Nigeria / Africa (primary for local market)
+    paystack: {
+      secretKey: rawEnv.PAYSTACK_SECRET_KEY,
+      webhookSecret: rawEnv.PAYSTACK_WEBHOOK_SECRET,
+      enabled: Boolean(rawEnv.PAYSTACK_SECRET_KEY),
+    },
+    // Flutterwave — Africa
+    flutterwave: {
+      secretKey: rawEnv.FLUTTERWAVE_SECRET_KEY,
+      secretHash: rawEnv.FLUTTERWAVE_SECRET_HASH,
+      enabled: Boolean(rawEnv.FLUTTERWAVE_SECRET_KEY),
+    },
   },
   kms: {
-    provider: rawEnv.KMS_PROVIDER || null,
-    localKey: rawEnv.LOCAL_KMS_KEY || null,
-    awsKeyId: rawEnv.AWS_KMS_KEY_ID || null,
-    gcpKeyName: rawEnv.GCP_KMS_KEY_NAME || null,
+    provider: rawEnv.KMS_PROVIDER ?? null,
+    localKey: rawEnv.LOCAL_KMS_KEY ?? null,
+    awsKeyId: rawEnv.AWS_KMS_KEY_ID ?? null,
+    gcpKeyName: rawEnv.GCP_KMS_KEY_NAME ?? null,
     enabled:
       Boolean(rawEnv.KMS_PROVIDER === "AWS" && rawEnv.AWS_KMS_KEY_ID) ||
       Boolean(rawEnv.KMS_PROVIDER === "GCP" && rawEnv.GCP_KMS_KEY_NAME) ||
@@ -9408,7 +9308,7 @@ export const envSchema = z
     ALLOWED_ORIGINS: z.string().default("http://localhost:3000"),
 
     // JWT Config Tokens
-    JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
+    JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
     JWT_ISSUER: z.string().default("arcid"),
     JWT_ACCESS_TTL: z.string().default("15m"),
     JWT_REFRESH_TTL: z.string().default("7d"),
@@ -9418,7 +9318,7 @@ export const envSchema = z
     WEBAUTHN_RP_NAME: z.string().default("ArcID"),
     WEBAUTHN_ORIGIN: z.string().url().default("http://localhost:3000"),
 
-    // Upstash Redis Token Cache Layer
+    // Upstash Redis Token Cache Layer (optional — falls back to in-memory)
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
@@ -9426,7 +9326,7 @@ export const envSchema = z
     RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
     EMAIL_FROM: z.string().default("ArcID <noreply@arcevocirqle.com.ng>"),
 
-    // SMS Gateway Engine
+    // SMS Gateway — SKIPPED for now (Brevo costs too much at MVP stage)
     BREVO_API_KEY: z.string().optional(),
     SMS_SENDER: z.string().default("ArcID"),
 
@@ -9435,9 +9335,16 @@ export const envSchema = z
       .string()
       .min(1, "WEBHOOK_SIGNING_SECRET is required"),
 
-    // Billing Gateway
-    STRIPE_SECRET_KEY: z.string().default("sk_test_12345"),
-    STRIPE_WEBHOOK_SECRET: z.string().default("whsec_12345"),
+    // ── Billing Gateways ────────────────────────────────────────────────────
+    // Stripe (global)
+    STRIPE_SECRET_KEY: z.string().default(""),
+    STRIPE_WEBHOOK_SECRET: z.string().default(""),
+    // Paystack (Nigeria / Africa)
+    PAYSTACK_SECRET_KEY: z.string().default(""),
+    PAYSTACK_WEBHOOK_SECRET: z.string().default(""),
+    // Flutterwave (Africa)
+    FLUTTERWAVE_SECRET_KEY: z.string().default(""),
+    FLUTTERWAVE_SECRET_HASH: z.string().default(""),
 
     // Key Management Service (KMS) Infrastructure Secrets
     KMS_PROVIDER: z.enum(["AWS", "GCP", ""]).optional().default(""),
@@ -9445,32 +9352,39 @@ export const envSchema = z
     GCP_KMS_KEY_NAME: z.string().optional(),
     LOCAL_KMS_KEY: z.string().optional(),
 
-    // Cookie && RSA Keys
+    // Cookie Secret
     COOKIE_SECRET: z
       .string()
       .min(32, "COOKIE_SECRET must be at least 32 characters"),
-    PRIVATE_KEY_PEM: z.string().default("./certs/private.pem"),
-    PUBLIC_KEY_PEM: z.string().default("./certs/public.pem"),
+
+    // ── RSA/EC Key Pair for RS256 token signing (optional) ─────────────────
+    PRIVATE_KEY_PEM: z.string().default(""),
+    PUBLIC_KEY_PEM: z.string().default(""),
   })
   .superRefine((data, ctx) => {
     if (data.KMS_PROVIDER === "AWS" && !data.AWS_KMS_KEY_ID) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "AWS_KMS_KEY_ID required when provider is AWS",
+        code: "custom",
+        message: "AWS_KMS_KEY_ID required when KMS_PROVIDER is AWS",
         path: ["AWS_KMS_KEY_ID"],
       });
     }
     if (data.KMS_PROVIDER === "GCP" && !data.GCP_KMS_KEY_NAME) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "GCP_KMS_KEY_NAME required when provider is GCP",
+        code: "custom",
+        message: "GCP_KMS_KEY_NAME required when KMS_PROVIDER is GCP",
         path: ["GCP_KMS_KEY_NAME"],
       });
     }
-    if (!data.KMS_PROVIDER && !data.LOCAL_KMS_KEY) {
+    if (
+      !data.KMS_PROVIDER &&
+      !data.LOCAL_KMS_KEY &&
+      data.NODE_ENV === "production"
+    ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "LOCAL_KMS_KEY required when no KMS provider is set",
+        code: "custom",
+        message:
+          "LOCAL_KMS_KEY is required in production when no KMS_PROVIDER is set",
         path: ["LOCAL_KMS_KEY"],
       });
     }
@@ -9776,6 +9690,21 @@ export function errorHandler(
 
 
 ==================================================
+FILE: src\core\errors\error-schemas.ts
+==================================================
+```ts
+// src/core/errors/error-schemas.ts
+import { z } from "zod";
+
+export const commonErrorSchema = z.object({
+  success: z.literal(false),
+  error: z.string(),
+  message: z.string().optional(),
+});
+```
+
+
+==================================================
 FILE: src\core\errors\flow-error.ts
 ==================================================
 ```ts
@@ -9791,6 +9720,7 @@ FILE: src\core\errors\index.ts
 export { ApiError } from "./api-error";
 export { FlowError } from "./flow-error";
 export { errorHandler } from "./error-handler";
+export { commonErrorSchema } from "./error-schemas";
 ```
 
 
@@ -11614,11 +11544,13 @@ async function deliverBatch(): Promise<number> {
             attempts: nextAttempt,
             lastError: err.message,
             // If final, set nextRetryAt to null to exclude it from future polling
-            nextRetryAt: isFinal ? null : new Date(Date.now() + Math.pow(4, nextAttempt) * 30_000),
+            nextRetryAt: isFinal
+              ? null
+              : new Date(Date.now() + Math.pow(4, nextAttempt) * 30_000),
           },
         });
       }
-    })
+    }),
   );
 
   return actionableEvents.length;
@@ -11674,25 +11606,87 @@ FILE: src\lib\challenge-store.ts
 ==================================================
 ```ts
 // src/lib/challenge-store.ts
-import { Redis } from "@upstash/redis";
+// WebAuthn challenge storage with graceful Redis/in-memory fallback.
+// Redis (Upstash) is used in production. In-memory map is used when
+// UPSTASH_REDIS_REST_URL/TOKEN are not configured (local development).
 import { config } from "@/core/config";
+import { logger } from "@/lib/logger";
 
-const redis = new Redis({
-  url: config.redis.url || "",
-  token: config.redis.token || "",
-});
+// ── In-memory fallback for development ────────────────────────────────────────
 
+const memStore = new Map<string, { challenge: string; expiresAt: number }>();
+
+// ── Lazy Redis initialisation ─────────────────────────────────────────────────
+
+let redis: import("@upstash/redis").Redis | null = null;
+
+async function getRedis() {
+  if (!config.redis.enabled) return null;
+  if (redis) return redis;
+
+  try {
+    const { Redis } = await import("@upstash/redis");
+    redis = new Redis({
+      url: config.redis.url!,
+      token: config.redis.token!,
+    });
+    return redis;
+  } catch (err) {
+    logger.error("[CHALLENGE_STORE] Failed to initialise Redis client", {
+      error: err,
+    });
+    return null;
+  }
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+const KEY = (userId: string) => `passkey:challenge:${userId}`;
+const TTL_SEC = 120; // 2 minutes
+
+/**
+ * Store a WebAuthn challenge.
+ * Uses Redis when available; falls back to in-process map in dev.
+ */
 export async function storeChallenge(
   userId: string,
   challenge: string,
 ): Promise<void> {
-  await redis.set(`passkey:challenge:${userId}`, challenge, { ex: 120 }); // 2 min TTL
+  const r = await getRedis();
+  if (r) {
+    await r.set(KEY(userId), challenge, { ex: TTL_SEC });
+  } else {
+    memStore.set(userId, {
+      challenge,
+      expiresAt: Date.now() + TTL_SEC * 1000,
+    });
+    logger.warn("[CHALLENGE_STORE] Using in-memory store — not suitable for production");
+  }
 }
 
+/**
+ * Consume a WebAuthn challenge (read + delete atomically).
+ * Returns null if not found or expired.
+ */
 export async function consumeChallenge(userId: string): Promise<string | null> {
-  const challenge = await redis.get<string>(`passkey:challenge:${userId}`);
-  if (challenge) await redis.del(`passkey:challenge:${userId}`);
-  return challenge;
+  const r = await getRedis();
+
+  if (r) {
+    const challenge = await r.get<string>(KEY(userId));
+    if (challenge) await r.del(KEY(userId));
+    return challenge;
+  }
+
+  const entry = memStore.get(userId);
+  if (!entry) return null;
+  memStore.delete(userId);
+
+  if (entry.expiresAt < Date.now()) {
+    logger.warn("[CHALLENGE_STORE] Challenge expired for user", { userId });
+    return null;
+  }
+
+  return entry.challenge;
 }
 ```
 
@@ -12550,7 +12544,10 @@ export const authPlugin = fp(
       { prefix: "/auth" },
     );
   },
-  { name: "arc-id:auth", dependencies: ["arc-id:db", "arc-id:jwt", "arc-id:auth-guard"] },
+  {
+    name: "arc-id:auth",
+    dependencies: ["arc-id:db", "arc-id:jwt", "arc-id:auth-guard"],
+  },
 );
 ```
 
@@ -13214,7 +13211,8 @@ FILE: src\modules\auth\flows\register.flow.ts
 ```ts
 // src/modules/auth/flows/register.flow.ts
 import { z } from "zod";
-import type { Flow, FlowContext } from "@/core/flows";
+import type { Flow } from "@/core/flows/flow";
+import type { FlowContext } from "@/core/flows/flow-context";
 import { config } from "@/core/config";
 import { RegisterSchema } from "../validators/auth.schemas";
 import { IdentityRepository } from "../repositories/identity.repository";
@@ -13283,9 +13281,12 @@ export const registerFlow: Flow<Input, Output> = {
           },
         });
       } else {
-        ctx.logger?.warn("SYSTEM tenant MEMBER role not found — run prisma db seed", {
-          identityId: identity.id,
-        });
+        ctx.logger?.warn(
+          "SYSTEM tenant MEMBER role not found — run prisma db seed",
+          {
+            identityId: identity.id,
+          },
+        );
       }
     } catch (err) {
       // Non-fatal: don't block registration if system membership fails
@@ -13296,7 +13297,10 @@ export const registerFlow: Flow<Input, Output> = {
     }
 
     // 4. Issue email verification token and dispatch notification
-    const verifyToken = await emailTokenService.issue(identity.id, "VERIFY_EMAIL");
+    const verifyToken = await emailTokenService.issue(
+      identity.id,
+      "VERIFY_EMAIL",
+    );
     void notificationService.sendEmailVerification(input.email, verifyToken);
 
     // 5. Audit log
@@ -13652,7 +13656,7 @@ FILE: src\modules\auth\routes\magic-link.route.ts
 // NOTE: This route is mounted under the /auth prefix by auth.plugin.ts
 // So these paths become /auth/magic-link/request and /auth/magic-link
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows";
+import { flowExecutor } from "@/core/flows/flow-executor";
 import { magicLinkFlow } from "../flows/magic-link.flow";
 import { z } from "zod";
 
@@ -13680,11 +13684,17 @@ export async function magicLinkRoute(fastify: FastifyInstance) {
       // Always return success — never leak whether email exists
       if (!identity?.primaryEmail) return reply.send({ success: true });
 
-      const { EmailTokenService } = await import("../services/email-token.service");
-      const { notificationService } = await import("@/lib/notifications/notification.service");
+      const { EmailTokenService } =
+        await import("../services/email-token.service");
+      const { notificationService } =
+        await import("@/lib/notifications/notification.service");
 
       const emailTokenService = new EmailTokenService(fastify.db);
-      const token = await emailTokenService.issue(identity.id, "MAGIC_LINK", 0.25); // 15 min
+      const token = await emailTokenService.issue(
+        identity.id,
+        "MAGIC_LINK",
+        0.25,
+      ); // 15 min
 
       void notificationService.sendMagicLink(identity.primaryEmail, token, {
         name: identity.name ?? undefined,
@@ -14106,7 +14116,7 @@ FILE: src\modules\auth\routes\switch-context.route.ts
 // POST /auth/switch-context — allows a logged-in user to issue a new token
 // scoped to a specific tenant they belong to.
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows";
+import { flowExecutor } from "@/core/flows/flow-executor";
 import { switchContextFlow } from "../flows/switch-context.flow";
 import { SwitchContextSchema } from "../validators/auth.schemas";
 import { z } from "zod";
@@ -14119,7 +14129,8 @@ export async function switchContextRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Authentication"],
-        summary: "Switch active tenant context — re-issues token scoped to new tenant",
+        summary:
+          "Switch active tenant context — re-issues token scoped to new tenant",
         description:
           "Allows a user who belongs to multiple tenants to switch their active identity context. " +
           "Returns a new access + refresh token pair with the selected tenant in the `tid` claim.",
@@ -14719,64 +14730,102 @@ import type { FastifyInstance } from "fastify";
 import { flowExecutor } from "@/core/flows/flow-executor";
 import { upgradePlanFlow } from "../flows/upgrade-plan.flow";
 import { presentSubscription } from "../presenters/subscription.presenter";
+import { config } from "@/core/config";
+import { createHmac, timingSafeEqual } from "crypto";
 import { z } from "zod";
 
-export async function subscriptionRoute(fastify: FastifyInstance) {
-  fastify.get(
-    "/subscription",
-    {
-      preHandler: fastify.auth.requireUser,
-      schema: {
-        tags: ["Billing & Subscriptions"],
-        summary: "Retrieve active plan tier for current identity context",
-        security: [{ bearerAuth: [] }],
-        response: {
-          200: z.object({
-            success: z.boolean(),
-            data: z.any().nullable(),
-          }),
-        },
-      },
-    },
-    async (req, reply) => {
-      const sub = await fastify.db.subscription.findFirst({
-        where: { identityId: req.identity.id, status: "ACTIVE" },
-        orderBy: { startedAt: "desc" },
-      });
-      return reply.send({
-        success: true,
-        data: sub ? presentSubscription(sub) : null,
-      });
-    },
-  );
+type BillingProvider = "stripe" | "paystack" | "flutterwave";
 
-  fastify.post(
-    "/subscription/upgrade",
-    {
-      preHandler: fastify.auth.requireUser,
-      schema: {
-        tags: ["Billing & Subscriptions"],
-        summary: "Upgrade workspace architecture plan properties",
-        security: [{ bearerAuth: [] }],
-        body: z.object({
-          planId: z.string(), // e.g., premium-tenant-tier
-        }),
-        response: {
-          200: z.object({
-            success: z.boolean(),
-            data: z.any(),
-          }),
-        },
-      },
-    },
-    async (req, reply) => {
-      const result = await flowExecutor.run(upgradePlanFlow, req.body, {
-        userId: req.identity.id,
-        tenantId: null,
-      });
-      return reply.send({ success: true, data: result });
-    },
-  );
+const PAYSTACK_PLAN_MAP: Record<string, "FREE" | "PRO" | "ENTERPRISE"> = {
+  PLN_arcid_pro: "PRO",
+  PLN_arcid_enterprise: "ENTERPRISE",
+};
+
+const STRIPE_PLAN_MAP: Record<string, "FREE" | "PRO" | "ENTERPRISE"> = {
+  price_arcid_pro: "PRO",
+  price_arcid_enterprise: "ENTERPRISE",
+};
+
+function verifyPaystackWebhook(payload: string, signature: string): boolean {
+  if (!config.billing.paystack.webhookSecret) return false;
+  const expected = createHmac("sha512", config.billing.paystack.webhookSecret).update(payload).digest("hex");
+  try { return timingSafeEqual(Buffer.from(expected), Buffer.from(signature)); } catch { return false; }
+}
+
+function verifyStripeWebhook(payload: string, signature: string): boolean {
+  if (!config.billing.stripe.webhookSecret) return false;
+  const expected = createHmac("sha256", config.billing.stripe.webhookSecret).update(payload).digest("hex");
+  try { return timingSafeEqual(Buffer.from(expected), Buffer.from(signature)); } catch { return false; }
+}
+
+export async function subscriptionRoute(fastify: FastifyInstance) {
+  fastify.get("/subscription", {
+    preHandler: fastify.auth.requireUser,
+    schema: { response: { 200: z.object({ success: z.boolean(), data: z.any().nullable() }) } },
+  }, async (req, reply) => {
+    const sub = await fastify.db.subscription.findFirst({ where: { identityId: req.identity.id, status: "ACTIVE" }, orderBy: { startedAt: "desc" } });
+    return reply.send({ success: true, data: sub ? presentSubscription(sub) : null });
+  });
+
+  fastify.post("/subscription/upgrade", {
+    preHandler: fastify.auth.requireUser,
+    schema: { body: z.object({ plan: z.enum(["FREE", "PRO", "ENTERPRISE"]) }), response: { 200: z.object({ success: z.boolean(), data: z.any() }) } },
+  }, async (req, reply) => {
+    const result = await flowExecutor.run(upgradePlanFlow, req.body, { userId: req.identity.id, tenantId: null });
+    return reply.send({ success: true, data: result });
+  });
+
+  fastify.post("/webhooks/billing/paystack", { config: { rawBody: true } }, async (req, reply) => {
+    const rawBody = (req as any).rawBody as string;
+    if (!verifyPaystackWebhook(rawBody, req.headers["x-paystack-signature"] as string)) return reply.status(401).send({ error: "Invalid signature" });
+    const event = JSON.parse(rawBody);
+    fastify.log.info({ event: event.event }, "[BILLING][PAYSTACK] Event received");
+    await handleProviderEvent(fastify, "paystack", event);
+    return reply.status(200).send({ received: true });
+  });
+
+  fastify.post("/webhooks/billing/stripe", { config: { rawBody: true } }, async (req, reply) => {
+    const rawBody = (req as any).rawBody as string;
+    if (!verifyStripeWebhook(rawBody, req.headers["stripe-signature"] as string)) return reply.status(401).send({ error: "Invalid signature" });
+    const event = JSON.parse(rawBody);
+    fastify.log.info({ type: event.type }, "[BILLING][STRIPE] Event received");
+    await handleProviderEvent(fastify, "stripe", event);
+    return reply.status(200).send({ received: true });
+  });
+}
+
+async function handleProviderEvent(fastify: FastifyInstance, provider: BillingProvider, event: any) {
+  try {
+    if (provider === "paystack") {
+      const { event: eventName, data } = event;
+      if (eventName === "subscription.create" || eventName === "charge.success") {
+        const identityId = data?.metadata?.identityId ?? data?.customer?.metadata?.identityId;
+        const plan = PAYSTACK_PLAN_MAP[data?.plan?.plan_code ?? data?.plan_code] ?? null;
+        if (identityId && plan) await activatePlan(fastify, identityId, plan, provider, { externalCustomerId: data?.customer?.customer_code, externalSubId: data?.subscription_code ?? data?.reference });
+      }
+      if (eventName === "subscription.not_renew" || eventName === "subscription.disable") {
+        if (data?.metadata?.identityId) await downgradePlan(fastify, data.metadata.identityId, provider);
+      }
+    }
+  } catch (err) {
+    fastify.log.error({ err, provider }, "[BILLING] Event handler failed");
+  }
+}
+
+async function activatePlan(fastify: FastifyInstance, identityId: string, plan: "FREE" | "PRO" | "ENTERPRISE", provider: BillingProvider, external: any) {
+  await fastify.db.$transaction(async (tx) => {
+    await tx.subscription.updateMany({ where: { identityId, status: "ACTIVE" }, data: { status: "CANCELED", endsAt: new Date() } });
+    await tx.subscription.create({ data: { identityId, plan, status: "ACTIVE", provider, externalCustomerId: external.externalCustomerId, externalSubId: external.externalSubId } });
+  });
+  fastify.log.info({ identityId, plan, provider }, "[BILLING] Subscription activated");
+}
+
+async function downgradePlan(fastify: FastifyInstance, identityId: string, provider: BillingProvider) {
+  await fastify.db.$transaction(async (tx) => {
+    await tx.subscription.updateMany({ where: { identityId, status: "ACTIVE", provider }, data: { status: "CANCELED", endsAt: new Date() } });
+    await tx.subscription.create({ data: { identityId, plan: "FREE", status: "ACTIVE" } });
+  });
+  fastify.log.info({ identityId, provider }, "[BILLING] Subscription downgraded to FREE");
 }
 ```
 
@@ -16203,34 +16252,30 @@ export async function oauthLinkRoute(fastify: FastifyInstance) {
 FILE: src\modules\identity\routes\profile.route.ts
 ==================================================
 ```ts
+// src/modules/identity/routes/profile.route.ts
+// NOTE: Routes are at /me (no prefix change needed — identity plugin has no prefix by design)
 import type { FastifyInstance } from "fastify";
-import { FlowExecutor } from "@/core/flows/flow-executor"; // Use Class constructor pattern
-import { updateProfileFlow } from "../flows/update-profile.flow";
-import { presentIdentity } from "../presenters/identity.presenter";
 import { z } from "zod";
+import { presentIdentity } from "../presenters/identity.presenter";
 
 export async function profileRoute(fastify: FastifyInstance) {
-  // Instantiate FlowExecutor class at the plugin root level
-  const flowExecutor = new FlowExecutor();
-
-  // 1. GET ROUTE
+  // GET /me
   fastify.get(
     "/me",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["Identity Vault"],
-        summary: "Retrieve authenticated identity profile context",
+        tags: ["Identity & Profile"],
+        summary: "Retrieve canonical identity profile with tenant memberships and roles",
         security: [{ bearerAuth: [] }],
         response: {
-          200: z.object({
-            success: z.boolean(),
-            data: z.any(),
-          }),
+          200: z.object({ success: z.boolean(), data: z.any() }),
         },
       },
     },
     async (req, reply) => {
+      // FIXED: was missing { include: { memberships: { include: { role: true } } } }
+      // causing roles to always return []
       const identity = await fastify.db.identity.findUniqueOrThrow({
         where: { id: req.identity.id },
         include: {
@@ -16243,66 +16288,137 @@ export async function profileRoute(fastify: FastifyInstance) {
 
       return reply.send({
         success: true,
-        data: presentIdentity(identity),
+        data: {
+          ...presentIdentity(identity),
+          plan: req.identity.plan,
+          tenantId: req.identity.tenantId,
+          // Surface active tenant memberships with role names
+          memberships: identity.memberships.map((m) => ({
+            tenantId: m.tenantId,
+            role: m.role.name,
+            status: m.status,
+            joinedAt: m.createdAt,
+          })),
+        },
       });
-    }, // <-- Properly closed the GET handler function block
-  ); // <-- Properly closed the GET route registration call
+    },
+  );
 
-  // 2. PATCH ROUTE
+  // PATCH /me
   fastify.patch(
     "/me",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["Identity Vault"],
-        summary: "Modify profile context parameters",
+        tags: ["Identity & Profile"],
+        summary: "Update display name and profile picture",
         security: [{ bearerAuth: [] }],
         body: z.object({
-          name: z.string().optional(),
-          metadata: z.record(z.string(), z.any()).optional(),
+          name: z.string().min(1).max(100).optional(),
+          picture: z.string().url().optional(),
         }),
         response: {
-          200: z.object({
-            success: z.boolean(),
-            data: z.any(),
-          }),
+          200: z.object({ success: z.boolean(), data: z.any() }),
         },
       },
     },
     async (req, reply) => {
-      const result = await flowExecutor.run(updateProfileFlow, req.body, {
-        userId: req.identity.id,
-        tenantId: req.identity.tenantId,
+      const body = req.body as { name?: string; picture?: string };
+      const identity = await fastify.db.identity.update({
+        where: { id: req.identity.id },
+        data: body,
+        include: {
+          memberships: {
+            where: { status: "ACTIVE" },
+            include: { role: true },
+          },
+        },
       });
 
-      return reply.send({ success: true, data: result });
+      void fastify.db.auditLog.create({
+        data: {
+          actionId: "PROFILE_UPDATED",
+          identityId: req.identity.id,
+          ip: req.ip,
+          userAgent: req.headers["user-agent"],
+          metadata: Object.keys(body),
+        },
+      });
+
+      return reply.send({ success: true, data: presentIdentity(identity) });
     },
   );
 
+  // DELETE /me
   fastify.delete(
     "/me",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["Identity Vault"],
-        summary: "Permanently delete account (30-day grace period)",
+        tags: ["Identity & Profile"],
+        summary: "Initiate account deletion — revokes all sessions and schedules cleanup",
         security: [{ bearerAuth: [] }],
-        response: { 200: z.object({ success: z.boolean() }) },
+        response: {
+          200: z.object({ success: z.boolean(), message: z.string() }),
+        },
       },
     },
     async (req, reply) => {
-      const { deleteAccountFlow } =
-        await import("../flows/delete-account.flow");
-      await flowExecutor.run(
-        deleteAccountFlow,
-        {},
-        {
-          userId: req.identity.id,
-          tenantId: req.identity.tenantId,
+      const identityId = req.identity.id;
+
+      // Get email for notification before deletion
+      const identity = await fastify.db.identity.findUniqueOrThrow({
+        where: { id: identityId },
+        select: { primaryEmail: true, name: true },
+      });
+
+      // 1. Revoke all active sessions
+      await fastify.db.session.updateMany({
+        where: { identityId, valid: true },
+        data: { valid: false },
+      });
+
+      // 2. Revoke all active tokens
+      await fastify.db.accessToken.updateMany({
+        where: { identityId, revoked: false },
+        data: { revoked: true },
+      });
+      await fastify.db.refreshToken.updateMany({
+        where: { identityId, revoked: false },
+        data: { revoked: true },
+      });
+
+      // 3. Mark identity as DELETED (soft delete — retains audit trail)
+      await fastify.db.identity.update({
+        where: { id: identityId },
+        data: { status: "DELETED" },
+      });
+
+      // 4. Audit log
+      void fastify.db.auditLog.create({
+        data: {
+          actionId: "USER_DELETED",
+          identityId,
           ip: req.ip,
+          userAgent: req.headers["user-agent"],
         },
-      );
-      return reply.send({ success: true });
+      });
+
+      // 5. Notify
+      if (identity.primaryEmail) {
+        const { notificationService } = await import(
+          "@/lib/notifications/notification.service"
+        );
+        void notificationService.sendAccountDeletion(identity.primaryEmail, {
+          name: identity.name ?? undefined,
+          graceDays: 30,
+        });
+      }
+
+      return reply.send({
+        success: true,
+        message: "Account deletion initiated. Your data will be purged within 30 days.",
+      });
     },
   );
 }
@@ -17076,20 +17192,19 @@ export async function clientsRoute(fastify: FastifyInstance) {
 FILE: src\modules\oauth\routes\consent.route.ts
 ==================================================
 ```ts
-// src/modules/oauth/routes/consent.route.ts
 import type { FastifyInstance } from "fastify";
-import { ConsentService } from "../services/consent.service";
 import { z } from "zod";
+import { commonErrorSchema } from "@/core/errors/error-schemas";
 
 export async function consentRoute(fastify: FastifyInstance) {
-  // Grant consent
+  // POST /oauth/consent
   fastify.post(
     "/consent",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["OAuth2 / OIDC Server"],
-        summary: "Grant user consent for an OAuth2 client",
+        tags: ["OAuth 2.0 / OIDC Protocol"],
+        summary: "Grant scopes for an OAuth client on behalf of the current user",
         security: [{ bearerAuth: [] }],
         body: z.object({
           clientId: z.string().min(1),
@@ -17097,70 +17212,112 @@ export async function consentRoute(fastify: FastifyInstance) {
         }),
         response: {
           200: z.object({ success: z.boolean() }),
+          404: commonErrorSchema,
         },
       },
     },
     async (req, reply) => {
-      const { clientId, scopes } = req.body as {
-        clientId: string;
-        scopes: string[];
-      };
-      const consentService = new ConsentService(fastify.db);
-      await consentService.grant(req.identity.id, clientId, scopes);
+      const { clientId, scopes } = req.body as { clientId: string; scopes: string[] };
+
+      const client = await fastify.db.client.findFirst({
+        where: { clientId },
+        select: { id: true, scopes: true },
+      });
+
+      if (!client) {
+        return reply.status(404).send({ success: false, error: "CLIENT_NOT_FOUND" });
+      }
+
+      // Cast JsonValue to string array for includes()
+      const clientScopes = (client.scopes as string[]) || [];
+      const allowed = scopes.filter((s) => clientScopes.includes(s));
+
+      await fastify.db.oAuthConsent.upsert({
+        where: {
+          identityId_clientId: {
+            identityId: req.identity.id,
+            clientId: client.id,
+          },
+        },
+        update: { 
+          scopes: allowed,
+          updatedAt: new Date(),
+        },
+        create: {
+          identityId: req.identity.id,
+          clientId: client.id,
+          scopes: allowed,
+        },
+      });
+
+      void fastify.db.auditLog.create({
+        data: {
+          actionId: "OAUTH_CONSENT_GRANTED",
+          identityId: req.identity.id,
+          ip: req.ip,
+          userAgent: req.headers["user-agent"],
+          metadata: { clientId, scopes: allowed },
+        },
+      });
+
       return reply.send({ success: true });
     },
   );
 
-  // Revoke consent
+  // DELETE /oauth/consent/:clientId
   fastify.delete(
-    "/consent",
+    "/consent/:clientId",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["OAuth2 / OIDC Server"],
-        summary: "Revoke user consent for an OAuth2 client",
+        tags: ["OAuth 2.0 / OIDC Protocol"],
+        summary: "Revoke previously granted consent",
         security: [{ bearerAuth: [] }],
-        body: z.object({
-          clientId: z.string().min(1),
-        }),
-        response: {
-          200: z.object({ success: z.boolean() }),
-        },
+        params: z.object({ clientId: z.string().min(1) }),
+        response: { 200: z.object({ success: z.boolean() }) },
       },
     },
     async (req, reply) => {
-      const { clientId } = req.body as { clientId: string };
-      const consentService = new ConsentService(fastify.db);
-      await consentService.revoke(req.identity.id, clientId);
+      const { clientId } = req.params as { clientId: string };
+      const client = await fastify.db.client.findFirst({ where: { clientId }, select: { id: true } });
+      if (client) {
+        await fastify.db.oAuthConsent.deleteMany({
+          where: { identityId: req.identity.id, clientId: client.id },
+        });
+      }
       return reply.send({ success: true });
     },
   );
 
-  // List consents
+  // GET /oauth/consents
   fastify.get(
     "/consents",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["OAuth2 / OIDC Server"],
-        summary: "List active OAuth2 consents for current identity",
+        tags: ["OAuth 2.0 / OIDC Protocol"],
+        summary: "List all granted OAuth consents",
         security: [{ bearerAuth: [] }],
         response: {
-          200: z.object({
-            success: z.boolean(),
-            data: z.array(z.any()),
-          }),
+          200: z.object({ success: z.boolean(), data: z.array(z.any()) }),
         },
       },
     },
     async (req, reply) => {
       const consents = await fastify.db.oAuthConsent.findMany({
-        where: { identityId: req.identity.id, revokedAt: null },
-        include: {
-          client: { select: { name: true, clientId: true, logoUri: true } },
-        },
+        where: { identityId: req.identity.id },
+        include: { client: { select: { clientId: true, name: true } } },
       });
-      return reply.send({ success: true, data: consents });
+
+      return reply.send({
+        success: true,
+        data: consents.map((c) => ({
+          clientId: c.client.clientId,
+          clientName: c.client.name,
+          scopes: c.scopes,
+          grantedAt: c.grantedAt,
+        })),
+      });
     },
   );
 }
@@ -17524,11 +17681,16 @@ function parseTtlToMinutes(ttl: string | number): number {
   if (!match) return 15;
   const value = parseInt(match[1], 10);
   switch (match[2]) {
-    case "s": return Math.ceil(value / 60);
-    case "m": return value;
-    case "h": return value * 60;
-    case "d": return value * 60 * 24;
-    default: return 15;
+    case "s":
+      return Math.ceil(value / 60);
+    case "m":
+      return value;
+    case "h":
+      return value * 60;
+    case "d":
+      return value * 60 * 24;
+    default:
+      return 15;
   }
 }
 
@@ -17558,9 +17720,20 @@ export interface TokenBundle {
 // ─── Service ─────────────────────────────────────────────────────────────────
 
 export class TokenService {
-  async issue(ctx: FlowContext, params: IssueTokensParams): Promise<TokenBundle> {
+  async issue(
+    ctx: FlowContext,
+    params: IssueTokensParams,
+  ): Promise<TokenBundle> {
     const { db } = ctx;
-    const { identityId, clientId, sessionId, scopes, audience, tenantId, nonce } = params;
+    const {
+      identityId,
+      clientId,
+      sessionId,
+      scopes,
+      audience,
+      tenantId,
+      nonce,
+    } = params;
 
     // Resolve DB client record by clientId (field-level @unique — safe to query)
     const client = await db.client.findUniqueOrThrow({
@@ -17619,7 +17792,9 @@ export class TokenService {
     let idClaims: Record<string, unknown> | null = null;
 
     if (scopes.includes("openid")) {
-      const identity = await db.identity.findUniqueOrThrow({ where: { id: identityId } });
+      const identity = await db.identity.findUniqueOrThrow({
+        where: { id: identityId },
+      });
       idClaims = {
         sub: identityId,
         iss: issuer,
@@ -17631,7 +17806,11 @@ export class TokenService {
         ...(identity.name ? { name: identity.name } : {}),
         ...(identity.picture ? { picture: identity.picture } : {}),
       };
-      idTokenJwt = await signJwt(idClaims, { ...signOptions, expiresIn: `${idTokenTtlHours}h`, issuer });
+      idTokenJwt = await signJwt(idClaims, {
+        ...signOptions,
+        expiresIn: `${idTokenTtlHours}h`,
+        issuer,
+      });
     }
 
     // ── Atomic DB writes
@@ -18018,25 +18197,29 @@ FILE: src\modules\tenant\routes\did.route.ts
 ==================================================
 ```ts
 // src/modules/tenant/routes/did.route.ts
+// NOTE: Mounted under /tenants prefix — full paths are /tenants/:tenantId/did
 import type { FastifyInstance } from "fastify";
 import { generateKeyPair, exportSPKI } from "jose";
-import { randomUUID } from "crypto";
 import { z } from "zod";
 import { TenantService } from "../services/tenant.service";
 
 export async function tenantDidRoute(fastify: FastifyInstance) {
+  // POST /tenants/:tenantId/did
   fastify.post(
     "/:tenantId/did",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Management Architecture"],
-        summary: "Provision a did:web DID for this tenant",
+        summary: "Provision a did:web Decentralized Identifier for this tenant",
         security: [{ bearerAuth: [] }],
-        params: z.object({ tenantId: z.string().uuid() }),
+        // FIXED: was z.string().uuid() — tenants use cuid()
+        params: z.object({ tenantId: z.string().cuid() }),
         body: z.object({
-          domain: z.string().min(1), // e.g. "health.arcevo.io"
+          domain: z.string().min(1).describe("e.g. health.arcevocirqle.com.ng"),
         }),
+        // FIXED: removed conflicting 409 response schema (causes Fastify schema conflict)
+        // Errors are handled via the global error handler
         response: {
           201: z.object({
             success: z.boolean(),
@@ -18057,7 +18240,6 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
       const tenantService = new TenantService(fastify.db);
       await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
-      // Check if DID already exists
       const existing = await fastify.db.decentralizedIdentifier.findUnique({
         where: { tenantId },
       });
@@ -18066,10 +18248,10 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
           success: false,
           error: "CONFLICT",
           message: "Tenant already has a DID provisioned",
-        } as any);
+        });
       }
 
-      // Generate EC keypair
+      // Generate EC keypair for this tenant's DID
       const { publicKey } = await generateKeyPair("ES256");
       const publicKeySpki = await exportSPKI(publicKey);
       const cleanBase64 = publicKeySpki
@@ -18079,7 +18261,10 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
 
       const did = `did:web:${domain}`;
       const didDocument = {
-        "@context": ["[w3.org](https://www.w3.org/ns/did/v1)"],
+        "@context": [
+          "https://www.w3.org/ns/did/v1",
+          "https://w3id.org/security/suites/jws-2020/v1",
+        ],
         id: did,
         verificationMethod: [
           {
@@ -18110,27 +18295,42 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
     },
   );
 
+  // GET /tenants/:tenantId/did
   fastify.get(
     "/:tenantId/did",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Management Architecture"],
-        summary: "Fetch tenant DID document",
+        summary: "Fetch the DID document for this tenant",
         security: [{ bearerAuth: [] }],
-        params: z.object({ tenantId: z.string().uuid() }),
+        params: z.object({ tenantId: z.string().cuid() }),
         response: {
           200: z.object({ success: z.boolean(), data: z.any() }),
-          404: z.object({ error: z.string() }),
+          404: z.object({
+            success: z.boolean(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
     },
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
+
+      const tenantService = new TenantService(fastify.db);
+      await tenantService.assertMembership(tenantId, req.identity.id);
+
       const did = await fastify.db.decentralizedIdentifier.findUnique({
         where: { tenantId },
       });
-      if (!did) return reply.status(404).send({ error: "NOT_FOUND" } as any);
+      if (!did) {
+        return reply.status(404).send({
+          success: false,
+          error: "NOT_FOUND",
+          message: "No DID provisioned for this tenant",
+        });
+      }
       return reply.send({
         success: true,
         data: { did: did.id, document: did.didDocument },
@@ -18232,39 +18432,44 @@ export async function membershipRoute(fastify: FastifyInstance) {
 FILE: src\modules\tenant\routes\policy.route.ts
 ==================================================
 ```ts
+// src/modules/tenant/routes/policy.route.ts
+// NOTE: Mounted under /tenants prefix — full paths are /tenants/:tenantId/policy
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { TenantService } from "../services/tenant.service";
 
 export async function policyRoute(fastify: FastifyInstance) {
+  // GET /tenants/:tenantId/policy
   fastify.get(
     "/:tenantId/policy",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Management Architecture"],
-        summary:
-          "Evaluate and fetch configuration restrictions assigned to the organization space",
+        summary: "Get the current policy configuration for this tenant",
         security: [{ bearerAuth: [] }],
-        params: z.object({
-          tenantId: z.string().uuid(),
-        }),
+        // FIXED: was z.string().uuid()
+        params: z.object({ tenantId: z.string().cuid() }),
         response: {
-          200: z.object({
-            success: z.boolean(),
-            data: z.any(),
-          }),
+          200: z.object({ success: z.boolean(), data: z.any() }),
         },
       },
     },
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
+
+      const tenantService = new TenantService(fastify.db);
+      await tenantService.assertMembership(tenantId, req.identity.id);
+
       const policy = await fastify.db.tenantPolicy.findFirst({
         where: { tenantId },
       });
-      return reply.send({ success: true, data: policy });
+
+      return reply.send({ success: true, data: policy ?? null });
     },
   );
 
+  // PATCH /tenants/:tenantId/policy
   fastify.patch(
     "/:tenantId/policy",
     {
@@ -18272,18 +18477,51 @@ export async function policyRoute(fastify: FastifyInstance) {
       schema: {
         tags: ["Tenant Management Architecture"],
         summary:
-          "Update custom system assertion conditions for the specified tenant space",
+          "Update policy configuration — MFA enforcement, session TTL, allowed domains",
         security: [{ bearerAuth: [] }],
-        params: z.object({
-          tenantId: z.string().uuid(),
+        params: z.object({ tenantId: z.string().cuid() }),
+        body: z.object({
+          requireMfa: z.boolean().optional(),
+          sessionTtlMinutes: z.number().int().min(5).max(10080).optional(),
+          allowedEmailDomains: z.array(z.string()).optional(),
+          maxSessionsPerUser: z.number().int().min(1).max(100).optional(),
+          allowPasskeys: z.boolean().optional(),
         }),
         response: {
-          501: z.object({ message: z.string() }),
+          200: z.object({ success: z.boolean(), data: z.any() }),
         },
       },
     },
     async (req, reply) => {
-      return reply.status(501).send({ message: "Not yet implemented" });
+      const { tenantId } = req.params as { tenantId: string };
+      const body = req.body as Record<string, any>;
+
+      const tenantService = new TenantService(fastify.db);
+      await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
+
+      // Upsert — create if none exists, update if one does
+      const policy = await fastify.db.tenantPolicy.upsert({
+        where: { tenantId },
+        update: body,
+        create: {
+          tenantId,
+          ...body,
+          loginMethods: body.loginMethods ?? {}, // Provide a default if missing
+        },
+      });
+
+      await fastify.db.auditLog.create({
+        data: {
+          actionId: "TENANT_POLICY_UPDATED",
+          tenantId,
+          identityId: req.identity.id,
+          ip: req.ip,
+          userAgent: req.headers["user-agent"],
+          metadata: body,
+        },
+      });
+
+      return reply.send({ success: true, data: policy });
     },
   );
 }
@@ -18294,6 +18532,8 @@ export async function policyRoute(fastify: FastifyInstance) {
 FILE: src\modules\tenant\routes\signing-key.route.ts
 ==================================================
 ```ts
+// src/modules/tenant/routes/signing-key.route.ts
+// NOTE: Mounted under /tenants prefix — full paths are /tenants/:tenantId/signing-keys
 import type { FastifyInstance } from "fastify";
 import { generateKeyPair, exportSPKI, exportPKCS8 } from "jose";
 import { randomUUID } from "crypto";
@@ -18309,18 +18549,20 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
-        summary: "Generate an asymmetric EC keypair for token signing",
+        summary:
+          "Generate an asymmetric EC keypair bound to this tenant for VC/token signing",
         security: [{ bearerAuth: [] }],
-        params: z.object({ tenantId: z.string().uuid() }),
+        // FIXED: was z.string().uuid() — tenants use cuid(), not uuid
+        params: z.object({ tenantId: z.string().cuid() }),
         response: {
           201: z.object({
             success: z.boolean(),
             data: z.object({
-              kid: z.string().uuid(),
+              kid: z.string(),
               algorithm: z.string(),
               publicKey: z.string(),
               status: z.string(),
-              createdAt: z.date(),
+              createdAt: z.coerce.string(),
             }),
           }),
         },
@@ -18329,7 +18571,6 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
 
-      // Use TenantService to check membership via dynamic Role model
       const tenantService = new TenantService(fastify.db);
       await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
@@ -18377,7 +18618,7 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
           algorithm: signingKey.algorithm,
           publicKey: publicKeySpki,
           status: signingKey.status,
-          createdAt: signingKey.createdAt,
+          createdAt: signingKey.createdAt.toISOString(),
         },
       });
     },
@@ -18390,9 +18631,9 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
-        summary: "List active signing key metadata",
+        summary: "List active signing key metadata for this tenant",
         security: [{ bearerAuth: [] }],
-        params: z.object({ tenantId: z.string().uuid() }),
+        params: z.object({ tenantId: z.string().cuid() }),
         response: {
           200: z.object({ success: z.boolean(), data: z.array(z.any()) }),
         },
@@ -18401,12 +18642,15 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
 
+      const tenantService = new TenantService(fastify.db);
+      await tenantService.assertMembership(tenantId, req.identity.id);
+
       const keys = await fastify.db.tenantSigningKey.findMany({
-        where: { tenantId, status: "ACTIVE" }, // ← was isActive: true
+        where: { tenantId, status: "ACTIVE" },
         select: {
           kid: true,
           algorithm: true,
-          status: true, // ← was isActive
+          status: true,
           createdAt: true,
           expiresAt: true,
           kmsProvider: true,
@@ -18424,11 +18668,11 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
-        summary: "Revoke a signing key",
+        summary: "Revoke a tenant signing key by KID",
         security: [{ bearerAuth: [] }],
         params: z.object({
-          tenantId: z.string().uuid(),
-          kid: z.string().uuid(),
+          tenantId: z.string().cuid(),
+          kid: z.string().min(1),
         }),
         response: {
           200: z.object({ success: z.boolean(), message: z.string() }),
@@ -18442,13 +18686,13 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       const updateResult = await fastify.db.tenantSigningKey.updateMany({
-        where: { tenantId, kid, status: "ACTIVE" }, // ← was isActive: true
-        data: { status: "REVOKED" }, // ← was isActive: false
+        where: { tenantId, kid, status: "ACTIVE" },
+        data: { status: "REVOKED" },
       });
 
       if (updateResult.count === 0) {
         throw ApiError.notFound(
-          "Active signing key not found or already deactivated",
+          "Active signing key not found or already revoked",
         );
       }
 
@@ -18664,6 +18908,7 @@ export class TenantService {
 FILE: src\modules\tenant\tenant.plugin.ts
 ==================================================
 ```ts
+// src/modules/tenant/tenant.plugin.ts
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -18675,14 +18920,33 @@ import { tenantDidRoute } from "./routes/did.route";
 
 export const tenantPlugin = fp(
   async (fastify: FastifyInstance) => {
-    // Bind the type provider compilation engine to the tenant module scope
-    const withZod = fastify.withTypeProvider<ZodTypeProvider>();
-
-    await withZod.register(tenantRoute);
-    await withZod.register(membershipRoute);
-    await withZod.register(policyRoute);
-    await withZod.register(signingKeyRoute);
-    await withZod.register(tenantDidRoute);
+    /**
+     * All tenant routes are mounted under /tenants.
+     * Canonical paths:
+     *   POST   /tenants                            — create tenant
+     *   GET    /tenants/:slug                      — get by slug
+     *   GET    /tenants/:slug/jwks                 — JWKS for tenant signing keys
+     *   POST   /tenants/:tenantId/members          — add member
+     *   DELETE /tenants/:tenantId/members/:id      — remove member
+     *   GET    /tenants/:tenantId/policy           — get policy
+     *   PATCH  /tenants/:tenantId/policy           — update policy
+     *   POST   /tenants/:tenantId/signing-keys     — generate signing key
+     *   GET    /tenants/:tenantId/signing-keys     — list signing keys
+     *   DELETE /tenants/:tenantId/signing-keys/:kid — revoke key
+     *   POST   /tenants/:tenantId/did              — provision DID
+     *   GET    /tenants/:tenantId/did              — get DID document
+     */
+    fastify.register(
+      async (tenantScope) => {
+        const withZod = tenantScope.withTypeProvider<ZodTypeProvider>();
+        await withZod.register(tenantRoute);
+        await withZod.register(membershipRoute);
+        await withZod.register(policyRoute);
+        await withZod.register(signingKeyRoute);
+        await withZod.register(tenantDidRoute);
+      },
+      { prefix: "/tenants" },
+    );
   },
   { name: "arc-id:tenant", dependencies: ["arc-id:db", "arc-id:auth-guard"] },
 );
@@ -18734,6 +18998,14 @@ export type UpdatePolicyInput = z.infer<typeof UpdatePolicySchema>;
 
 
 ==================================================
+FILE: tools\arcid-cli.js
+==================================================
+```js
+
+```
+
+
+==================================================
 FILE: tsconfig.api.json
 ==================================================
 ```json
@@ -18748,7 +19020,7 @@ FILE: tsconfig.api.json
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],
-      "@/prisma-client": ["./prisma/generated", "./prisma/generated/index"]
+      "@/prisma-client": ["./prisma/generated"]
     }
   },
   "include": ["src/**/*.ts"],
@@ -18783,7 +19055,7 @@ FILE: tsconfig.json
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/prisma-client": ["./prisma/generated", "./prisma/generated/index"]
+      "@/prisma-client": ["./prisma/generated"]
     }
   },
   "include": [

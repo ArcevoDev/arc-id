@@ -1,7 +1,6 @@
 // src/modules/auth/flows/register.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { FlowContext, Flow } from "@/core/flows";
 import { config } from "@/core/config";
 import { RegisterSchema } from "../validators/auth.schemas";
 import { IdentityRepository } from "../repositories/identity.repository";
@@ -32,7 +31,7 @@ export const registerFlow: Flow<Input, Output> = {
 
     const passwordHash = await hashPassword(input.password);
 
-    // 2. Create Identity + LocalAccount atomically
+    // 2. Create Identity + LocalAccount atomically (Decoupled from legacy inline subscriptions payload)
     const identity = await ctx.db.identity.create({
       data: {
         primaryEmail: input.email,
@@ -41,19 +40,10 @@ export const registerFlow: Flow<Input, Output> = {
         localAccount: {
           create: { email: input.email, passwordHash },
         },
-        // Immediately create a FREE subscription for this identity
-        subscriptions: {
-          create: {
-            plan: "FREE",
-            status: "ACTIVE",
-          },
-        },
       },
     });
 
     // 3. Auto-join SYSTEM tenant as MEMBER
-    //    This is the "default space" — ensures every user has a canonical context
-    //    and can use ArcID without belonging to any specific org.
     try {
       const memberRole = await ctx.db.role.findFirst({
         where: { tenantId: SYSTEM_TENANT_ID, name: "MEMBER" },
@@ -72,13 +62,10 @@ export const registerFlow: Flow<Input, Output> = {
       } else {
         ctx.logger?.warn(
           "SYSTEM tenant MEMBER role not found — run prisma db seed",
-          {
-            identityId: identity.id,
-          },
+          { identityId: identity.id }
         );
       }
     } catch (err) {
-      // Non-fatal: don't block registration if system membership fails
       ctx.logger?.error("Failed to add identity to SYSTEM tenant", {
         error: err,
         identityId: identity.id,
@@ -92,12 +79,15 @@ export const registerFlow: Flow<Input, Output> = {
     );
     void notificationService.sendEmailVerification(input.email, verifyToken);
 
-    // 5. Audit log
-    void auditService.log({
-      action: "USER_REGISTERED",
-      identityId: identity.id,
-      ip: ctx.ip,
-    });
+    // 5. Audit log passed safely via the current active connection context to prevent transactional pool deadlock
+    void auditService.log(
+      {
+        action: "USER_REGISTERED",
+        identityId: identity.id,
+        ip: ctx.ip,
+      },
+      ctx.db
+    );
 
     // 6. Outbox webhook for ecosystem provisioning (e.g. arcbase)
     try {

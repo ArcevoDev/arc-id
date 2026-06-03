@@ -1,3 +1,4 @@
+// src/modules/auth/repositories/session.repository.ts
 import type { DbClient } from "@/lib/db-client";
 import { ApiError } from "@/core/errors/api-error";
 

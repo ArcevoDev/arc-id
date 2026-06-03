@@ -1,6 +1,6 @@
+// src/modules/auth/flows/mfa-setup.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { Flow, FlowContext } from "@/core/flows";
 import { MfaService } from "../services/mfa.service";
 import { ApiError } from "@/core/errors/api-error";
 import { auditService } from "@/modules/audit/services/audit.service";
@@ -50,8 +50,7 @@ export const mfaConfirmFlow: Flow<
 
     const mfaService = new MfaService(ctx.db);
     const confirmed = await mfaService.confirmTotp(ctx.userId, input.code);
-    if (!confirmed)
-      throw ApiError.badRequest("Invalid TOTP code — confirm failed");
+    if (!confirmed) throw ApiError.badRequest("Invalid TOTP code — confirm failed");
 
     const recoveryCodes = await mfaService.generateRecoveryCodes(ctx.userId);
 
@@ -68,13 +67,12 @@ export const mfaConfirmFlow: Flow<
       );
     }
 
-    auditService.log({ action: "MFA_ENABLED", identityId: ctx.userId });
+    void auditService.log({ action: "MFA_ENABLED", identityId: ctx.userId }, ctx.db);
 
     return { recoveryCodes };
   },
 };
 
-// Called from mfa.route.ts DELETE /mfa
 export async function disableMfa(
   identityId: string,
   db: FlowContext["db"],
@@ -97,5 +95,5 @@ export async function disableMfa(
     });
   }
 
-  auditService.log({ action: "MFA_DISABLED", identityId });
+  void auditService.log({ action: "MFA_DISABLED", identityId }, db);
 }

@@ -1,3 +1,4 @@
+// src/modules/auth/flows/switch-context.flow.ts
 import { z } from "zod";
 import type { FlowContext, Flow } from "@/core/flows";
 import { ApiError } from "@/core/errors/api-error";
@@ -5,7 +6,6 @@ import { TokenService } from "@/modules/oauth/services/token.service";
 import { config } from "@/core/config";
 import { SwitchContextSchema } from "../validators/auth.schemas";
 
-// Define the output structure matching your login flow
 type Output = {
   accessToken: string;
   refreshToken: string;
@@ -13,10 +13,7 @@ type Output = {
   expiresIn: number;
 };
 
-export const switchContextFlow: Flow<
-  z.infer<typeof SwitchContextSchema>,
-  Output
-> = {
+export const switchContextFlow: Flow<z.infer<typeof SwitchContextSchema>, Output> = {
   name: "auth:switch-context",
   inputSchema: SwitchContextSchema,
 
@@ -34,7 +31,6 @@ export const switchContextFlow: Flow<
     if (!membership) throw ApiError.forbidden("No access to this tenant");
 
     const tokenService = new TokenService();
-    // Assuming ctx.metadata contains the active sessionId from the login session
     const sessionId = (ctx.metadata?.sessionId as string) || ctx.sessionId;
 
     if (!sessionId) throw ApiError.unauthorized("No active session found");

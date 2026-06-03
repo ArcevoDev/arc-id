@@ -69,16 +69,20 @@ export class TokenService {
       nonce,
     } = params;
 
-    // Resolve DB client record by clientId (field-level @unique — safe to query)
-    const client = await db.client.findUniqueOrThrow({
+    // Resolve DB client record safely
+    const client = await db.client.findUnique({
       where: { clientId },
-      select: { id: true },
+      select: { id: true, public: true, clientSecret: true },
     });
+
+    if (!client) {
+      throw new Error(`OAuth Client matching '${clientId}' not found.`);
+    }
 
     const now = new Date();
     const issuer = "arcid";
 
-    // ── Algorithm selection — MUST mirror jwt.plugin.ts resolvePemContent logic
+    // ── Algorithm selection
     const privateKeyPem = resolvePemContent(config.security.jwt.privateKey);
     const publicKeyPem = resolvePemContent(config.security.jwt.publicKey);
     const useRsa = Boolean(privateKeyPem && publicKeyPem);
@@ -95,13 +99,22 @@ export class TokenService {
     const refreshExpiry = addDays(now, refreshTtlDays);
     const idExpiry = addHours(now, idTokenTtlHours);
 
-    // ── Resolve subscription plan for embedding in JWT (avoids DB hit on every protected route)
+    // ── Resolve decoupled subscription plan via Tenant context rather than Identity
+    let plan = "FREE";
+    const activeTenantId = tenantId || "SYSTEM";
+
     const activeSub = await db.subscription.findFirst({
-      where: { identityId, status: "ACTIVE" },
+      where: { 
+        tenantId: activeTenantId, 
+        status: "ACTIVE" 
+      },
       orderBy: { startedAt: "desc" },
       select: { plan: true },
     });
-    const plan = activeSub?.plan ?? "FREE";
+    
+    if (activeSub) {
+      plan = activeSub.plan;
+    }
 
     // ── Sign Access Token
     const accessJti = randomUUID();
@@ -117,7 +130,7 @@ export class TokenService {
       { ...signOptions, expiresIn: `${accessTtlMinutes}m`, issuer },
     );
 
-    // ── Refresh Token (opaque, not a JWT — no secret needed)
+    // ── Refresh Token (Opaque signature token string value)
     const refreshTokenValue = generateToken(48);
 
     // ── ID Token (only when openid scope requested)
@@ -176,7 +189,6 @@ export class TokenService {
     });
 
     // ── Update session with refresh token link ONLY for real sessions
-    // client_credentials uses client.id as sessionId — no session row exists for that
     const sessionExists = await db.session.findFirst({
       where: { id: sessionId },
       select: { id: true },

@@ -28,29 +28,27 @@ const DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"];
 export const loginFlow: Flow<Input, Output> = {
   name: "auth:login",
   inputSchema: LoginSchema,
-
   async execute(input, ctx: FlowContext): Promise<Output> {
     const identityRepo = new IdentityRepository(ctx.db);
     const sessionService = new SessionService(ctx.db);
     const targetClientId = config.oauth.directClientId;
 
     const identity = await identityRepo.findForAuth(input.email);
+
     if (!identity?.localAccount) {
       await auditService.log({ action: "USER_LOGIN_FAILED", ip: ctx.ip });
       throw ApiError.unauthorized("Invalid email or password");
     }
 
-    if (identity.status === "BANNED")
-      throw ApiError.forbidden("Account banned");
-    if (identity.status === "SUSPENDED")
-      throw ApiError.forbidden("Account suspended");
-    if (identity.status === "DELETED")
-      throw ApiError.unauthorized("Invalid email");
+    if (identity.status === "BANNED") throw ApiError.forbidden("Account banned");
+    if (identity.status === "SUSPENDED") throw ApiError.forbidden("Account suspended");
+    if (identity.status === "DELETED") throw ApiError.unauthorized("Invalid email");
 
     const valid = await verifyPassword(
       identity.localAccount.passwordHash,
       input.password,
     );
+
     if (!valid) {
       await auditService.log({
         action: "USER_LOGIN_FAILED",
@@ -60,6 +58,7 @@ export const loginFlow: Flow<Input, Output> = {
       throw ApiError.unauthorized("Invalid email or password");
     }
 
+    // Invoke clean, decoupled Session service
     const { session } = await sessionService.create({
       identityId: identity.id,
       localAccountId: identity.localAccount.id,
@@ -69,15 +68,18 @@ export const loginFlow: Flow<Input, Output> = {
 
     const activeMfas = identity.mfas.filter((m) => m.enabled);
     if (activeMfas.length > 0) {
+      // Intentionally disable session validity flag until step-up token execution resolves successfully
       await ctx.db.session.update({
         where: { id: session.id },
         data: { valid: false },
       });
+
       await auditService.log({
         action: "SESSION_CREATED",
         identityId: identity.id,
         ip: ctx.ip,
       });
+
       return {
         identity: presentIdentity(identity),
         sessionId: session.id,
@@ -99,14 +101,12 @@ export const loginFlow: Flow<Input, Output> = {
       });
     }
 
-    // Perform side effects out-of-band using non-blocking promises
     void Promise.all([
       auditService.log({
         action: "USER_LOGIN_SUCCESS",
         identityId: identity.id,
         ip: ctx.ip ?? "0.0.0.0",
       }),
-      // Used specific notification method instead of generic .send()
       notificationService.sendNewDeviceLogin(
         identity.primaryEmail ?? "unknown@arcid.local",
         {

@@ -1,6 +1,6 @@
+// src/modules/auth/flows/password-reset-confirm.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { Flow, FlowContext } from "@/core/flows";
 import { PasswordResetConfirmSchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { hashPassword } from "../services/password.service";
@@ -8,13 +8,11 @@ import { SessionRepository } from "../repositories/session.repository";
 import { notificationService } from "@/lib/notifications/notification.service";
 import { auditService } from "@/modules/audit/services/audit.service";
 
-export const passwordResetConfirmFlow: Flow<
-  z.infer<typeof PasswordResetConfirmSchema>
-> = {
+export const passwordResetConfirmFlow: Flow<z.infer<typeof PasswordResetConfirmSchema>, Record<string, never>> = {
   name: "auth:password-reset-confirm",
   inputSchema: PasswordResetConfirmSchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Record<string, never>> {
     const emailTokenService = new EmailTokenService(ctx.db);
     const sessionRepo = new SessionRepository(ctx.db);
 
@@ -39,11 +37,11 @@ export const passwordResetConfirmFlow: Flow<
       );
     }
 
-    auditService.log({
+    void auditService.log({
       action: "PASSWORD_CHANGED",
       identityId: tokenRecord.identityId,
       ip: ctx.ip,
-    });
+    }, ctx.db);
 
     return {};
   },

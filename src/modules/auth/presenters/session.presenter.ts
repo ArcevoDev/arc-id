@@ -1,3 +1,4 @@
+// src/modules/auth/presenters/session.presenter.ts
 import type { Session } from "@/prisma-client";
 
 export function presentSession(session: Session) {

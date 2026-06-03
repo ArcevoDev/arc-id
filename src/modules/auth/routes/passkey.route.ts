@@ -1,3 +1,4 @@
+// src/modules/auth/routes/passkey.route.ts
 import type { FastifyInstance } from "fastify";
 import { flowExecutor } from "@/core/flows/flow-executor";
 import { passkeyRegisterFlow } from "../flows/passkey-register.flow";
@@ -6,6 +7,7 @@ import { PasskeyService } from "../services/passkey.service";
 import { z } from "zod";
 
 export async function passkeyRoute(fastify: FastifyInstance) {
+  // 1. Generate Registration Options
   fastify.post(
     "/passkey/options/register",
     {
@@ -29,17 +31,50 @@ export async function passkeyRoute(fastify: FastifyInstance) {
         identity.primaryEmail ?? req.identity.id,
       );
 
-      // Store challenge server-side (use session or Redis)
-      // For now store in the session metadata — production should use Redis
-      await fastify.db.session.updateMany({
+      // Persist challenge server-side in the current active session meta
+      const currentSession = await fastify.db.session.findFirst({
         where: { identityId: req.identity.id, valid: true },
-        data: { riskSignals: { challenge: options.challenge } as any },
+        orderBy: { createdAt: "desc" },
       });
+
+      if (currentSession) {
+        await fastify.db.session.update({
+          where: { id: currentSession.id },
+          data: { riskSignals: { challenge: options.challenge } as any },
+        });
+      }
 
       return reply.send({ success: true, data: options });
     },
   );
 
+  // 2. Execute WebAuthn Registration Flow
+  fastify.post(
+    "/passkey/register",
+    {
+      preHandler: fastify.auth.requireUser,
+      schema: {
+        tags: ["Passkeys / WebAuthn"],
+        summary: "Verify and save registered credential public key",
+        security: [{ bearerAuth: [] }],
+        body: z.object({
+          response: z.record(z.string(), z.unknown()),
+          challenge: z.string(),
+        }),
+        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
+      },
+    },
+    async (req, reply) => {
+      const result = await flowExecutor.run(passkeyRegisterFlow, req.body, {
+        userId: req.identity.id,
+        tenantId: req.identity.tenantId,
+        ip: req.ip,
+      });
+      return reply.send({ success: true, data: result });
+    },
+  );
+
+  // 3. Generate Authentication Options
   fastify.post(
     "/passkey/options/authenticate",
     {
@@ -53,9 +88,32 @@ export async function passkeyRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { identityId } = req.body as { identityId?: string };
       const passkeyService = new PasskeyService(fastify.db);
-      const options =
-        await passkeyService.generateAuthenticationOptions(identityId);
+      const options = await passkeyService.generateAuthenticationOptions(identityId);
       return reply.send({ success: true, data: options });
+    },
+  );
+
+  // 4. Execute WebAuthn Assertion Authentication Flow
+  fastify.post(
+    "/passkey/authenticate",
+    {
+      schema: {
+        tags: ["Passkeys / WebAuthn"],
+        summary: "Authenticate via passkey assertion payload signature",
+        body: z.object({
+          response: z.record(z.string(), z.unknown()),
+          challenge: z.string(),
+        }),
+        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
+      },
+    },
+    async (req, reply) => {
+      const result = await flowExecutor.run(passkeyAuthenticateFlow, req.body, {
+        tenantId: null,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+      return reply.send({ success: true, data: result });
     },
   );
 }

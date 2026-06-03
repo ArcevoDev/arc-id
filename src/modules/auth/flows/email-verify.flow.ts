@@ -1,14 +1,15 @@
+// src/modules/auth/flows/email-verify.flow.ts
 import { z } from "zod";
 import type { FlowContext, Flow } from "@/core/flows";
 import { EmailVerifySchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
 
-export const emailVerifyFlow: Flow<z.infer<typeof EmailVerifySchema>> = {
+export const emailVerifyFlow: Flow<z.infer<typeof EmailVerifySchema>, Record<string, never>> = {
   name: "auth:email-verify",
   inputSchema: EmailVerifySchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Record<string, never>> {
     const emailTokenService = new EmailTokenService(ctx.db);
     const tokenRecord = await emailTokenService.consume(
       input.token,
@@ -21,7 +22,6 @@ export const emailVerifyFlow: Flow<z.infer<typeof EmailVerifySchema>> = {
       select: { primaryEmail: true, name: true },
     });
 
-    // Fire welcome email now that the account is truly active
     if (identity.primaryEmail) {
       void notificationService.sendWelcome(identity.primaryEmail, {
         name: identity.name ?? undefined,

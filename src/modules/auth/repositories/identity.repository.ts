@@ -1,3 +1,4 @@
+// src/modules/auth/repositories/identity.repository.ts
 import type { DbClient } from "@/lib/db-client";
 import { ApiError } from "@/core/errors/api-error";
 
@@ -5,9 +6,7 @@ export class IdentityRepository {
   constructor(private db: DbClient) {}
 
   /**
-   * Loads the full auth context for a login attempt.
-   * Includes localAccount, active MFAs, and active memberships.
-   * Used by: login.flow, mfa-verify.flow, auth-guard
+   * Loads full authentication profiles including active roles per workspace partition context.
    */
   async findForAuth(email: string) {
     return this.db.identity.findUnique({
@@ -15,7 +14,10 @@ export class IdentityRepository {
       include: {
         localAccount: true,
         mfas: { where: { enabled: true } },
-        memberships: { where: { status: "ACTIVE" }, include: { tenant: true } },
+        memberships: { 
+          where: { status: "ACTIVE" }, 
+          include: { role: true, tenant: true } 
+        },
       },
     });
   }

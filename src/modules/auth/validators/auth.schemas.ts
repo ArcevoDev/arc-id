@@ -1,15 +1,12 @@
+// src/modules/auth/validators/auth.schemas.ts
 import { z } from "zod";
 import { UserStatus, MfaType } from "@/prisma-client";
 
-// Input Validations (Request Bodies)
 export const RegisterSchema = z.object({
   email: z.string().email("Provide a valid operational email address space"),
   password: z
     .string()
-    .min(
-      8,
-      "Security vector requires a minimum password length of 8 characters",
-    ),
+    .min(8, "Security vector requires a minimum password length of 8 characters"),
   name: z.string().min(1).max(100).optional(),
 });
 
@@ -40,10 +37,7 @@ export const PasswordResetConfirmSchema = z.object({
   token: z.string(),
   newPassword: z
     .string()
-    .min(
-      12,
-      "New credentials require an extended entropy minimum of 12 characters",
-    ),
+    .min(12, "New credentials require an extended entropy minimum of 12 characters"),
 });
 
 export const PasswordChangeSchema = z.object({
@@ -54,10 +48,6 @@ export const PasswordChangeSchema = z.object({
 export const EmailVerifySchema = z.object({
   token: z.string(),
 });
-
-// ==========================================
-// OUTPUT MODEL DTOs (Strict Schema Serialization Targets)
-// ==========================================
 
 export const IdentityDtoSchema = z.object({
   id: z.string().cuid(),
@@ -75,14 +65,9 @@ export const SwitchContextSchema = z.object({
   tenantId: z.string().cuid("Invalid tenant ID format"),
 });
 
-// Structural Inference Typing Context maps
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type MfaVerifyInput = z.infer<typeof MfaVerifySchema>;
-export type PasswordResetRequestInput = z.infer<
-  typeof PasswordResetRequestSchema
->;
-export type PasswordResetConfirmInput = z.infer<
-  typeof PasswordResetConfirmSchema
->;
+export type PasswordResetRequestInput = z.infer<typeof PasswordResetRequestSchema>;
+export type PasswordResetConfirmInput = z.infer<typeof PasswordResetConfirmSchema>;
 export type IdentityDto = z.infer<typeof IdentityDtoSchema>;

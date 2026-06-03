@@ -1,23 +1,20 @@
+// src/modules/auth/flows/password-reset-request.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { Flow, FlowContext } from "@/core/flows";
 import { PasswordResetRequestSchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
 
-export const passwordResetRequestFlow: Flow<
-  z.infer<typeof PasswordResetRequestSchema>
-> = {
+export const passwordResetRequestFlow: Flow<z.infer<typeof PasswordResetRequestSchema>, Record<string, never>> = {
   name: "auth:password-reset-request",
   inputSchema: PasswordResetRequestSchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Record<string, never>> {
     const identity = await ctx.db.identity.findUnique({
       where: { primaryEmail: input.email },
       select: { id: true, primaryEmail: true, name: true },
     });
 
-    // Always return success — never leak whether email exists
     if (!identity?.primaryEmail) return {};
 
     const emailTokenService = new EmailTokenService(ctx.db);

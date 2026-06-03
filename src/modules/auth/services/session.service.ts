@@ -1,52 +1,56 @@
-import type { DbClient } from "@/lib/db-client";
-import type { Session } from "@/prisma-client";
+import type { PrismaClient } from "@/prisma-client";
 import { generateToken } from "@/lib/crypto";
-import { addDays, addMinutes } from "date-fns";
+import { addDays } from "date-fns";
 
-interface CreateSessionParams {
+export interface CreateSessionInput {
   identityId: string;
   localAccountId?: string;
-  deviceId?: string;
-  ip?: string;
-  userAgent?: string;
-  tenantId?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
 }
 
-interface SessionBundle {
-  session: Session;
-  refreshTokenValue: string;
-}
-
-/**
- * Creates a new Session and its corresponding RefreshToken atomically.
- * Must be called within a transaction (ctx.db is a tx client).
- */
 export class SessionService {
-  constructor(private db: DbClient) {}
+  constructor(private readonly db: PrismaClient) {}
 
-  async create(params: CreateSessionParams): Promise<SessionBundle> {
-    const sessionTtlDays = 30;
-    const refreshTokenValue = generateToken(48);
+  /**
+   * Provisions a sovereign identity session bound securely to the core client context.
+   * Decoupled completely from downstream TokenService token generation side effects.
+   */
+  async create(input: CreateSessionInput) {
+    const sessionToken = generateToken(64);
+    // Standard session window defaults to 7 operational days
+    const expiresAt = addDays(new Date(), 7);
 
     const session = await this.db.session.create({
       data: {
-        identityId: params.identityId,
-        localAccountId: params.localAccountId,
-        deviceId: params.deviceId,
-        ip: params.ip,
-        userAgent: params.userAgent,
-        expiresAt: addDays(new Date(), sessionTtlDays),
+        identityId: input.identityId,
+        localAccountId: input.localAccountId || null,
+        token: sessionToken,
+        ip: input.ip || null,
+        userAgent: input.userAgent || null,
         valid: true,
+        expiresAt,
       },
     });
 
-    return { session, refreshTokenValue };
+    return { session };
   }
 
-  async revoke(sessionId: string): Promise<void> {
-    await this.db.session.update({
-      where: { id: sessionId },
-      data: { valid: false },
+  /**
+   * Explicit check to determine if an active session profile context remains valid.
+   */
+  async validate(token: string) {
+    const session = await this.db.session.findFirst({
+      where: {
+        token,
+        valid: true,
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        identity: true,
+      },
     });
+
+    return session;
   }
 }

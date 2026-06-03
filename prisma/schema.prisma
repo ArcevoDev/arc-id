@@ -1,4 +1,7 @@
-// GENERATOR & DATASOURCE
+// =========================================================================
+// GENERATOR & DATASOURCE CONFIGURATION
+// =========================================================================
+
 datasource db {
   provider = "postgresql"
 }
@@ -10,9 +13,9 @@ generator client {
   previewFeatures = ["partialIndexes"]
 }
 
-// ==========================================
+// =========================================================================
 // ENUMS
-// ==========================================
+// =========================================================================
 
 enum MfaType {
   TOTP
@@ -90,6 +93,7 @@ enum AuditLogAction {
   MFA_ENABLED
   MFA_DISABLED
   MFA_RECOVERY_USED
+  MFA_VERIFICATION_SUCCESS
   TOKEN_REVOKED
   SESSION_CREATED
   SESSION_REVOKED
@@ -111,9 +115,9 @@ enum AuditLogAction {
   IDP_CONNECTION_UPDATED
 }
 
-// ==========================================
-// CENTRAL CORE: IDENTITY
-// ==========================================
+// =========================================================================
+// CENTRAL CORE: IDENTITY (INDIVIDUAL ACCOUNT HOLDERS)
+// =========================================================================
 
 model Identity {
   id            String     @id @default(cuid())
@@ -152,16 +156,15 @@ model Identity {
   delegationsGranted  AccessDelegation[] @relation("DelegationGrantor")
   delegationsReceived AccessDelegation[] @relation("DelegationGrantee")
 
-  subscriptions Subscription[]
-  auditLogs     AuditLog[]
+  auditLogs AuditLog[]
 
   @@index([primaryEmail])
   @@index([status])
 }
 
-// ==========================================
+// =========================================================================
 // DECENTRALIZED IDENTIFIER (DID) LAYER
-// ==========================================
+// =========================================================================
 
 model DecentralizedIdentifier {
   id         String    @id
@@ -182,9 +185,9 @@ model DecentralizedIdentifier {
   @@index([identityId])
 }
 
-// ==========================================
+// =========================================================================
 // W3C VERIFIABLE CREDENTIAL MODULE
-// ==========================================
+// =========================================================================
 
 model VerifiableCredential {
   id      String   @id
@@ -253,9 +256,9 @@ model StatusListEntry {
   @@unique([statusListId, index])
 }
 
-// ==========================================
+// =========================================================================
 // MULTI-TENANCY, B2B & ENTERPRISE SSO
-// ==========================================
+// =========================================================================
 
 model Tenant {
   id        String   @id @default(cuid())
@@ -276,6 +279,9 @@ model Tenant {
   branding          TenantBranding?
   roles             Role[]
   auditLogs         AuditLog[]
+
+  // Handled structurally at the organization scale
+  subscription Subscription?
 
   @@index([slug])
 }
@@ -332,9 +338,9 @@ model IdpConnection {
   @@index([tenantId])
 }
 
-// ==========================================
-// DYNAMIC Authorization (RBAC / FINE-GRAINED)
-// ==========================================
+// =========================================================================
+// DYNAMIC AUTHORIZATION (RBAC / FINE-GRAINED ACCESS CONTROL)
+// =========================================================================
 
 model Role {
   id          String   @id @default(cuid())
@@ -416,9 +422,9 @@ model TenantPolicy {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-// ==========================================
+// =========================================================================
 // AUTHENTICATION SECURITY VECTORS
-// ==========================================
+// =========================================================================
 
 model LocalAccount {
   id                String    @id @default(cuid())
@@ -480,9 +486,9 @@ model MfaRecoveryCode {
   @@index([identityId])
 }
 
-// ==========================================
+// =========================================================================
 // OAUTH2 / OIDC PROVIDER LAYER
-// ==========================================
+// =========================================================================
 
 model Client {
   id                    String   @id @default(cuid())
@@ -602,9 +608,9 @@ model IdToken {
   @@index([expiresAt])
 }
 
-// ==========================================
+// =========================================================================
 // SYSTEM BRIDGES & UTILITIES
-// ==========================================
+// =========================================================================
 
 model AccessDelegation {
   id        String    @id @default(cuid())
@@ -716,7 +722,7 @@ model OAuthConsent {
   identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
   client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
-  @@index([identityId, clientId])
+  @@unique([identityId, clientId])
 }
 
 model LegalConsent {
@@ -746,22 +752,45 @@ model EmailToken {
   @@index([expiresAt])
 }
 
+// =========================================================================
+// COUPLING-SAFE DECOUPLED SUBSCRIPTION INFRASTRUCTURE
+// =========================================================================
+
 model Subscription {
-  id                 String             @id @default(cuid())
-  identityId         String
-  plan               SubscriptionPlan   @default(FREE)
-  provider           String? // "stripe" | "paystack" | "flutterwave"
-  status             SubscriptionStatus @default(ACTIVE)
-  externalCustomerId String?
-  externalSubId      String?
-  startedAt          DateTime           @default(now())
-  endsAt             DateTime?
+  id        String             @id @default(cuid())
+  tenantId  String             @unique
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan      SubscriptionPlan   @default(FREE)
+  status    SubscriptionStatus @default(ACTIVE)
+  startedAt DateTime           @default(now())
+  endsAt    DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
-  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  // Pluggable mapping row table tracking providers separately
+  billingIntegrations ExternalBillingIntegration[]
 
-  @@index([identityId])
   @@index([status])
 }
+
+model ExternalBillingIntegration {
+  id                 String       @id @default(cuid())
+  subscriptionId     String
+  subscription       Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  providerName       String // "PAYSTACK" | "STRIPE" | "FLUTTERWAVE"
+  externalCustomerId String? // Generated Customer Identity Token Reference
+  externalSubId      String? // Provider mapping active subscription token reference
+  metadata           Json? // Fallback catch-all object for webhooks mapping info
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([providerName, externalSubId])
+  @@index([subscriptionId])
+}
+
+// =========================================================================
+// SYSTEM LOGISTICS & TELEMETRY
+// =========================================================================
 
 model AuditLog {
   id         String         @id @default(cuid())
@@ -803,9 +832,8 @@ model WebhookEvent {
   lastError   String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @default(now()) @updatedAt
-  nextRetryAt DateTime?      @default(now()) // Now nullable
+  nextRetryAt DateTime?      @default(now())
 
-  // Partial Index: Only index rows that are NOT delivered.
   @@index([nextRetryAt], map: "idx_webhook_processing", where: { deliveredAt: null })
   @@index([identityId])
 }

@@ -1,25 +1,31 @@
+// src/modules/auth/flows/passkey-register.flow.ts
 import { z } from "zod";
 import type { Flow } from "@/core/flows/flow";
 import type { FlowContext } from "@/core/flows/flow-context";
 import { PasskeyService } from "../services/passkey.service";
+import { ApiError } from "@/core/errors/api-error";
 
 const PasskeyRegisterSchema = z.object({
   response: z.record(z.string(), z.unknown()),
   challenge: z.string(),
 });
 
-export const passkeyRegisterFlow: Flow<z.infer<typeof PasskeyRegisterSchema>> =
-  {
-    name: "auth:passkey-register",
-    inputSchema: PasskeyRegisterSchema,
+type Output = {
+  verified: boolean;
+};
 
-    async execute(input, ctx: FlowContext) {
-      if (!ctx.userId) throw new Error("userId required");
-      const service = new PasskeyService(ctx.db);
-      return service.verifyRegistration(
-        ctx.userId,
-        input.response,
-        input.challenge,
-      );
-    },
-  };
+export const passkeyRegisterFlow: Flow<z.infer<typeof PasskeyRegisterSchema>, Output> = {
+  name: "auth:passkey-register",
+  inputSchema: PasskeyRegisterSchema,
+
+  async execute(input, ctx: FlowContext): Promise<Output> {
+    if (!ctx.userId) throw ApiError.unauthorized("Authentication required to register passkeys");
+    
+    const service = new PasskeyService(ctx.db);
+    return await service.verifyRegistration(
+      ctx.userId,
+      input.response,
+      input.challenge,
+    );
+  },
+};
