@@ -84,6 +84,8 @@ enum AuditLogAction {
   USER_LOGIN_SUCCESS
   USER_LOGIN_FAILED
   USER_REGISTERED
+  USER_DELETED
+  PROFILE_UPDATED
   PASSWORD_CHANGED
   MFA_ENABLED
   MFA_DISABLED
@@ -99,6 +101,7 @@ enum AuditLogAction {
   OAUTH_CONSENT_REVOKED
   TENANT_MEMBER_ADDED
   TENANT_MEMBER_REMOVED
+  TENANT_POLICY_UPDATED
   SIGNING_KEY_CREATED
   SIGNING_KEY_REVOKED
   IDENTITY_CREATED
@@ -398,13 +401,17 @@ model Project {
 }
 
 model TenantPolicy {
-  id            String   @id @default(cuid())
-  tenantId      String   @unique
-  requireMfa    Boolean  @default(false)
-  passwordRules Json?
-  loginMethods  Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  tenantId            String   @unique
+  requireMfa          Boolean  @default(false)
+  sessionTtlMinutes   Int      @default(10080)
+  allowedEmailDomains String[]
+  maxSessionsPerUser  Int      @default(10)
+  allowPasskeys       Boolean  @default(true)
+  passwordRules       Json?
+  loginMethods        Json     @default("{}")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
@@ -703,6 +710,7 @@ model OAuthConsent {
   clientId   String
   scopes     Json
   grantedAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   revokedAt  DateTime?
 
   identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
@@ -742,6 +750,7 @@ model Subscription {
   id                 String             @id @default(cuid())
   identityId         String
   plan               SubscriptionPlan   @default(FREE)
+  provider           String? // "stripe" | "paystack" | "flutterwave"
   status             SubscriptionStatus @default(ACTIVE)
   externalCustomerId String?
   externalSubId      String?

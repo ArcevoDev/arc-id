@@ -1,13 +1,15 @@
 // src/modules/auth/routes/magic-link.route.ts
+// NOTE: This route is mounted under the /auth prefix by auth.plugin.ts
+// So these paths become /auth/magic-link/request and /auth/magic-link
 import type { FastifyInstance } from "fastify";
 import { flowExecutor } from "@/core/flows/flow-executor";
 import { magicLinkFlow } from "../flows/magic-link.flow";
 import { z } from "zod";
 
 export async function magicLinkRoute(fastify: FastifyInstance) {
-  // Request a magic link
+  // POST /auth/magic-link/request
   fastify.post(
-    "/auth/magic-link/request",
+    "/magic-link/request",
     {
       config: { rateLimit: { max: 3, timeWindow: "15 minutes" } },
       schema: {
@@ -38,7 +40,7 @@ export async function magicLinkRoute(fastify: FastifyInstance) {
         identity.id,
         "MAGIC_LINK",
         0.25,
-      ); // 15min
+      ); // 15 min
 
       void notificationService.sendMagicLink(identity.primaryEmail, token, {
         name: identity.name ?? undefined,
@@ -49,17 +51,15 @@ export async function magicLinkRoute(fastify: FastifyInstance) {
     },
   );
 
-  // Consume a magic link
+  // POST /auth/magic-link
   fastify.post(
-    "/auth/magic-link",
+    "/magic-link",
     {
       schema: {
         tags: ["Authentication"],
         summary: "Authenticate via a magic link token",
         body: z.object({ token: z.string().min(1) }),
-        response: {
-          200: z.object({ success: z.boolean(), data: z.any() }),
-        },
+        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
       },
     },
     async (req, reply) => {

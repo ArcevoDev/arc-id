@@ -629,7 +629,7 @@ FILE: .zhanlu\.spec-state.json
 ```json
 {
   "initialized": true,
-  "lastUpdate": 1780240133537,
+  "lastUpdate": 1780440349228,
   "version": "1.0.0",
   "scriptCount": 10,
   "templateCount": 5,
@@ -8563,9 +8563,13 @@ console.log(`
 FILE: src\api\plugins\auth-guard.plugin.ts
 ==================================================
 ```ts
+// src/api/plugins/auth-guard.plugin.ts
 import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { ApiError } from "@/core/errors";
+import type { SubscriptionPlan } from "@/prisma-client";
+
+// ─── Augment Fastify Request ─────────────────────────────────────────────────
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -8573,67 +8577,108 @@ declare module "fastify" {
       id: string;
       tenantId: string | null;
       scope: string[];
+      /** Current subscription plan — resolved from DB on each protected request */
+      plan: SubscriptionPlan;
+    };
+  }
+  interface FastifyInstance {
+    auth: {
+      requireUser: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
+      requireScope: (scope: string) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
+      requirePlan: (minPlan: SubscriptionPlan) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
     };
   }
 }
 
-/**
- * Provides reusable preHandler hooks for route-level auth enforcement.
- *
- * Usage in routes:
- *   fastify.get("/me", { preHandler: fastify.auth.requireUser }, handler)
- *   fastify.post("/admin", { preHandler: fastify.auth.requireScope("admin:write") }, handler)
- */
-// Add to your identity interface in the future:
-// roles: string[];
-// permissions: string[];
+// ─── Plan Hierarchy ──────────────────────────────────────────────────────────
+
+const PLAN_ORDER: Record<SubscriptionPlan, number> = {
+  FREE: 0,
+  PRO: 1,
+  ENTERPRISE: 2,
+};
+
+// ─── Plugin ──────────────────────────────────────────────────────────────────
 
 export const authGuardPlugin = fp(
   async (fastify: FastifyInstance) => {
+    /**
+     * Verifies the Bearer JWT and resolves identity + active subscription plan.
+     * Must be the base of every other guard — requireScope and requirePlan both
+     * call this first.
+     */
     const requireUser = async (req: FastifyRequest, reply: FastifyReply) => {
       try {
         await req.jwtVerify();
         const payload = req.user as any;
 
+        // Resolve active subscription for this identity (defaults to FREE)
+        let plan: SubscriptionPlan = "FREE";
+        if (payload.sub) {
+          const sub = await fastify.db.subscription.findFirst({
+            where: { identityId: payload.sub, status: "ACTIVE" },
+            orderBy: { startedAt: "desc" },
+            select: { plan: true },
+          });
+          if (sub?.plan) plan = sub.plan;
+        }
+
         req.identity = {
           id: payload.sub,
           tenantId: payload.tid ?? null,
           scope: (payload.scope ?? "").split(" ").filter(Boolean),
+          plan,
         };
-      } catch {
+      } catch (err) {
+        // Re-throw ApiError instances (e.g. from nested guards) as-is
+        if (err instanceof ApiError) throw err;
         throw ApiError.unauthorized("Invalid or expired access token");
       }
     };
 
+    /**
+     * Extends requireUser with a scope check against the JWT `scope` claim.
+     * To grant admin:write, issue a token with that scope explicitly.
+     */
     const requireScope =
-      (requiredScope: string) => async (req: FastifyRequest) => {
-        await requireUser(req, null as any);
-
-        // Check JWT Scope
-        if (req.identity.scope.includes(requiredScope)) return;
-
-        // TODO: If you implement DB-backed RBAC, check it here:
-        // const hasPermission = await fastify.db.permission.check(req.identity.id, requiredScope);
-        // if (!hasPermission) throw ApiError.forbidden(...);
-
-        throw ApiError.forbidden(`Scope '${requiredScope}' is required`);
+      (requiredScope: string) =>
+      async (req: FastifyRequest, reply: FastifyReply) => {
+        await requireUser(req, reply);
+        if (!req.identity.scope.includes(requiredScope)) {
+          throw ApiError.forbidden(`Scope '${requiredScope}' is required`);
+        }
       };
 
-    fastify.decorate("auth", { requireUser, requireScope });
+    /**
+     * Extends requireUser with a minimum subscription plan check.
+     *
+     * Usage: preHandler: fastify.auth.requirePlan("PRO")
+     *
+     * Returns 403 with a clear upgrade message when the plan is insufficient.
+     * Returns 402 (Payment Required) so the frontend can redirect to upgrade.
+     */
+    const requirePlan =
+      (minPlan: SubscriptionPlan) =>
+      async (req: FastifyRequest, reply: FastifyReply) => {
+        await requireUser(req, reply);
+
+        if (PLAN_ORDER[req.identity.plan] < PLAN_ORDER[minPlan]) {
+          reply.status(402).send({
+            success: false,
+            error: "UPGRADE_REQUIRED",
+            message: `This feature requires a ${minPlan} subscription`,
+            currentPlan: req.identity.plan,
+            requiredPlan: minPlan,
+          });
+          // Halt the request lifecycle
+          return reply;
+        }
+      };
+
+    fastify.decorate("auth", { requireUser, requireScope, requirePlan });
   },
   { name: "arc-id:auth-guard", dependencies: ["arc-id:jwt", "arc-id:db"] },
 );
-
-declare module "fastify" {
-  interface FastifyInstance {
-    auth: {
-      requireUser: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
-      requireScope: (
-        scope: string,
-      ) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
-    };
-  }
-}
 ```
 
 
@@ -8671,24 +8716,73 @@ export const dbPlugin = fp(
 FILE: src\api\plugins\jwt.plugin.ts
 ==================================================
 ```ts
+// src/api/plugins/jwt.plugin.ts
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import fastifyJwt from "@fastify/jwt";
 import { config } from "@/core/config";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
 /**
- * Registers @fastify/jwt for use in auth-guard preHandler hooks.
- * Do NOT use fastify.jwt.sign() for token issuance —
- * use src/lib/jwt/jose.ts instead.
+ * Resolves PEM key content from either:
+ * - A raw PEM string (starts with "-----BEGIN")
+ * - A filesystem path to a .pem file
+ * - Returns empty string if path doesn't exist or input is empty
+ */
+function resolvePemContent(keyOrPath: string): string {
+  if (!keyOrPath || keyOrPath.trim() === "") return "";
+  if (keyOrPath.includes("-----BEGIN")) return keyOrPath.trim();
+  try {
+    return readFileSync(resolve(process.cwd(), keyOrPath), "utf-8").trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Registers @fastify/jwt with algorithm auto-detection:
+ *  - RS256 when PRIVATE_KEY_PEM + PUBLIC_KEY_PEM resolve to real PEM content
+ *  - HS256 (JWT_SECRET) when no RSA keys are present
+ *
+ * CRITICAL: This MUST match the algorithm selection in token.service.ts.
+ * Both use resolvePemContent() to make the decision identically.
  */
 export const jwtPlugin = fp(
   async (fastify: FastifyInstance) => {
-    await fastify.register(fastifyJwt, {
-      secret: config.jwt.secret,
-    });
+    const privateKeyPem = resolvePemContent(config.security.jwt.privateKey);
+    const publicKeyPem = resolvePemContent(config.security.jwt.publicKey);
+    const useRsa = Boolean(privateKeyPem && publicKeyPem);
+
+    if (useRsa) {
+      fastify.log.info("[JWT] Using RS256 asymmetric key pair for token verification");
+      await fastify.register(fastifyJwt, {
+        secret: {
+          private: privateKeyPem,
+          public: publicKeyPem,
+        },
+        sign: { algorithm: "RS256" },
+        verify: {
+          algorithms: ["RS256"],
+          // audience check is NOT enforced here — handled per-route if needed
+        },
+      });
+    } else {
+      fastify.log.info("[JWT] Using HS256 symmetric secret for token verification");
+      await fastify.register(fastifyJwt, {
+        secret: config.jwt.secret,
+        sign: { algorithm: "HS256" },
+        verify: {
+          algorithms: ["HS256"],
+        },
+      });
+    }
   },
   { name: "arc-id:jwt", dependencies: ["arc-id:db"] },
 );
+
+// Export the resolver so token.service.ts can use the SAME logic
+export { resolvePemContent };
 ```
 
 
@@ -12407,6 +12501,7 @@ export type AuditLogDto = z.infer<typeof AuditLogDtoSchema>;
 FILE: src\modules\auth\auth.plugin.ts
 ==================================================
 ```ts
+// src/modules/auth/auth.plugin.ts
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -12424,21 +12519,38 @@ import { switchContextRoute } from "./routes/switch-context.route";
 
 export const authPlugin = fp(
   async (fastify: FastifyInstance) => {
-    // Coerce global scope tracking down to the explicit Zod parsing engine type context
-    const withZod = fastify.withTypeProvider<ZodTypeProvider>();
-
-    await withZod.register(registerRoute);
-    await withZod.register(loginRoute);
-    await withZod.register(logoutRoute);
-    await withZod.register(sessionRoute);
-    await withZod.register(mfaRoute);
-    await withZod.register(passkeyRoute);
-    await withZod.register(passwordRoute);
-    await withZod.register(emailVerifyRoute);
-    await withZod.register(magicLinkRoute);
-    await withZod.register(switchContextRoute);
+    /**
+     * All authentication routes are mounted under /auth.
+     * Canonical paths:
+     *   POST /auth/register
+     *   POST /auth/login
+     *   POST /auth/logout
+     *   GET  /auth/sessions
+     *   POST /auth/mfa/setup | /auth/mfa/confirm | /auth/mfa/verify
+     *   POST /auth/passkey/options/register | /auth/passkey/options/authenticate
+     *   POST /auth/password/reset | /auth/password/reset/confirm
+     *   POST /auth/email/verify
+     *   POST /auth/magic-link/request | /auth/magic-link
+     *   POST /auth/switch-context
+     */
+    fastify.register(
+      async (authScope) => {
+        const withZod = authScope.withTypeProvider<ZodTypeProvider>();
+        await withZod.register(registerRoute);
+        await withZod.register(loginRoute);
+        await withZod.register(logoutRoute);
+        await withZod.register(sessionRoute);
+        await withZod.register(mfaRoute);
+        await withZod.register(passkeyRoute);
+        await withZod.register(passwordRoute);
+        await withZod.register(emailVerifyRoute);
+        await withZod.register(magicLinkRoute);
+        await withZod.register(switchContextRoute);
+      },
+      { prefix: "/auth" },
+    );
   },
-  { name: "arc-id:auth", dependencies: ["arc-id:db", "arc-id:jwt"] },
+  { name: "arc-id:auth", dependencies: ["arc-id:db", "arc-id:jwt", "arc-id:auth-guard"] },
 );
 ```
 
@@ -13100,10 +13212,10 @@ export const passwordResetRequestFlow: Flow<
 FILE: src\modules\auth\flows\register.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/register.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
-import { config } from "@/core/config"; // Centralized config
+import type { Flow, FlowContext } from "@/core/flows";
+import { config } from "@/core/config";
 import { RegisterSchema } from "../validators/auth.schemas";
 import { IdentityRepository } from "../repositories/identity.repository";
 import { hashPassword } from "../services/password.service";
@@ -13116,6 +13228,8 @@ import { presentIdentity } from "../presenters/identity.presenter";
 type Input = z.infer<typeof RegisterSchema>;
 type Output = { identity: ReturnType<typeof presentIdentity> };
 
+const SYSTEM_TENANT_ID = "SYSTEM";
+
 export const registerFlow: Flow<Input, Output> = {
   name: "auth:register",
   inputSchema: RegisterSchema,
@@ -13124,55 +13238,85 @@ export const registerFlow: Flow<Input, Output> = {
     const identityRepo = new IdentityRepository(ctx.db);
     const emailTokenService = new EmailTokenService(ctx.db);
 
-    // 1. Guard: email uniqueness verification
+    // 1. Guard: email uniqueness
     if (await identityRepo.existsByEmail(input.email)) {
       throw ApiError.conflict("An account with this email already exists");
     }
 
     const passwordHash = await hashPassword(input.password);
 
-    // 2. Create Identity + LocalAccount atomically (Inside the executor's transaction)
+    // 2. Create Identity + LocalAccount atomically
     const identity = await ctx.db.identity.create({
       data: {
         primaryEmail: input.email,
         name: input.name,
         status: "PENDING",
         localAccount: {
+          create: { email: input.email, passwordHash },
+        },
+        // Immediately create a FREE subscription for this identity
+        subscriptions: {
           create: {
-            email: input.email,
-            passwordHash,
+            plan: "FREE",
+            status: "ACTIVE",
           },
         },
       },
     });
 
-    // 3. Issue email verification token and dispatch notification (Non-blocking worker loop)
-    const verifyToken = await emailTokenService.issue(
-      identity.id,
-      "VERIFY_EMAIL",
-    );
+    // 3. Auto-join SYSTEM tenant as MEMBER
+    //    This is the "default space" — ensures every user has a canonical context
+    //    and can use ArcID without belonging to any specific org.
+    try {
+      const memberRole = await ctx.db.role.findFirst({
+        where: { tenantId: SYSTEM_TENANT_ID, name: "MEMBER" },
+        select: { id: true },
+      });
 
+      if (memberRole) {
+        await ctx.db.tenantMembership.create({
+          data: {
+            identityId: identity.id,
+            tenantId: SYSTEM_TENANT_ID,
+            roleId: memberRole.id,
+            status: "ACTIVE",
+          },
+        });
+      } else {
+        ctx.logger?.warn("SYSTEM tenant MEMBER role not found — run prisma db seed", {
+          identityId: identity.id,
+        });
+      }
+    } catch (err) {
+      // Non-fatal: don't block registration if system membership fails
+      ctx.logger?.error("Failed to add identity to SYSTEM tenant", {
+        error: err,
+        identityId: identity.id,
+      });
+    }
+
+    // 4. Issue email verification token and dispatch notification
+    const verifyToken = await emailTokenService.issue(identity.id, "VERIFY_EMAIL");
     void notificationService.sendEmailVerification(input.email, verifyToken);
 
-    // Call audit log using the root `db`
+    // 5. Audit log
     void auditService.log({
       action: "USER_REGISTERED",
       identityId: identity.id,
       ip: ctx.ip,
     });
 
-    // 4. Record webhook event to the outbox table for ecosystem provisioning (e.g., arcbase)
+    // 6. Outbox webhook for ecosystem provisioning (e.g. arcbase)
     try {
       await ctx.db.webhookEvent.create({
         data: {
           eventType: "IDENTITY_CREATED",
           identityId: identity.id,
           payload: { email: input.email, name: input.name ?? null },
-          targetUrl: config.integration.arcbaseWebhookUrl, // Clean injection
+          targetUrl: config.integration.arcbaseWebhookUrl,
         },
       });
     } catch (error) {
-      // ✨ Fixed: Order adjusted to comply with (message, meta) signature mapping rules
       ctx.logger?.error("Failed to write outbox webhookEvent record", {
         error,
         identityId: identity.id,
@@ -13505,15 +13649,17 @@ FILE: src\modules\auth\routes\magic-link.route.ts
 ==================================================
 ```ts
 // src/modules/auth/routes/magic-link.route.ts
+// NOTE: This route is mounted under the /auth prefix by auth.plugin.ts
+// So these paths become /auth/magic-link/request and /auth/magic-link
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
+import { flowExecutor } from "@/core/flows";
 import { magicLinkFlow } from "../flows/magic-link.flow";
 import { z } from "zod";
 
 export async function magicLinkRoute(fastify: FastifyInstance) {
-  // Request a magic link
+  // POST /auth/magic-link/request
   fastify.post(
-    "/auth/magic-link/request",
+    "/magic-link/request",
     {
       config: { rateLimit: { max: 3, timeWindow: "15 minutes" } },
       schema: {
@@ -13534,17 +13680,11 @@ export async function magicLinkRoute(fastify: FastifyInstance) {
       // Always return success — never leak whether email exists
       if (!identity?.primaryEmail) return reply.send({ success: true });
 
-      const { EmailTokenService } =
-        await import("../services/email-token.service");
-      const { notificationService } =
-        await import("@/lib/notifications/notification.service");
+      const { EmailTokenService } = await import("../services/email-token.service");
+      const { notificationService } = await import("@/lib/notifications/notification.service");
 
       const emailTokenService = new EmailTokenService(fastify.db);
-      const token = await emailTokenService.issue(
-        identity.id,
-        "MAGIC_LINK",
-        0.25,
-      ); // 15min
+      const token = await emailTokenService.issue(identity.id, "MAGIC_LINK", 0.25); // 15 min
 
       void notificationService.sendMagicLink(identity.primaryEmail, token, {
         name: identity.name ?? undefined,
@@ -13555,17 +13695,15 @@ export async function magicLinkRoute(fastify: FastifyInstance) {
     },
   );
 
-  // Consume a magic link
+  // POST /auth/magic-link
   fastify.post(
-    "/auth/magic-link",
+    "/magic-link",
     {
       schema: {
         tags: ["Authentication"],
         summary: "Authenticate via a magic link token",
         body: z.object({ token: z.string().min(1) }),
-        response: {
-          200: z.object({ success: z.boolean(), data: z.any() }),
-        },
+        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
       },
     },
     async (req, reply) => {
@@ -13889,29 +14027,33 @@ export async function registerRoute(fastify: FastifyInstance) {
 FILE: src\modules\auth\routes\session.route.ts
 ==================================================
 ```ts
+// src/modules/auth/routes/session.route.ts
+// NOTE: Mounted under /auth prefix — full paths are /auth/sessions and /auth/sessions/:id
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 export async function sessionRoute(fastify: FastifyInstance) {
+  // GET /auth/sessions
   fastify.get(
     "/sessions",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Session Infrastructure"],
-        summary: "List active browser/device authentication records",
+        summary: "List active browser/device authentication sessions",
         security: [{ bearerAuth: [] }],
         response: {
           200: z.object({
             success: z.boolean(),
             data: z.array(
               z.object({
-                id: z.string().uuid(),
-                identityId: z.string().uuid(),
+                id: z.string(),
+                identityId: z.string(),
                 userAgent: z.string().nullable(),
                 ip: z.string().nullable(),
                 valid: z.boolean(),
-                createdAt: z.date(),
+                createdAt: z.coerce.string(),
+                expiresAt: z.coerce.string(),
               }),
             ),
           }),
@@ -13927,22 +14069,20 @@ export async function sessionRoute(fastify: FastifyInstance) {
     },
   );
 
+  // DELETE /auth/sessions/:id
   fastify.delete(
     "/sessions/:id",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Session Infrastructure"],
-        summary: "Invalidate/revoke a distinct user session entry",
+        summary: "Revoke a specific session",
         security: [{ bearerAuth: [] }],
         params: z.object({
-          id: z.string().uuid("Invalid session tracking key standard format"),
+          // Sessions use cuid() — NOT uuid — fix from previous uuid validation
+          id: z.string().cuid("Invalid session ID format"),
         }),
-        response: {
-          200: z.object({
-            success: z.boolean(),
-          }),
-        },
+        response: { 200: z.object({ success: z.boolean() }) },
       },
     },
     async (req, reply) => {
@@ -13962,31 +14102,59 @@ export async function sessionRoute(fastify: FastifyInstance) {
 FILE: src\modules\auth\routes\switch-context.route.ts
 ==================================================
 ```ts
+// src/modules/auth/routes/switch-context.route.ts
+// POST /auth/switch-context — allows a logged-in user to issue a new token
+// scoped to a specific tenant they belong to.
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
+import { flowExecutor } from "@/core/flows";
 import { switchContextFlow } from "../flows/switch-context.flow";
 import { SwitchContextSchema } from "../validators/auth.schemas";
+import { z } from "zod";
 
 export async function switchContextRoute(fastify: FastifyInstance) {
   fastify.post(
     "/switch-context",
     {
+      // FIXED: requireUser was missing — req.identity was undefined, flow always got 401
+      preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Authentication"],
-        summary: "Switch tenant context",
+        summary: "Switch active tenant context — re-issues token scoped to new tenant",
+        description:
+          "Allows a user who belongs to multiple tenants to switch their active identity context. " +
+          "Returns a new access + refresh token pair with the selected tenant in the `tid` claim.",
+        security: [{ bearerAuth: [] }],
         body: SwitchContextSchema,
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            data: z.object({
+              accessToken: z.string(),
+              refreshToken: z.string(),
+              idToken: z.string().nullable(),
+              expiresIn: z.number(),
+            }),
+          }),
+        },
       },
     },
     async (req, reply) => {
-      // Ensure you pass the session/userId into the context here
+      // Pull active session so switch-context can bind to it
+      const activeSession = await fastify.db.session.findFirst({
+        where: { identityId: req.identity.id, valid: true },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+
       const result = await flowExecutor.run(
         switchContextFlow,
         req.body as any,
         {
-          tenantId: null, // We are switching TO a new one
+          userId: req.identity.id,
+          tenantId: req.identity.tenantId,
+          sessionId: activeSession?.id,
           ip: req.ip,
           userAgent: req.headers["user-agent"],
-          // metadata: { sessionId: req.session.id } // Map your session ID here
         },
       );
       return reply.send({ success: true, data: result });
@@ -17339,30 +17507,28 @@ export function verifyPkce(
 FILE: src\modules\oauth\services\token.service.ts
 ==================================================
 ```ts
+// src/modules/oauth/services/token.service.ts
 import { signJwt, AccessTokenClaims } from "@/lib/jwt";
 import { generateToken } from "@/lib/crypto";
 import { randomUUID } from "crypto";
 import { addMinutes, addHours, addDays } from "date-fns";
 import { FlowContext } from "@/core/flows";
 import { config } from "@/core/config";
+import { resolvePemContent } from "@/api/plugins/jwt.plugin";
 
-// ── TTL helpers
+// ─── TTL helpers ─────────────────────────────────────────────────────────────
+
 function parseTtlToMinutes(ttl: string | number): number {
   if (typeof ttl === "number") return ttl;
   const match = ttl.match(/^(\d+)([smhd])$/);
   if (!match) return 15;
   const value = parseInt(match[1], 10);
   switch (match[2]) {
-    case "s":
-      return Math.ceil(value / 60);
-    case "m":
-      return value;
-    case "h":
-      return value * 60;
-    case "d":
-      return value * 60 * 24;
-    default:
-      return 15;
+    case "s": return Math.ceil(value / 60);
+    case "m": return value;
+    case "h": return value * 60;
+    case "d": return value * 60 * 24;
+    default: return 15;
   }
 }
 
@@ -17370,7 +17536,7 @@ function parseTtlToDays(ttl: string | number): number {
   return Math.ceil(parseTtlToMinutes(ttl) / (60 * 24));
 }
 
-// ── Service ─────────────────────────────────────────────────────────────────
+// ─── Service Types ────────────────────────────────────────────────────────────
 
 export interface IssueTokensParams {
   identityId: string;
@@ -17389,22 +17555,14 @@ export interface TokenBundle {
   expiresIn: number;
 }
 
-export class TokenService {
-  async issue(
-    ctx: FlowContext,
-    params: IssueTokensParams,
-  ): Promise<TokenBundle> {
-    const { db } = ctx;
-    const {
-      identityId,
-      clientId,
-      sessionId,
-      scopes,
-      audience,
-      tenantId,
-      nonce,
-    } = params;
+// ─── Service ─────────────────────────────────────────────────────────────────
 
+export class TokenService {
+  async issue(ctx: FlowContext, params: IssueTokensParams): Promise<TokenBundle> {
+    const { db } = ctx;
+    const { identityId, clientId, sessionId, scopes, audience, tenantId, nonce } = params;
+
+    // Resolve DB client record by clientId (field-level @unique — safe to query)
     const client = await db.client.findUniqueOrThrow({
       where: { clientId },
       select: { id: true },
@@ -17413,16 +17571,13 @@ export class TokenService {
     const now = new Date();
     const issuer = "arcid";
 
-    // Determine Strategy: If path exists and is not default empty string, use RS256
-    const isRsa = Boolean(
-      config.security.jwt.privateKey &&
-      config.security.jwt.privateKey.length > 0,
-    );
-    const signOptions = isRsa
-      ? {
-          privateKeyOrSecret: config.security.jwt.privateKey,
-          alg: "RS256" as const,
-        }
+    // ── Algorithm selection — MUST mirror jwt.plugin.ts resolvePemContent logic
+    const privateKeyPem = resolvePemContent(config.security.jwt.privateKey);
+    const publicKeyPem = resolvePemContent(config.security.jwt.publicKey);
+    const useRsa = Boolean(privateKeyPem && publicKeyPem);
+
+    const signOptions = useRsa
+      ? { privateKeyOrSecret: privateKeyPem, alg: "RS256" as const }
       : { privateKeyOrSecret: config.jwt.secret, alg: "HS256" as const };
 
     const accessTtlMinutes = parseTtlToMinutes(config.jwt.accessTtl);
@@ -17433,7 +17588,15 @@ export class TokenService {
     const refreshExpiry = addDays(now, refreshTtlDays);
     const idExpiry = addHours(now, idTokenTtlHours);
 
-    // 2. Generate Tokens
+    // ── Resolve subscription plan for embedding in JWT (avoids DB hit on every protected route)
+    const activeSub = await db.subscription.findFirst({
+      where: { identityId, status: "ACTIVE" },
+      orderBy: { startedAt: "desc" },
+      select: { plan: true },
+    });
+    const plan = activeSub?.plan ?? "FREE";
+
+    // ── Sign Access Token
     const accessJti = randomUUID();
     const accessTokenJwt = await signJwt(
       {
@@ -17441,21 +17604,22 @@ export class TokenService {
         jti: accessJti,
         scope: scopes.join(" "),
         aud: audience,
+        plan,
         ...(tenantId ? { tid: tenantId } : {}),
-      } satisfies Partial<AccessTokenClaims>,
+      } satisfies Partial<AccessTokenClaims> & { plan: string },
       { ...signOptions, expiresIn: `${accessTtlMinutes}m`, issuer },
     );
 
+    // ── Refresh Token (opaque, not a JWT — no secret needed)
     const refreshTokenValue = generateToken(48);
 
+    // ── ID Token (only when openid scope requested)
     let idTokenJwt: string | null = null;
     const idJti = randomUUID();
     let idClaims: Record<string, unknown> | null = null;
 
     if (scopes.includes("openid")) {
-      const identity = await db.identity.findUniqueOrThrow({
-        where: { id: identityId },
-      });
+      const identity = await db.identity.findUniqueOrThrow({ where: { id: identityId } });
       idClaims = {
         sub: identityId,
         iss: issuer,
@@ -17467,15 +17631,10 @@ export class TokenService {
         ...(identity.name ? { name: identity.name } : {}),
         ...(identity.picture ? { picture: identity.picture } : {}),
       };
-
-      idTokenJwt = await signJwt(idClaims, {
-        ...signOptions,
-        expiresIn: `${idTokenTtlHours}h`,
-        issuer,
-      });
+      idTokenJwt = await signJwt(idClaims, { ...signOptions, expiresIn: `${idTokenTtlHours}h`, issuer });
     }
 
-    // 3. Atomic Database Operations
+    // ── Atomic DB writes
     await db.accessToken.create({
       data: {
         token: accessTokenJwt,
@@ -17503,10 +17662,18 @@ export class TokenService {
       },
     });
 
-    await db.session.update({
+    // ── Update session with refresh token link ONLY for real sessions
+    // client_credentials uses client.id as sessionId — no session row exists for that
+    const sessionExists = await db.session.findFirst({
       where: { id: sessionId },
-      data: { refreshTokenId: refreshRecord.id },
+      select: { id: true },
     });
+    if (sessionExists) {
+      await db.session.update({
+        where: { id: sessionId },
+        data: { refreshTokenId: refreshRecord.id },
+      });
+    }
 
     if (idTokenJwt && idClaims) {
       await db.idToken.create({

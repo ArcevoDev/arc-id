@@ -74,11 +74,13 @@ async function deliverBatch(): Promise<number> {
             attempts: nextAttempt,
             lastError: err.message,
             // If final, set nextRetryAt to null to exclude it from future polling
-            nextRetryAt: isFinal ? null : new Date(Date.now() + Math.pow(4, nextAttempt) * 30_000),
+            nextRetryAt: isFinal
+              ? null
+              : new Date(Date.now() + Math.pow(4, nextAttempt) * 30_000),
           },
         });
       }
-    })
+    }),
   );
 
   return actionableEvents.length;

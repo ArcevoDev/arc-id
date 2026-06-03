@@ -1,11 +1,14 @@
+// src/modules/oauth/services/token.service.ts
 import { signJwt, AccessTokenClaims } from "@/lib/jwt";
 import { generateToken } from "@/lib/crypto";
 import { randomUUID } from "crypto";
 import { addMinutes, addHours, addDays } from "date-fns";
 import { FlowContext } from "@/core/flows";
 import { config } from "@/core/config";
+import { resolvePemContent } from "@/api/plugins/jwt.plugin";
 
-// ── TTL helpers
+// ─── TTL helpers ─────────────────────────────────────────────────────────────
+
 function parseTtlToMinutes(ttl: string | number): number {
   if (typeof ttl === "number") return ttl;
   const match = ttl.match(/^(\d+)([smhd])$/);
@@ -29,7 +32,7 @@ function parseTtlToDays(ttl: string | number): number {
   return Math.ceil(parseTtlToMinutes(ttl) / (60 * 24));
 }
 
-// ── Service ─────────────────────────────────────────────────────────────────
+// ─── Service Types ────────────────────────────────────────────────────────────
 
 export interface IssueTokensParams {
   identityId: string;
@@ -48,6 +51,8 @@ export interface TokenBundle {
   expiresIn: number;
 }
 
+// ─── Service ─────────────────────────────────────────────────────────────────
+
 export class TokenService {
   async issue(
     ctx: FlowContext,
@@ -64,6 +69,7 @@ export class TokenService {
       nonce,
     } = params;
 
+    // Resolve DB client record by clientId (field-level @unique — safe to query)
     const client = await db.client.findUniqueOrThrow({
       where: { clientId },
       select: { id: true },
@@ -72,16 +78,13 @@ export class TokenService {
     const now = new Date();
     const issuer = "arcid";
 
-    // Determine Strategy: If path exists and is not default empty string, use RS256
-    const isRsa = Boolean(
-      config.security.jwt.privateKey &&
-      config.security.jwt.privateKey.length > 0,
-    );
-    const signOptions = isRsa
-      ? {
-          privateKeyOrSecret: config.security.jwt.privateKey,
-          alg: "RS256" as const,
-        }
+    // ── Algorithm selection — MUST mirror jwt.plugin.ts resolvePemContent logic
+    const privateKeyPem = resolvePemContent(config.security.jwt.privateKey);
+    const publicKeyPem = resolvePemContent(config.security.jwt.publicKey);
+    const useRsa = Boolean(privateKeyPem && publicKeyPem);
+
+    const signOptions = useRsa
+      ? { privateKeyOrSecret: privateKeyPem, alg: "RS256" as const }
       : { privateKeyOrSecret: config.jwt.secret, alg: "HS256" as const };
 
     const accessTtlMinutes = parseTtlToMinutes(config.jwt.accessTtl);
@@ -92,7 +95,15 @@ export class TokenService {
     const refreshExpiry = addDays(now, refreshTtlDays);
     const idExpiry = addHours(now, idTokenTtlHours);
 
-    // 2. Generate Tokens
+    // ── Resolve subscription plan for embedding in JWT (avoids DB hit on every protected route)
+    const activeSub = await db.subscription.findFirst({
+      where: { identityId, status: "ACTIVE" },
+      orderBy: { startedAt: "desc" },
+      select: { plan: true },
+    });
+    const plan = activeSub?.plan ?? "FREE";
+
+    // ── Sign Access Token
     const accessJti = randomUUID();
     const accessTokenJwt = await signJwt(
       {
@@ -100,13 +111,16 @@ export class TokenService {
         jti: accessJti,
         scope: scopes.join(" "),
         aud: audience,
+        plan,
         ...(tenantId ? { tid: tenantId } : {}),
-      } satisfies Partial<AccessTokenClaims>,
+      } satisfies Partial<AccessTokenClaims> & { plan: string },
       { ...signOptions, expiresIn: `${accessTtlMinutes}m`, issuer },
     );
 
+    // ── Refresh Token (opaque, not a JWT — no secret needed)
     const refreshTokenValue = generateToken(48);
 
+    // ── ID Token (only when openid scope requested)
     let idTokenJwt: string | null = null;
     const idJti = randomUUID();
     let idClaims: Record<string, unknown> | null = null;
@@ -126,7 +140,6 @@ export class TokenService {
         ...(identity.name ? { name: identity.name } : {}),
         ...(identity.picture ? { picture: identity.picture } : {}),
       };
-
       idTokenJwt = await signJwt(idClaims, {
         ...signOptions,
         expiresIn: `${idTokenTtlHours}h`,
@@ -134,7 +147,7 @@ export class TokenService {
       });
     }
 
-    // 3. Atomic Database Operations
+    // ── Atomic DB writes
     await db.accessToken.create({
       data: {
         token: accessTokenJwt,
@@ -162,10 +175,18 @@ export class TokenService {
       },
     });
 
-    await db.session.update({
+    // ── Update session with refresh token link ONLY for real sessions
+    // client_credentials uses client.id as sessionId — no session row exists for that
+    const sessionExists = await db.session.findFirst({
       where: { id: sessionId },
-      data: { refreshTokenId: refreshRecord.id },
+      select: { id: true },
     });
+    if (sessionExists) {
+      await db.session.update({
+        where: { id: sessionId },
+        data: { refreshTokenId: refreshRecord.id },
+      });
+    }
 
     if (idTokenJwt && idClaims) {
       await db.idToken.create({

@@ -1,6 +1,10 @@
+// src/api/plugins/auth-guard.plugin.ts
 import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { ApiError } from "@/core/errors";
+import type { SubscriptionPlan } from "@/prisma-client";
+
+// ─── Augment Fastify Request ─────────────────────────────────────────────────
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -8,64 +12,109 @@ declare module "fastify" {
       id: string;
       tenantId: string | null;
       scope: string[];
+      /** Current subscription plan — resolved from DB on each protected request */
+      plan: SubscriptionPlan;
     };
   }
-}
-
-/**
- * Provides reusable preHandler hooks for route-level auth enforcement.
- *
- * Usage in routes:
- *   fastify.get("/me", { preHandler: fastify.auth.requireUser }, handler)
- *   fastify.post("/admin", { preHandler: fastify.auth.requireScope("admin:write") }, handler)
- */
-// Add to your identity interface in the future:
-// roles: string[];
-// permissions: string[];
-
-export const authGuardPlugin = fp(
-  async (fastify: FastifyInstance) => {
-    const requireUser = async (req: FastifyRequest, reply: FastifyReply) => {
-      try {
-        await req.jwtVerify();
-        const payload = req.user as any;
-
-        req.identity = {
-          id: payload.sub,
-          tenantId: payload.tid ?? null,
-          scope: (payload.scope ?? "").split(" ").filter(Boolean),
-        };
-      } catch {
-        throw ApiError.unauthorized("Invalid or expired access token");
-      }
-    };
-
-    const requireScope =
-      (requiredScope: string) => async (req: FastifyRequest) => {
-        await requireUser(req, null as any);
-
-        // Check JWT Scope
-        if (req.identity.scope.includes(requiredScope)) return;
-
-        // TODO: If you implement DB-backed RBAC, check it here:
-        // const hasPermission = await fastify.db.permission.check(req.identity.id, requiredScope);
-        // if (!hasPermission) throw ApiError.forbidden(...);
-
-        throw ApiError.forbidden(`Scope '${requiredScope}' is required`);
-      };
-
-    fastify.decorate("auth", { requireUser, requireScope });
-  },
-  { name: "arc-id:auth-guard", dependencies: ["arc-id:jwt", "arc-id:db"] },
-);
-
-declare module "fastify" {
   interface FastifyInstance {
     auth: {
       requireUser: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
       requireScope: (
         scope: string,
       ) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
+      requirePlan: (
+        minPlan: SubscriptionPlan,
+      ) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
     };
   }
 }
+
+// ─── Plan Hierarchy ──────────────────────────────────────────────────────────
+
+const PLAN_ORDER: Record<SubscriptionPlan, number> = {
+  FREE: 0,
+  PRO: 1,
+  ENTERPRISE: 2,
+};
+
+// ─── Plugin ──────────────────────────────────────────────────────────────────
+
+export const authGuardPlugin = fp(
+  async (fastify: FastifyInstance) => {
+    /**
+     * Verifies the Bearer JWT and resolves identity + active subscription plan.
+     * Must be the base of every other guard — requireScope and requirePlan both
+     * call this first.
+     */
+    const requireUser = async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        await req.jwtVerify();
+        const payload = req.user as any;
+
+        // Resolve active subscription for this identity (defaults to FREE)
+        let plan: SubscriptionPlan = "FREE";
+        if (payload.sub) {
+          const sub = await fastify.db.subscription.findFirst({
+            where: { identityId: payload.sub, status: "ACTIVE" },
+            orderBy: { startedAt: "desc" },
+            select: { plan: true },
+          });
+          if (sub?.plan) plan = sub.plan;
+        }
+
+        req.identity = {
+          id: payload.sub,
+          tenantId: payload.tid ?? null,
+          scope: (payload.scope ?? "").split(" ").filter(Boolean),
+          plan,
+        };
+      } catch (err) {
+        // Re-throw ApiError instances (e.g. from nested guards) as-is
+        if (err instanceof ApiError) throw err;
+        throw ApiError.unauthorized("Invalid or expired access token");
+      }
+    };
+
+    /**
+     * Extends requireUser with a scope check against the JWT `scope` claim.
+     * To grant admin:write, issue a token with that scope explicitly.
+     */
+    const requireScope =
+      (requiredScope: string) =>
+      async (req: FastifyRequest, reply: FastifyReply) => {
+        await requireUser(req, reply);
+        if (!req.identity.scope.includes(requiredScope)) {
+          throw ApiError.forbidden(`Scope '${requiredScope}' is required`);
+        }
+      };
+
+    /**
+     * Extends requireUser with a minimum subscription plan check.
+     *
+     * Usage: preHandler: fastify.auth.requirePlan("PRO")
+     *
+     * Returns 403 with a clear upgrade message when the plan is insufficient.
+     * Returns 402 (Payment Required) so the frontend can redirect to upgrade.
+     */
+    const requirePlan =
+      (minPlan: SubscriptionPlan) =>
+      async (req: FastifyRequest, reply: FastifyReply) => {
+        await requireUser(req, reply);
+
+        if (PLAN_ORDER[req.identity.plan] < PLAN_ORDER[minPlan]) {
+          reply.status(402).send({
+            success: false,
+            error: "UPGRADE_REQUIRED",
+            message: `This feature requires a ${minPlan} subscription`,
+            currentPlan: req.identity.plan,
+            requiredPlan: minPlan,
+          });
+          // Halt the request lifecycle
+          return reply;
+        }
+      };
+
+    fastify.decorate("auth", { requireUser, requireScope, requirePlan });
+  },
+  { name: "arc-id:auth-guard", dependencies: ["arc-id:jwt", "arc-id:db"] },
+);

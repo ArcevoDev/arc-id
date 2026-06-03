@@ -1,26 +1,30 @@
+// src/modules/auth/routes/session.route.ts
+// NOTE: Mounted under /auth prefix — full paths are /auth/sessions and /auth/sessions/:id
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 export async function sessionRoute(fastify: FastifyInstance) {
+  // GET /auth/sessions
   fastify.get(
     "/sessions",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Session Infrastructure"],
-        summary: "List active browser/device authentication records",
+        summary: "List active browser/device authentication sessions",
         security: [{ bearerAuth: [] }],
         response: {
           200: z.object({
             success: z.boolean(),
             data: z.array(
               z.object({
-                id: z.string().uuid(),
-                identityId: z.string().uuid(),
+                id: z.string(),
+                identityId: z.string(),
                 userAgent: z.string().nullable(),
                 ip: z.string().nullable(),
                 valid: z.boolean(),
-                createdAt: z.date(),
+                createdAt: z.coerce.string(),
+                expiresAt: z.coerce.string(),
               }),
             ),
           }),
@@ -36,22 +40,20 @@ export async function sessionRoute(fastify: FastifyInstance) {
     },
   );
 
+  // DELETE /auth/sessions/:id
   fastify.delete(
     "/sessions/:id",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Session Infrastructure"],
-        summary: "Invalidate/revoke a distinct user session entry",
+        summary: "Revoke a specific session",
         security: [{ bearerAuth: [] }],
         params: z.object({
-          id: z.string().uuid("Invalid session tracking key standard format"),
+          // Sessions use cuid() — NOT uuid — fix from previous uuid validation
+          id: z.string().cuid("Invalid session ID format"),
         }),
-        response: {
-          200: z.object({
-            success: z.boolean(),
-          }),
-        },
+        response: { 200: z.object({ success: z.boolean() }) },
       },
     },
     async (req, reply) => {

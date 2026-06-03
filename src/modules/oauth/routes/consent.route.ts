@@ -1,17 +1,16 @@
-// src/modules/oauth/routes/consent.route.ts
 import type { FastifyInstance } from "fastify";
-import { ConsentService } from "../services/consent.service";
 import { z } from "zod";
+import { commonErrorSchema } from "@/core/errors/error-schemas";
 
 export async function consentRoute(fastify: FastifyInstance) {
-  // Grant consent
+  // POST /oauth/consent
   fastify.post(
     "/consent",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["OAuth2 / OIDC Server"],
-        summary: "Grant user consent for an OAuth2 client",
+        tags: ["OAuth 2.0 / OIDC Protocol"],
+        summary: "Grant scopes for an OAuth client on behalf of the current user",
         security: [{ bearerAuth: [] }],
         body: z.object({
           clientId: z.string().min(1),
@@ -19,70 +18,112 @@ export async function consentRoute(fastify: FastifyInstance) {
         }),
         response: {
           200: z.object({ success: z.boolean() }),
+          404: commonErrorSchema,
         },
       },
     },
     async (req, reply) => {
-      const { clientId, scopes } = req.body as {
-        clientId: string;
-        scopes: string[];
-      };
-      const consentService = new ConsentService(fastify.db);
-      await consentService.grant(req.identity.id, clientId, scopes);
+      const { clientId, scopes } = req.body as { clientId: string; scopes: string[] };
+
+      const client = await fastify.db.client.findFirst({
+        where: { clientId },
+        select: { id: true, scopes: true },
+      });
+
+      if (!client) {
+        return reply.status(404).send({ success: false, error: "CLIENT_NOT_FOUND" });
+      }
+
+      // Cast JsonValue to string array for includes()
+      const clientScopes = (client.scopes as string[]) || [];
+      const allowed = scopes.filter((s) => clientScopes.includes(s));
+
+      await fastify.db.oAuthConsent.upsert({
+        where: {
+          identityId_clientId: {
+            identityId: req.identity.id,
+            clientId: client.id,
+          },
+        },
+        update: {
+          scopes: allowed,
+          updatedAt: new Date(),
+        },
+        create: {
+          identityId: req.identity.id,
+          clientId: client.id,
+          scopes: allowed,
+        },
+      });
+
+      void fastify.db.auditLog.create({
+        data: {
+          actionId: "OAUTH_CONSENT_GRANTED",
+          identityId: req.identity.id,
+          ip: req.ip,
+          userAgent: req.headers["user-agent"],
+          metadata: { clientId, scopes: allowed },
+        },
+      });
+
       return reply.send({ success: true });
     },
   );
 
-  // Revoke consent
+  // DELETE /oauth/consent/:clientId
   fastify.delete(
-    "/consent",
+    "/consent/:clientId",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["OAuth2 / OIDC Server"],
-        summary: "Revoke user consent for an OAuth2 client",
+        tags: ["OAuth 2.0 / OIDC Protocol"],
+        summary: "Revoke previously granted consent",
         security: [{ bearerAuth: [] }],
-        body: z.object({
-          clientId: z.string().min(1),
-        }),
-        response: {
-          200: z.object({ success: z.boolean() }),
-        },
+        params: z.object({ clientId: z.string().min(1) }),
+        response: { 200: z.object({ success: z.boolean() }) },
       },
     },
     async (req, reply) => {
-      const { clientId } = req.body as { clientId: string };
-      const consentService = new ConsentService(fastify.db);
-      await consentService.revoke(req.identity.id, clientId);
+      const { clientId } = req.params as { clientId: string };
+      const client = await fastify.db.client.findFirst({ where: { clientId }, select: { id: true } });
+      if (client) {
+        await fastify.db.oAuthConsent.deleteMany({
+          where: { identityId: req.identity.id, clientId: client.id },
+        });
+      }
       return reply.send({ success: true });
     },
   );
 
-  // List consents
+  // GET /oauth/consents
   fastify.get(
     "/consents",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["OAuth2 / OIDC Server"],
-        summary: "List active OAuth2 consents for current identity",
+        tags: ["OAuth 2.0 / OIDC Protocol"],
+        summary: "List all granted OAuth consents",
         security: [{ bearerAuth: [] }],
         response: {
-          200: z.object({
-            success: z.boolean(),
-            data: z.array(z.any()),
-          }),
+          200: z.object({ success: z.boolean(), data: z.array(z.any()) }),
         },
       },
     },
     async (req, reply) => {
       const consents = await fastify.db.oAuthConsent.findMany({
-        where: { identityId: req.identity.id, revokedAt: null },
-        include: {
-          client: { select: { name: true, clientId: true, logoUri: true } },
-        },
+        where: { identityId: req.identity.id },
+        include: { client: { select: { clientId: true, name: true } } },
       });
-      return reply.send({ success: true, data: consents });
+
+      return reply.send({
+        success: true,
+        data: consents.map((c) => ({
+          clientId: c.client.clientId,
+          clientName: c.client.name,
+          scopes: c.scopes,
+          grantedAt: c.grantedAt,
+        })),
+      });
     },
   );
 }

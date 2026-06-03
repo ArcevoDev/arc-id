@@ -1,3 +1,5 @@
+// src/modules/tenant/routes/signing-key.route.ts
+// NOTE: Mounted under /tenants prefix — full paths are /tenants/:tenantId/signing-keys
 import type { FastifyInstance } from "fastify";
 import { generateKeyPair, exportSPKI, exportPKCS8 } from "jose";
 import { randomUUID } from "crypto";
@@ -13,18 +15,20 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
-        summary: "Generate an asymmetric EC keypair for token signing",
+        summary:
+          "Generate an asymmetric EC keypair bound to this tenant for VC/token signing",
         security: [{ bearerAuth: [] }],
-        params: z.object({ tenantId: z.string().uuid() }),
+        // FIXED: was z.string().uuid() — tenants use cuid(), not uuid
+        params: z.object({ tenantId: z.string().cuid() }),
         response: {
           201: z.object({
             success: z.boolean(),
             data: z.object({
-              kid: z.string().uuid(),
+              kid: z.string(),
               algorithm: z.string(),
               publicKey: z.string(),
               status: z.string(),
-              createdAt: z.date(),
+              createdAt: z.coerce.string(),
             }),
           }),
         },
@@ -33,7 +37,6 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
 
-      // Use TenantService to check membership via dynamic Role model
       const tenantService = new TenantService(fastify.db);
       await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
@@ -81,7 +84,7 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
           algorithm: signingKey.algorithm,
           publicKey: publicKeySpki,
           status: signingKey.status,
-          createdAt: signingKey.createdAt,
+          createdAt: signingKey.createdAt.toISOString(),
         },
       });
     },
@@ -94,9 +97,9 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
-        summary: "List active signing key metadata",
+        summary: "List active signing key metadata for this tenant",
         security: [{ bearerAuth: [] }],
-        params: z.object({ tenantId: z.string().uuid() }),
+        params: z.object({ tenantId: z.string().cuid() }),
         response: {
           200: z.object({ success: z.boolean(), data: z.array(z.any()) }),
         },
@@ -105,12 +108,15 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
 
+      const tenantService = new TenantService(fastify.db);
+      await tenantService.assertMembership(tenantId, req.identity.id);
+
       const keys = await fastify.db.tenantSigningKey.findMany({
-        where: { tenantId, status: "ACTIVE" }, // ← was isActive: true
+        where: { tenantId, status: "ACTIVE" },
         select: {
           kid: true,
           algorithm: true,
-          status: true, // ← was isActive
+          status: true,
           createdAt: true,
           expiresAt: true,
           kmsProvider: true,
@@ -128,11 +134,11 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
-        summary: "Revoke a signing key",
+        summary: "Revoke a tenant signing key by KID",
         security: [{ bearerAuth: [] }],
         params: z.object({
-          tenantId: z.string().uuid(),
-          kid: z.string().uuid(),
+          tenantId: z.string().cuid(),
+          kid: z.string().min(1),
         }),
         response: {
           200: z.object({ success: z.boolean(), message: z.string() }),
@@ -146,13 +152,13 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       const updateResult = await fastify.db.tenantSigningKey.updateMany({
-        where: { tenantId, kid, status: "ACTIVE" }, // ← was isActive: true
-        data: { status: "REVOKED" }, // ← was isActive: false
+        where: { tenantId, kid, status: "ACTIVE" },
+        data: { status: "REVOKED" },
       });
 
       if (updateResult.count === 0) {
         throw ApiError.notFound(
-          "Active signing key not found or already deactivated",
+          "Active signing key not found or already revoked",
         );
       }
 

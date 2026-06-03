@@ -1,23 +1,27 @@
 // src/modules/tenant/routes/did.route.ts
+// NOTE: Mounted under /tenants prefix — full paths are /tenants/:tenantId/did
 import type { FastifyInstance } from "fastify";
 import { generateKeyPair, exportSPKI } from "jose";
-import { randomUUID } from "crypto";
 import { z } from "zod";
 import { TenantService } from "../services/tenant.service";
 
 export async function tenantDidRoute(fastify: FastifyInstance) {
+  // POST /tenants/:tenantId/did
   fastify.post(
     "/:tenantId/did",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Management Architecture"],
-        summary: "Provision a did:web DID for this tenant",
+        summary: "Provision a did:web Decentralized Identifier for this tenant",
         security: [{ bearerAuth: [] }],
-        params: z.object({ tenantId: z.string().uuid() }),
+        // FIXED: was z.string().uuid() — tenants use cuid()
+        params: z.object({ tenantId: z.string().cuid() }),
         body: z.object({
-          domain: z.string().min(1), // e.g. "health.arcevo.io"
+          domain: z.string().min(1).describe("e.g. health.arcevocirqle.com.ng"),
         }),
+        // FIXED: removed conflicting 409 response schema (causes Fastify schema conflict)
+        // Errors are handled via the global error handler
         response: {
           201: z.object({
             success: z.boolean(),
@@ -38,7 +42,6 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
       const tenantService = new TenantService(fastify.db);
       await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
-      // Check if DID already exists
       const existing = await fastify.db.decentralizedIdentifier.findUnique({
         where: { tenantId },
       });
@@ -47,10 +50,10 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
           success: false,
           error: "CONFLICT",
           message: "Tenant already has a DID provisioned",
-        } as any);
+        });
       }
 
-      // Generate EC keypair
+      // Generate EC keypair for this tenant's DID
       const { publicKey } = await generateKeyPair("ES256");
       const publicKeySpki = await exportSPKI(publicKey);
       const cleanBase64 = publicKeySpki
@@ -60,7 +63,10 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
 
       const did = `did:web:${domain}`;
       const didDocument = {
-        "@context": ["[w3.org](https://www.w3.org/ns/did/v1)"],
+        "@context": [
+          "https://www.w3.org/ns/did/v1",
+          "https://w3id.org/security/suites/jws-2020/v1",
+        ],
         id: did,
         verificationMethod: [
           {
@@ -91,27 +97,42 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
     },
   );
 
+  // GET /tenants/:tenantId/did
   fastify.get(
     "/:tenantId/did",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Tenant Management Architecture"],
-        summary: "Fetch tenant DID document",
+        summary: "Fetch the DID document for this tenant",
         security: [{ bearerAuth: [] }],
-        params: z.object({ tenantId: z.string().uuid() }),
+        params: z.object({ tenantId: z.string().cuid() }),
         response: {
           200: z.object({ success: z.boolean(), data: z.any() }),
-          404: z.object({ error: z.string() }),
+          404: z.object({
+            success: z.boolean(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
     },
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
+
+      const tenantService = new TenantService(fastify.db);
+      await tenantService.assertMembership(tenantId, req.identity.id);
+
       const did = await fastify.db.decentralizedIdentifier.findUnique({
         where: { tenantId },
       });
-      if (!did) return reply.status(404).send({ error: "NOT_FOUND" } as any);
+      if (!did) {
+        return reply.status(404).send({
+          success: false,
+          error: "NOT_FOUND",
+          message: "No DID provisioned for this tenant",
+        });
+      }
       return reply.send({
         success: true,
         data: { did: did.id, document: did.didDocument },
