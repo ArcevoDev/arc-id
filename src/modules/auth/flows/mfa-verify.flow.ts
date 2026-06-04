@@ -66,7 +66,7 @@ export const mfaVerifyFlow: Flow<Input, Output> = {
       });
     }
 
-    void auditService.log({
+    await auditService.log({
       action: "MFA_VERIFICATION_SUCCESS",
       identityId: session.identityId,
       ip: ctx.ip,

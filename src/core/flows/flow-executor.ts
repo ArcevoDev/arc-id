@@ -17,8 +17,9 @@ async function withTx<T>(
   options?: { timeout?: number; maxWait?: number },
 ): Promise<T> {
   return prisma.$transaction(fn, {
-    timeout: options?.timeout ?? 10_000,
-    maxWait: options?.maxWait ?? 5_000,
+    // Increased standard timeout threshold safely to 25 seconds for long-lived orchestration steps
+    timeout: options?.timeout ?? 25_000,
+    maxWait: options?.maxWait ?? 10_000,
   });
 }
 
@@ -35,7 +36,6 @@ export class FlowExecutor {
     const start = Date.now();
     const useTransaction = opts?.transaction ?? true;
 
-    // Centralized resolution: Default to SYSTEM if tenantId is missing
     const resolvedTenantId = ctx.tenantId ?? this.SYSTEM_TENANT_ID;
 
     try {
@@ -48,15 +48,19 @@ export class FlowExecutor {
             ...ctx,
             tenantId: resolvedTenantId,
             requestId: traceId,
-            db: tx, // Transaction client injected
+            db: tx, 
           };
           const result = await flow.execute(parsedInput, enrichedCtx);
           if (flow.outputSchema) flow.outputSchema.parse(result);
+          
+          logger.info(`[FLOW OK] ${flow.name}`, {
+            traceId,
+            ms: Date.now() - start,
+          });
           return result;
         });
       }
 
-      // No transaction — use global client directly
       const parsedInput = flow.inputSchema.parse(input);
       const enrichedCtx: FlowContext = {
         ...ctx,
@@ -76,15 +80,12 @@ export class FlowExecutor {
       const message = err instanceof Error ? err.message : "Unknown error";
       logger.error(`[FLOW FAIL] ${flow.name}`, { traceId, message });
 
-      // Already a typed error — re-throw as-is
       if (err instanceof ApiError) throw err;
 
-      // Domain error → map to HTTP error
       if (err instanceof FlowError) {
         throw new ApiError(err.message, err.statusCode ?? 400, err.code);
       }
 
-      // Unexpected — wrap generically
       throw new ApiError(
         config.base.env === "production"
           ? "An unexpected error occurred"

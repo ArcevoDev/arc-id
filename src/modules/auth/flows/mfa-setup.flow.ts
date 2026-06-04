@@ -67,7 +67,7 @@ export const mfaConfirmFlow: Flow<
       );
     }
 
-    void auditService.log({ action: "MFA_ENABLED", identityId: ctx.userId }, ctx.db);
+    await auditService.log({ action: "MFA_ENABLED", identityId: ctx.userId }, ctx.db);
 
     return { recoveryCodes };
   },
@@ -95,5 +95,5 @@ export async function disableMfa(
     });
   }
 
-  void auditService.log({ action: "MFA_DISABLED", identityId }, db);
+  await auditService.log({ action: "MFA_DISABLED", identityId }, db);
 }

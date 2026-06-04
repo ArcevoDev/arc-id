@@ -81,7 +81,7 @@ export async function profileRoute(fastify: FastifyInstance) {
         },
       });
 
-      void fastify.db.auditLog.create({
+      await fastify.db.auditLog.create({
         data: {
           actionId: "PROFILE_UPDATED",
           identityId: req.identity.id,
@@ -141,7 +141,7 @@ export async function profileRoute(fastify: FastifyInstance) {
       });
 
       // 4. Audit log
-      void fastify.db.auditLog.create({
+      await fastify.db.auditLog.create({
         data: {
           actionId: "USER_DELETED",
           identityId,

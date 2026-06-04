@@ -1,8 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { commonErrorSchema } from "@/core/errors/error-schemas";
+import type { PrismaClient } from "@/prisma-client";
 
 export async function consentRoute(fastify: FastifyInstance) {
+  // Cast fastify.db to ensure explicit type mapping inside the route module scope
+  const db = fastify.db as PrismaClient;
+
   // POST /oauth/consent
   fastify.post(
     "/consent",
@@ -25,7 +29,7 @@ export async function consentRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { clientId, scopes } = req.body as { clientId: string; scopes: string[] };
 
-      const client = await fastify.db.client.findFirst({
+      const client = await db.client.findFirst({
         where: { clientId },
         select: { id: true, scopes: true },
       });
@@ -38,7 +42,8 @@ export async function consentRoute(fastify: FastifyInstance) {
       const clientScopes = (client.scopes as string[]) || [];
       const allowed = scopes.filter((s) => clientScopes.includes(s));
 
-      await fastify.db.oAuthConsent.upsert({
+      // Explicitly types and calls the upsert layout payload
+      await db.oAuthConsent.upsert({
         where: {
           identityId_clientId: {
             identityId: req.identity.id,
@@ -56,7 +61,7 @@ export async function consentRoute(fastify: FastifyInstance) {
         },
       });
 
-      void fastify.db.auditLog.create({
+      await db.auditLog.create({
         data: {
           actionId: "OAUTH_CONSENT_GRANTED",
           identityId: req.identity.id,
@@ -85,9 +90,9 @@ export async function consentRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const { clientId } = req.params as { clientId: string };
-      const client = await fastify.db.client.findFirst({ where: { clientId }, select: { id: true } });
+      const client = await db.client.findFirst({ where: { clientId }, select: { id: true } });
       if (client) {
-        await fastify.db.oAuthConsent.deleteMany({
+        await db.oAuthConsent.deleteMany({
           where: { identityId: req.identity.id, clientId: client.id },
         });
       }
@@ -110,7 +115,7 @@ export async function consentRoute(fastify: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      const consents = await fastify.db.oAuthConsent.findMany({
+      const consents = await db.oAuthConsent.findMany({
         where: { identityId: req.identity.id },
         include: { client: { select: { clientId: true, name: true } } },
       });

@@ -15,7 +15,7 @@ export const logoutFlow: Flow<z.infer<typeof LogoutSchema>, Record<string, never
     const sessionRepo = new SessionRepository(ctx.db);
     await sessionRepo.revokeById(input.sessionId);
 
-    void auditService.log({
+    await auditService.log({
       action: "SESSION_REVOKED",
       identityId: ctx.userId,
       ip: ctx.ip,

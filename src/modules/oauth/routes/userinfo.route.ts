@@ -1,3 +1,5 @@
+// src/modules/oauth/routes/userinfo.route.ts
+// FIX: sub was z.string().uuid() — identities use cuid → serializer threw on every /userinfo call
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
@@ -8,15 +10,16 @@ export async function userinfoRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["OAuth2 / OIDC Server"],
-        summary: "OIDC profile resource data payload provider mapping",
+        summary: "OIDC UserInfo endpoint",
         security: [{ bearerAuth: [] }],
         response: {
           200: z.object({
-            sub: z.string().uuid(),
-            email: z.string().email(),
+            sub: z.string(),          // FIX: was z.string().uuid() — identities are cuid
+            email: z.string().nullable(),
             email_verified: z.boolean(),
             name: z.string().nullable(),
-            picture: z.string().url().nullable(),
+            picture: z.string().nullable(),
+            plan: z.string(),
           }),
         },
       },
@@ -31,6 +34,7 @@ export async function userinfoRoute(fastify: FastifyInstance) {
         email_verified: identity.emailVerified,
         name: identity.name,
         picture: identity.picture,
+        plan: req.identity.plan,
       });
     },
   );

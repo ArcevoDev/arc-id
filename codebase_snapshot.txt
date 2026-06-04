@@ -46,7 +46,23 @@ arc-id/
 │   └── public.pem
 ├── prisma/
 │   ├── migrations/
-│   │   ├── 20260603120005_make_oauth_consent_compound_unique/
+│   │   ├── 20260527200711_db_schema_lockedin/
+│   │   │   └── migration.sql
+│   │   ├── 20260528050032_add_signing_key_audit_actions/
+│   │   │   └── migration.sql
+│   │   ├── 20260528171740/
+│   │   │   └── migration.sql
+│   │   ├── 20260530044938/
+│   │   │   └── migration.sql
+│   │   ├── 20260530182359_final_schema/
+│   │   │   └── migration.sql
+│   │   ├── 20260531234210_locked_in/
+│   │   │   └── migration.sql
+│   │   ├── 20260601124942_fix_webhook_model/
+│   │   │   └── migration.sql
+│   │   ├── 20260603092158_multi_provider_billing_consent_policy/
+│   │   │   └── migration.sql
+│   │   ├── 20260603095200_auditlog_additions/
 │   │   │   └── migration.sql
 │   │   └── migration_lock.toml
 │   ├── schema.prisma
@@ -76,13 +92,13 @@ arc-id/
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx
+│   ├── components/
 │   ├── core/
 │   │   ├── config/
 │   │   │   ├── config.ts
 │   │   │   ├── env.validator.ts
 │   │   │   └── index.ts
 │   │   ├── db/
-│   │   │   ├── db-client.ts
 │   │   │   ├── index.ts
 │   │   │   ├── prisma-helpers.ts
 │   │   │   └── prisma.ts
@@ -619,7 +635,7 @@ FILE: .zhanlu\.spec-state.json
 ```json
 {
   "initialized": true,
-  "lastUpdate": 1780487672699,
+  "lastUpdate": 1780473625075,
   "version": "1.0.0",
   "scriptCount": 10,
   "templateCount": 5,
@@ -629,7 +645,7 @@ FILE: .zhanlu\.spec-state.json
     "missingFiles": []
   },
   "metadata": {
-    "initializedAt": 1780411708211,
+    "initializedAt": 1779655253339,
     "platform": "win32",
     "extensionVersion": "1.0.0"
   }
@@ -4716,11 +4732,14 @@ export default config;
 
 
 ==================================================
-FILE: prisma\migrations\20260603120005_make_oauth_consent_compound_unique\migration.sql
+FILE: prisma\migrations\20260527200711_db_schema_lockedin\migration.sql
 ==================================================
 ```sql
 -- CreateEnum
 CREATE TYPE "MfaType" AS ENUM ('TOTP', 'EMAIL', 'SMS');
+
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('ADMIN', 'USER', 'GUEST', 'MEMBER', 'CUSTOM');
 
 -- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'VERIFIED', 'SUSPENDED', 'BANNED', 'DELETED', 'PENDING');
@@ -4738,19 +4757,13 @@ CREATE TYPE "TokenType" AS ENUM ('VERIFY_EMAIL', 'RESET_PASSWORD', 'MAGIC_LINK')
 CREATE TYPE "KeyType" AS ENUM ('Ed25519VerificationKey2020', 'X25519KeyAgreementKey2020', 'JsonWebKey2020', 'Multikey');
 
 -- CreateEnum
-CREATE TYPE "KeyStatus" AS ENUM ('ACTIVE', 'ARCHIVED', 'REVOKED');
-
--- CreateEnum
-CREATE TYPE "IdpProtocol" AS ENUM ('SAML2', 'OIDC', 'OAUTH2');
-
--- CreateEnum
 CREATE TYPE "StatusPurpose" AS ENUM ('REVOCATION', 'SUSPENSION');
 
 -- CreateEnum
 CREATE TYPE "VcFormat" AS ENUM ('JWT', 'SD_JWT', 'JSON_LD', 'DataIntegrity');
 
 -- CreateEnum
-CREATE TYPE "AuditLogAction" AS ENUM ('USER_LOGIN_SUCCESS', 'USER_LOGIN_FAILED', 'USER_REGISTERED', 'USER_DELETED', 'PROFILE_UPDATED', 'PASSWORD_CHANGED', 'MFA_ENABLED', 'MFA_DISABLED', 'MFA_RECOVERY_USED', 'TOKEN_REVOKED', 'SESSION_CREATED', 'SESSION_REVOKED', 'PASSKEY_REGISTERED', 'PASSKEY_USED', 'CREDENTIAL_ISSUED', 'CREDENTIAL_REVOKED', 'OAUTH_CONSENT_GRANTED', 'OAUTH_CONSENT_REVOKED', 'TENANT_MEMBER_ADDED', 'TENANT_MEMBER_REMOVED', 'TENANT_POLICY_UPDATED', 'SIGNING_KEY_CREATED', 'SIGNING_KEY_REVOKED', 'IDENTITY_CREATED', 'IDENTITY_SUSPENDED', 'IDENTITY_DELETED', 'IDP_CONNECTION_CREATED', 'IDP_CONNECTION_UPDATED');
+CREATE TYPE "AuditLogAction" AS ENUM ('USER_LOGIN_SUCCESS', 'USER_LOGIN_FAILED', 'USER_REGISTERED', 'PASSWORD_CHANGED', 'MFA_ENABLED', 'MFA_DISABLED', 'MFA_RECOVERY_USED', 'TOKEN_REVOKED', 'SESSION_CREATED', 'SESSION_REVOKED', 'CREDENTIAL_ISSUED', 'CREDENTIAL_REVOKED', 'OAUTH_CONSENT_GRANTED', 'OAUTH_CONSENT_REVOKED', 'TENANT_MEMBER_ADDED', 'TENANT_MEMBER_REMOVED');
 
 -- CreateTable
 CREATE TABLE "Identity" (
@@ -4759,6 +4772,7 @@ CREATE TABLE "Identity" (
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
     "name" TEXT,
     "picture" TEXT,
+    "globalRole" "Role" NOT NULL DEFAULT 'USER',
     "status" "UserStatus" NOT NULL DEFAULT 'PENDING',
     "metadata" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -4852,21 +4866,6 @@ CREATE TABLE "Tenant" (
 );
 
 -- CreateTable
-CREATE TABLE "TenantBranding" (
-    "id" TEXT NOT NULL,
-    "tenantId" TEXT NOT NULL,
-    "customDomain" TEXT,
-    "primaryColor" TEXT,
-    "logoUrl" TEXT,
-    "companyName" TEXT,
-    "emailTemplates" JSONB,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "TenantBranding_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "TenantSigningKey" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
@@ -4875,7 +4874,7 @@ CREATE TABLE "TenantSigningKey" (
     "publicKey" BYTEA NOT NULL,
     "algorithm" TEXT NOT NULL,
     "kmsProvider" TEXT,
-    "status" "KeyStatus" NOT NULL DEFAULT 'ACTIVE',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expiresAt" TIMESTAMP(3),
 
@@ -4883,60 +4882,11 @@ CREATE TABLE "TenantSigningKey" (
 );
 
 -- CreateTable
-CREATE TABLE "IdpConnection" (
-    "id" TEXT NOT NULL,
-    "tenantId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "protocol" "IdpProtocol" NOT NULL,
-    "enabled" BOOLEAN NOT NULL DEFAULT true,
-    "clientId" TEXT,
-    "clientSecret" TEXT,
-    "entryPoint" TEXT,
-    "issuer" TEXT,
-    "cert" TEXT,
-    "metadataUrl" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "IdpConnection_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Role" (
-    "id" TEXT NOT NULL,
-    "tenantId" TEXT NOT NULL DEFAULT 'SYSTEM',
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Permission" (
-    "id" TEXT NOT NULL,
-    "action" TEXT NOT NULL,
-    "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RolePermission" (
-    "roleId" TEXT NOT NULL,
-    "permissionId" TEXT NOT NULL,
-
-    CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("roleId","permissionId")
-);
-
--- CreateTable
 CREATE TABLE "TenantMembership" (
     "id" TEXT NOT NULL,
     "identityId" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
-    "roleId" TEXT NOT NULL,
+    "tenantRole" "Role" NOT NULL DEFAULT 'USER',
     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "profile" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -4961,14 +4911,9 @@ CREATE TABLE "TenantPolicy" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "requireMfa" BOOLEAN NOT NULL DEFAULT false,
-    "sessionTtlMinutes" INTEGER NOT NULL DEFAULT 10080,
-    "allowedEmailDomains" TEXT[],
-    "maxSessionsPerUser" INTEGER NOT NULL DEFAULT 10,
-    "allowPasskeys" BOOLEAN NOT NULL DEFAULT true,
     "passwordRules" JSONB,
-    "loginMethods" JSONB NOT NULL DEFAULT '{}',
+    "loginMethods" JSONB NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "TenantPolicy_pkey" PRIMARY KEY ("id")
 );
@@ -4999,7 +4944,6 @@ CREATE TABLE "Passkey" (
     "backedUp" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastUsedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "name" TEXT,
 
     CONSTRAINT "Passkey_pkey" PRIMARY KEY ("id")
 );
@@ -5042,9 +4986,6 @@ CREATE TABLE "Client" (
     "requirePkce" BOOLEAN NOT NULL DEFAULT false,
     "frontChannelLogoutUri" TEXT,
     "backChannelLogoutUri" TEXT,
-    "logoUri" TEXT,
-    "tosUri" TEXT,
-    "policyUri" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Client_pkey" PRIMARY KEY ("id")
@@ -5173,9 +5114,6 @@ CREATE TABLE "OAuthAccount" (
     "identityId" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
     "providerUserId" TEXT NOT NULL,
-    "accessToken" TEXT,
-    "refreshToken" TEXT,
-    "expiresAt" TIMESTAMP(3),
     "linkedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "OAuthAccount_pkey" PRIMARY KEY ("id")
@@ -5213,7 +5151,6 @@ CREATE TABLE "OAuthConsent" (
     "clientId" TEXT NOT NULL,
     "scopes" JSONB NOT NULL,
     "grantedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
     "revokedAt" TIMESTAMP(3),
 
     CONSTRAINT "OAuthConsent_pkey" PRIMARY KEY ("id")
@@ -5224,7 +5161,6 @@ CREATE TABLE "LegalConsent" (
     "id" TEXT NOT NULL,
     "identityId" TEXT NOT NULL,
     "documentId" TEXT NOT NULL,
-    "version" TEXT NOT NULL DEFAULT '1.0',
     "acceptedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "LegalConsent_pkey" PRIMARY KEY ("id")
@@ -5248,10 +5184,7 @@ CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL,
     "identityId" TEXT NOT NULL,
     "plan" "SubscriptionPlan" NOT NULL DEFAULT 'FREE',
-    "provider" TEXT,
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'ACTIVE',
-    "externalCustomerId" TEXT,
-    "externalSubId" TEXT,
     "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endsAt" TIMESTAMP(3),
 
@@ -5266,7 +5199,6 @@ CREATE TABLE "AuditLog" (
     "actionId" "AuditLogAction" NOT NULL,
     "metadata" JSONB,
     "ip" TEXT,
-    "userAgent" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
@@ -5281,33 +5213,11 @@ CREATE TABLE "RevokedJti" (
     CONSTRAINT "RevokedJti_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "WebhookEvent" (
-    "id" TEXT NOT NULL,
-    "eventType" "AuditLogAction" NOT NULL,
-    "identityId" TEXT,
-    "tenantId" TEXT,
-    "payload" JSONB NOT NULL,
-    "targetUrl" TEXT NOT NULL,
-    "attempts" INTEGER NOT NULL DEFAULT 0,
-    "maxAttempts" INTEGER NOT NULL DEFAULT 5,
-    "deliveredAt" TIMESTAMP(3),
-    "lastError" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "nextRetryAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "WebhookEvent_pkey" PRIMARY KEY ("id")
-);
-
 -- CreateIndex
 CREATE UNIQUE INDEX "Identity_primaryEmail_key" ON "Identity"("primaryEmail");
 
 -- CreateIndex
 CREATE INDEX "Identity_primaryEmail_idx" ON "Identity"("primaryEmail");
-
--- CreateIndex
-CREATE INDEX "Identity_status_idx" ON "Identity"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "DecentralizedIdentifier_tenantId_key" ON "DecentralizedIdentifier"("tenantId");
@@ -5334,28 +5244,10 @@ CREATE UNIQUE INDEX "Tenant_slug_key" ON "Tenant"("slug");
 CREATE INDEX "Tenant_slug_idx" ON "Tenant"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TenantBranding_tenantId_key" ON "TenantBranding"("tenantId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "TenantBranding_customDomain_key" ON "TenantBranding"("customDomain");
-
--- CreateIndex
 CREATE UNIQUE INDEX "TenantSigningKey_kid_key" ON "TenantSigningKey"("kid");
 
 -- CreateIndex
 CREATE INDEX "TenantSigningKey_tenantId_idx" ON "TenantSigningKey"("tenantId");
-
--- CreateIndex
-CREATE INDEX "TenantSigningKey_status_idx" ON "TenantSigningKey"("status");
-
--- CreateIndex
-CREATE INDEX "IdpConnection_tenantId_idx" ON "IdpConnection"("tenantId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Role_tenantId_name_key" ON "Role"("tenantId", "name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Permission_action_key" ON "Permission"("action");
 
 -- CreateIndex
 CREATE INDEX "TenantMembership_tenantId_idx" ON "TenantMembership"("tenantId");
@@ -5370,7 +5262,7 @@ CREATE UNIQUE INDEX "Project_slug_key" ON "Project"("slug");
 CREATE INDEX "Project_tenantId_idx" ON "Project"("tenantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TenantPolicy_tenantId_key" ON "TenantPolicy"("tenantId");
+CREATE INDEX "TenantPolicy_tenantId_idx" ON "TenantPolicy"("tenantId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "LocalAccount_identityId_key" ON "LocalAccount"("identityId");
@@ -5385,13 +5277,7 @@ CREATE UNIQUE INDEX "Passkey_credentialId_key" ON "Passkey"("credentialId");
 CREATE INDEX "Passkey_identityId_idx" ON "Passkey"("identityId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Mfa_identityId_type_key" ON "Mfa"("identityId", "type");
-
--- CreateIndex
 CREATE INDEX "MfaRecoveryCode_identityId_idx" ON "MfaRecoveryCode"("identityId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Client_clientId_key" ON "Client"("clientId");
 
 -- CreateIndex
 CREATE INDEX "Client_tenantId_idx" ON "Client"("tenantId");
@@ -5400,16 +5286,10 @@ CREATE INDEX "Client_tenantId_idx" ON "Client"("tenantId");
 CREATE UNIQUE INDEX "Client_tenantId_clientId_key" ON "Client"("tenantId", "clientId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ClientRedirectUri_clientId_uri_key" ON "ClientRedirectUri"("clientId", "uri");
+CREATE UNIQUE INDEX "ClientRedirectUri_uri_key" ON "ClientRedirectUri"("uri");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AuthorizationCode_code_key" ON "AuthorizationCode"("code");
-
--- CreateIndex
-CREATE INDEX "AuthorizationCode_identityId_idx" ON "AuthorizationCode"("identityId");
-
--- CreateIndex
-CREATE INDEX "AuthorizationCode_expiresAt_idx" ON "AuthorizationCode"("expiresAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AccessToken_token_key" ON "AccessToken"("token");
@@ -5454,37 +5334,19 @@ CREATE INDEX "IdToken_expiresAt_idx" ON "IdToken"("expiresAt");
 CREATE UNIQUE INDEX "Device_fingerprint_key" ON "Device"("fingerprint");
 
 -- CreateIndex
-CREATE INDEX "Device_identityId_idx" ON "Device"("identityId");
-
--- CreateIndex
 CREATE INDEX "Session_identityId_idx" ON "Session"("identityId");
 
 -- CreateIndex
 CREATE INDEX "Session_expiresAt_idx" ON "Session"("expiresAt");
 
 -- CreateIndex
-CREATE INDEX "Session_valid_idx" ON "Session"("valid");
-
--- CreateIndex
-CREATE INDEX "OAuthAccount_identityId_idx" ON "OAuthAccount"("identityId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "OAuthAccount_provider_providerUserId_key" ON "OAuthAccount"("provider", "providerUserId");
-
--- CreateIndex
-CREATE INDEX "Wallet_identityId_idx" ON "Wallet"("identityId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Wallet_provider_providerWalletId_key" ON "Wallet"("provider", "providerWalletId");
 
 -- CreateIndex
-CREATE INDEX "ExternalIdentifier_identityId_idx" ON "ExternalIdentifier"("identityId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "ExternalIdentifier_type_valueHash_key" ON "ExternalIdentifier"("type", "valueHash");
-
--- CreateIndex
-CREATE UNIQUE INDEX "OAuthConsent_identityId_clientId_key" ON "OAuthConsent"("identityId", "clientId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "LegalConsent_identityId_documentId_key" ON "LegalConsent"("identityId", "documentId");
@@ -5493,25 +5355,10 @@ CREATE UNIQUE INDEX "LegalConsent_identityId_documentId_key" ON "LegalConsent"("
 CREATE UNIQUE INDEX "EmailToken_token_key" ON "EmailToken"("token");
 
 -- CreateIndex
-CREATE INDEX "EmailToken_identityId_type_idx" ON "EmailToken"("identityId", "type");
-
--- CreateIndex
-CREATE INDEX "EmailToken_expiresAt_idx" ON "EmailToken"("expiresAt");
-
--- CreateIndex
-CREATE INDEX "Subscription_identityId_idx" ON "Subscription"("identityId");
-
--- CreateIndex
-CREATE INDEX "Subscription_status_idx" ON "Subscription"("status");
-
--- CreateIndex
 CREATE INDEX "AuditLog_identityId_idx" ON "AuditLog"("identityId");
 
 -- CreateIndex
 CREATE INDEX "AuditLog_tenantId_idx" ON "AuditLog"("tenantId");
-
--- CreateIndex
-CREATE INDEX "AuditLog_actionId_idx" ON "AuditLog"("actionId");
 
 -- CreateIndex
 CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt" DESC);
@@ -5521,12 +5368,6 @@ CREATE UNIQUE INDEX "RevokedJti_jti_key" ON "RevokedJti"("jti");
 
 -- CreateIndex
 CREATE INDEX "RevokedJti_revokedAt_idx" ON "RevokedJti"("revokedAt");
-
--- CreateIndex
-CREATE INDEX "idx_webhook_processing" ON "WebhookEvent"("nextRetryAt") WHERE ("deliveredAt" IS NULL);
-
--- CreateIndex
-CREATE INDEX "WebhookEvent_identityId_idx" ON "WebhookEvent"("identityId");
 
 -- AddForeignKey
 ALTER TABLE "DecentralizedIdentifier" ADD CONSTRAINT "DecentralizedIdentifier_identityId_fkey" FOREIGN KEY ("identityId") REFERENCES "Identity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -5553,31 +5394,13 @@ ALTER TABLE "VerifiableCredential" ADD CONSTRAINT "VerifiableCredential_schemaId
 ALTER TABLE "StatusListEntry" ADD CONSTRAINT "StatusListEntry_statusListId_fkey" FOREIGN KEY ("statusListId") REFERENCES "BitstringStatusList"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TenantBranding" ADD CONSTRAINT "TenantBranding_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "TenantSigningKey" ADD CONSTRAINT "TenantSigningKey_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "IdpConnection" ADD CONSTRAINT "IdpConnection_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Role" ADD CONSTRAINT "Role_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TenantMembership" ADD CONSTRAINT "TenantMembership_identityId_fkey" FOREIGN KEY ("identityId") REFERENCES "Identity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TenantMembership" ADD CONSTRAINT "TenantMembership_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "TenantMembership" ADD CONSTRAINT "TenantMembership_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Project" ADD CONSTRAINT "Project_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -5684,6 +5507,403 @@ ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_tenantId_fkey" FOREIGN KEY ("ten
 
 
 ==================================================
+FILE: prisma\migrations\20260528050032_add_signing_key_audit_actions\migration.sql
+==================================================
+```sql
+-- AlterEnum
+-- This migration adds more than one value to an enum.
+-- With PostgreSQL versions 11 and earlier, this is not possible
+-- in a single migration. This can be worked around by creating
+-- multiple migrations, each migration adding only one value to
+-- the enum.
+
+
+ALTER TYPE "AuditLogAction" ADD VALUE 'SIGNING_KEY_CREATED';
+ALTER TYPE "AuditLogAction" ADD VALUE 'SIGNING_KEY_REVOKED';
+ALTER TYPE "AuditLogAction" ADD VALUE 'PASSKEY_REGISTERED';
+ALTER TYPE "AuditLogAction" ADD VALUE 'PASSKEY_USED';
+```
+
+
+==================================================
+FILE: prisma\migrations\20260528171740\migration.sql
+==================================================
+```sql
+/*
+  Warnings:
+
+  - A unique constraint covering the columns `[clientId,uri]` on the table `ClientRedirectUri` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[identityId,type]` on the table `Mfa` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[tenantId]` on the table `TenantPolicy` will be added. If there are existing duplicate values, this will fail.
+  - Added the required column `updatedAt` to the `TenantPolicy` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- AlterEnum
+-- This migration adds more than one value to an enum.
+-- With PostgreSQL versions 11 and earlier, this is not possible
+-- in a single migration. This can be worked around by creating
+-- multiple migrations, each migration adding only one value to
+-- the enum.
+
+
+ALTER TYPE "AuditLogAction" ADD VALUE 'IDENTITY_CREATED';
+ALTER TYPE "AuditLogAction" ADD VALUE 'IDENTITY_SUSPENDED';
+ALTER TYPE "AuditLogAction" ADD VALUE 'IDENTITY_DELETED';
+
+-- DropIndex
+DROP INDEX "ClientRedirectUri_uri_key";
+
+-- DropIndex
+DROP INDEX "TenantPolicy_tenantId_idx";
+
+-- AlterTable
+ALTER TABLE "AuditLog" ADD COLUMN     "userAgent" TEXT;
+
+-- AlterTable
+ALTER TABLE "Client" ADD COLUMN     "logoUri" TEXT,
+ADD COLUMN     "policyUri" TEXT,
+ADD COLUMN     "tosUri" TEXT;
+
+-- AlterTable
+ALTER TABLE "LegalConsent" ADD COLUMN     "version" TEXT NOT NULL DEFAULT '1.0';
+
+-- AlterTable
+ALTER TABLE "OAuthAccount" ADD COLUMN     "accessToken" TEXT,
+ADD COLUMN     "expiresAt" TIMESTAMP(3),
+ADD COLUMN     "refreshToken" TEXT;
+
+-- AlterTable
+ALTER TABLE "Passkey" ADD COLUMN     "name" TEXT;
+
+-- AlterTable
+ALTER TABLE "Subscription" ADD COLUMN     "externalCustomerId" TEXT,
+ADD COLUMN     "externalSubId" TEXT;
+
+-- AlterTable
+ALTER TABLE "TenantPolicy" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+
+-- CreateTable
+CREATE TABLE "WebhookEvent" (
+    "id" TEXT NOT NULL,
+    "eventType" "AuditLogAction" NOT NULL,
+    "identityId" TEXT,
+    "tenantId" TEXT,
+    "payload" JSONB NOT NULL,
+    "targetUrl" TEXT NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "maxAttempts" INTEGER NOT NULL DEFAULT 5,
+    "deliveredAt" TIMESTAMP(3),
+    "lastError" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "nextRetryAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "WebhookEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "WebhookEvent_deliveredAt_nextRetryAt_idx" ON "WebhookEvent"("deliveredAt", "nextRetryAt");
+
+-- CreateIndex
+CREATE INDEX "WebhookEvent_identityId_idx" ON "WebhookEvent"("identityId");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_actionId_idx" ON "AuditLog"("actionId");
+
+-- CreateIndex
+CREATE INDEX "AuthorizationCode_identityId_idx" ON "AuthorizationCode"("identityId");
+
+-- CreateIndex
+CREATE INDEX "AuthorizationCode_expiresAt_idx" ON "AuthorizationCode"("expiresAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ClientRedirectUri_clientId_uri_key" ON "ClientRedirectUri"("clientId", "uri");
+
+-- CreateIndex
+CREATE INDEX "Device_identityId_idx" ON "Device"("identityId");
+
+-- CreateIndex
+CREATE INDEX "EmailToken_identityId_type_idx" ON "EmailToken"("identityId", "type");
+
+-- CreateIndex
+CREATE INDEX "EmailToken_expiresAt_idx" ON "EmailToken"("expiresAt");
+
+-- CreateIndex
+CREATE INDEX "ExternalIdentifier_identityId_idx" ON "ExternalIdentifier"("identityId");
+
+-- CreateIndex
+CREATE INDEX "Identity_status_idx" ON "Identity"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Mfa_identityId_type_key" ON "Mfa"("identityId", "type");
+
+-- CreateIndex
+CREATE INDEX "OAuthAccount_identityId_idx" ON "OAuthAccount"("identityId");
+
+-- CreateIndex
+CREATE INDEX "OAuthConsent_identityId_clientId_idx" ON "OAuthConsent"("identityId", "clientId");
+
+-- CreateIndex
+CREATE INDEX "Session_valid_idx" ON "Session"("valid");
+
+-- CreateIndex
+CREATE INDEX "Subscription_identityId_idx" ON "Subscription"("identityId");
+
+-- CreateIndex
+CREATE INDEX "Subscription_status_idx" ON "Subscription"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TenantPolicy_tenantId_key" ON "TenantPolicy"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "TenantSigningKey_isActive_idx" ON "TenantSigningKey"("isActive");
+
+-- CreateIndex
+CREATE INDEX "Wallet_identityId_idx" ON "Wallet"("identityId");
+```
+
+
+==================================================
+FILE: prisma\migrations\20260530044938\migration.sql
+==================================================
+```sql
+/*
+  Warnings:
+
+  - A unique constraint covering the columns `[clientId]` on the table `Client` will be added. If there are existing duplicate values, this will fail.
+
+*/
+-- CreateIndex
+CREATE UNIQUE INDEX "Client_clientId_key" ON "Client"("clientId");
+```
+
+
+==================================================
+FILE: prisma\migrations\20260530182359_final_schema\migration.sql
+==================================================
+```sql
+/*
+  Warnings:
+
+  - You are about to drop the column `globalRole` on the `Identity` table. All the data in the column will be lost.
+  - You are about to drop the column `tenantRole` on the `TenantMembership` table. All the data in the column will be lost.
+  - You are about to drop the column `isActive` on the `TenantSigningKey` table. All the data in the column will be lost.
+  - Added the required column `roleId` to the `TenantMembership` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- CreateEnum
+CREATE TYPE "KeyStatus" AS ENUM ('ACTIVE', 'ARCHIVED', 'REVOKED');
+
+-- CreateEnum
+CREATE TYPE "IdpProtocol" AS ENUM ('SAML2', 'OIDC', 'OAUTH2');
+
+-- AlterEnum
+-- This migration adds more than one value to an enum.
+-- With PostgreSQL versions 11 and earlier, this is not possible
+-- in a single migration. This can be worked around by creating
+-- multiple migrations, each migration adding only one value to
+-- the enum.
+
+
+ALTER TYPE "AuditLogAction" ADD VALUE 'IDP_CONNECTION_CREATED';
+ALTER TYPE "AuditLogAction" ADD VALUE 'IDP_CONNECTION_UPDATED';
+
+-- DropIndex
+DROP INDEX "TenantSigningKey_isActive_idx";
+
+-- AlterTable
+ALTER TABLE "Identity" DROP COLUMN "globalRole";
+
+-- AlterTable
+ALTER TABLE "TenantMembership" DROP COLUMN "tenantRole",
+ADD COLUMN     "roleId" TEXT NOT NULL;
+
+-- AlterTable
+ALTER TABLE "TenantSigningKey" DROP COLUMN "isActive",
+ADD COLUMN     "status" "KeyStatus" NOT NULL DEFAULT 'ACTIVE';
+
+-- DropEnum
+DROP TYPE "Role";
+
+-- CreateTable
+CREATE TABLE "TenantBranding" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "customDomain" TEXT,
+    "primaryColor" TEXT,
+    "logoUrl" TEXT,
+    "companyName" TEXT,
+    "emailTemplates" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "TenantBranding_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "IdpConnection" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "protocol" "IdpProtocol" NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "clientId" TEXT,
+    "clientSecret" TEXT,
+    "entryPoint" TEXT,
+    "issuer" TEXT,
+    "cert" TEXT,
+    "metadataUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "IdpConnection_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Role" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Permission" (
+    "id" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RolePermission" (
+    "roleId" TEXT NOT NULL,
+    "permissionId" TEXT NOT NULL,
+
+    CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("roleId","permissionId")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TenantBranding_tenantId_key" ON "TenantBranding"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TenantBranding_customDomain_key" ON "TenantBranding"("customDomain");
+
+-- CreateIndex
+CREATE INDEX "IdpConnection_tenantId_idx" ON "IdpConnection"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Role_tenantId_name_key" ON "Role"("tenantId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Permission_action_key" ON "Permission"("action");
+
+-- CreateIndex
+CREATE INDEX "TenantSigningKey_status_idx" ON "TenantSigningKey"("status");
+
+-- AddForeignKey
+ALTER TABLE "TenantBranding" ADD CONSTRAINT "TenantBranding_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "IdpConnection" ADD CONSTRAINT "IdpConnection_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Role" ADD CONSTRAINT "Role_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TenantMembership" ADD CONSTRAINT "TenantMembership_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+```
+
+
+==================================================
+FILE: prisma\migrations\20260531234210_locked_in\migration.sql
+==================================================
+```sql
+/*
+  Warnings:
+
+  - Made the column `tenantId` on table `Role` required. This step will fail if there are existing NULL values in that column.
+
+*/
+-- AlterTable
+ALTER TABLE "Role" ALTER COLUMN "tenantId" SET NOT NULL,
+ALTER COLUMN "tenantId" SET DEFAULT 'SYSTEM';
+```
+
+
+==================================================
+FILE: prisma\migrations\20260601124942_fix_webhook_model\migration.sql
+==================================================
+```sql
+-- DropIndex
+DROP INDEX "WebhookEvent_deliveredAt_nextRetryAt_idx";
+
+-- AlterTable
+ALTER TABLE "WebhookEvent" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ALTER COLUMN "nextRetryAt" DROP NOT NULL;
+
+-- CreateIndex
+CREATE INDEX "idx_webhook_processing" ON "WebhookEvent"("nextRetryAt") WHERE ("deliveredAt" IS NULL);
+```
+
+
+==================================================
+FILE: prisma\migrations\20260603092158_multi_provider_billing_consent_policy\migration.sql
+==================================================
+```sql
+/*
+  Warnings:
+
+  - Added the required column `updatedAt` to the `OAuthConsent` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- AlterEnum
+ALTER TYPE "AuditLogAction" ADD VALUE 'TENANT_POLICY_UPDATED';
+
+-- AlterTable
+ALTER TABLE "OAuthConsent" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+
+-- AlterTable
+ALTER TABLE "Subscription" ADD COLUMN     "provider" TEXT;
+
+-- AlterTable
+ALTER TABLE "TenantPolicy" ADD COLUMN     "allowPasskeys" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "allowedEmailDomains" TEXT[],
+ADD COLUMN     "maxSessionsPerUser" INTEGER NOT NULL DEFAULT 10,
+ADD COLUMN     "sessionTtlMinutes" INTEGER NOT NULL DEFAULT 10080,
+ALTER COLUMN "loginMethods" SET DEFAULT '{}';
+```
+
+
+==================================================
+FILE: prisma\migrations\20260603095200_auditlog_additions\migration.sql
+==================================================
+```sql
+-- AlterEnum
+-- This migration adds more than one value to an enum.
+-- With PostgreSQL versions 11 and earlier, this is not possible
+-- in a single migration. This can be worked around by creating
+-- multiple migrations, each migration adding only one value to
+-- the enum.
+
+
+ALTER TYPE "AuditLogAction" ADD VALUE 'USER_DELETED';
+ALTER TYPE "AuditLogAction" ADD VALUE 'PROFILE_UPDATED';
+```
+
+
+==================================================
 FILE: prisma\migrations\migration_lock.toml
 ==================================================
 ```toml
@@ -5697,7 +5917,10 @@ provider = "postgresql"
 FILE: prisma\schema.prisma
 ==================================================
 ```prisma
-// GENERATOR & DATASOURCE
+// =========================================================================
+// GENERATOR & DATASOURCE CONFIGURATION
+// =========================================================================
+
 datasource db {
   provider = "postgresql"
 }
@@ -5709,9 +5932,9 @@ generator client {
   previewFeatures = ["partialIndexes"]
 }
 
-// ==========================================
+// =========================================================================
 // ENUMS
-// ==========================================
+// =========================================================================
 
 enum MfaType {
   TOTP
@@ -5789,6 +6012,7 @@ enum AuditLogAction {
   MFA_ENABLED
   MFA_DISABLED
   MFA_RECOVERY_USED
+  MFA_VERIFICATION_SUCCESS
   TOKEN_REVOKED
   SESSION_CREATED
   SESSION_REVOKED
@@ -5810,9 +6034,9 @@ enum AuditLogAction {
   IDP_CONNECTION_UPDATED
 }
 
-// ==========================================
-// CENTRAL CORE: IDENTITY
-// ==========================================
+// =========================================================================
+// CENTRAL CORE: IDENTITY (INDIVIDUAL ACCOUNT HOLDERS)
+// =========================================================================
 
 model Identity {
   id            String     @id @default(cuid())
@@ -5851,16 +6075,15 @@ model Identity {
   delegationsGranted  AccessDelegation[] @relation("DelegationGrantor")
   delegationsReceived AccessDelegation[] @relation("DelegationGrantee")
 
-  subscriptions Subscription[]
-  auditLogs     AuditLog[]
+  auditLogs AuditLog[]
 
   @@index([primaryEmail])
   @@index([status])
 }
 
-// ==========================================
+// =========================================================================
 // DECENTRALIZED IDENTIFIER (DID) LAYER
-// ==========================================
+// =========================================================================
 
 model DecentralizedIdentifier {
   id         String    @id
@@ -5881,9 +6104,9 @@ model DecentralizedIdentifier {
   @@index([identityId])
 }
 
-// ==========================================
+// =========================================================================
 // W3C VERIFIABLE CREDENTIAL MODULE
-// ==========================================
+// =========================================================================
 
 model VerifiableCredential {
   id      String   @id
@@ -5952,9 +6175,9 @@ model StatusListEntry {
   @@unique([statusListId, index])
 }
 
-// ==========================================
+// =========================================================================
 // MULTI-TENANCY, B2B & ENTERPRISE SSO
-// ==========================================
+// =========================================================================
 
 model Tenant {
   id        String   @id @default(cuid())
@@ -5975,6 +6198,9 @@ model Tenant {
   branding          TenantBranding?
   roles             Role[]
   auditLogs         AuditLog[]
+
+  // Handled structurally at the organization scale
+  subscription Subscription?
 
   @@index([slug])
 }
@@ -6031,9 +6257,9 @@ model IdpConnection {
   @@index([tenantId])
 }
 
-// ==========================================
-// DYNAMIC Authorization (RBAC / FINE-GRAINED)
-// ==========================================
+// =========================================================================
+// DYNAMIC AUTHORIZATION (RBAC / FINE-GRAINED ACCESS CONTROL)
+// =========================================================================
 
 model Role {
   id          String   @id @default(cuid())
@@ -6115,9 +6341,9 @@ model TenantPolicy {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-// ==========================================
+// =========================================================================
 // AUTHENTICATION SECURITY VECTORS
-// ==========================================
+// =========================================================================
 
 model LocalAccount {
   id                String    @id @default(cuid())
@@ -6179,9 +6405,9 @@ model MfaRecoveryCode {
   @@index([identityId])
 }
 
-// ==========================================
+// =========================================================================
 // OAUTH2 / OIDC PROVIDER LAYER
-// ==========================================
+// =========================================================================
 
 model Client {
   id                    String   @id @default(cuid())
@@ -6301,9 +6527,9 @@ model IdToken {
   @@index([expiresAt])
 }
 
-// ==========================================
+// =========================================================================
 // SYSTEM BRIDGES & UTILITIES
-// ==========================================
+// =========================================================================
 
 model AccessDelegation {
   id        String    @id @default(cuid())
@@ -6445,22 +6671,45 @@ model EmailToken {
   @@index([expiresAt])
 }
 
+// =========================================================================
+// COUPLING-SAFE DECOUPLED SUBSCRIPTION INFRASTRUCTURE
+// =========================================================================
+
 model Subscription {
-  id                 String             @id @default(cuid())
-  identityId         String
-  plan               SubscriptionPlan   @default(FREE)
-  provider           String? // "stripe" | "paystack" | "flutterwave"
-  status             SubscriptionStatus @default(ACTIVE)
-  externalCustomerId String?
-  externalSubId      String?
-  startedAt          DateTime           @default(now())
-  endsAt             DateTime?
+  id        String             @id @default(cuid())
+  tenantId  String             @unique
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan      SubscriptionPlan   @default(FREE)
+  status    SubscriptionStatus @default(ACTIVE)
+  startedAt DateTime           @default(now())
+  endsAt    DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
-  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  // Pluggable mapping row table tracking providers separately
+  billingIntegrations ExternalBillingIntegration[]
 
-  @@index([identityId])
   @@index([status])
 }
+
+model ExternalBillingIntegration {
+  id                 String       @id @default(cuid())
+  subscriptionId     String
+  subscription       Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  providerName       String // "PAYSTACK" | "STRIPE" | "FLUTTERWAVE"
+  externalCustomerId String? // Generated Customer Identity Token Reference
+  externalSubId      String? // Provider mapping active subscription token reference
+  metadata           Json? // Fallback catch-all object for webhooks mapping info
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([providerName, externalSubId])
+  @@index([subscriptionId])
+}
+
+// =========================================================================
+// SYSTEM LOGISTICS & TELEMETRY
+// =========================================================================
 
 model AuditLog {
   id         String         @id @default(cuid())
@@ -6502,9 +6751,8 @@ model WebhookEvent {
   lastError   String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @default(now()) @updatedAt
-  nextRetryAt DateTime?      @default(now()) // Now nullable
+  nextRetryAt DateTime?      @default(now())
 
-  // Partial Index: Only index rows that are NOT delivered.
   @@index([nextRetryAt], map: "idx_webhook_processing", where: { deliveredAt: null })
   @@index([identityId])
 }
@@ -9404,21 +9652,11 @@ export type { AppConfig } from "./config";
 
 
 ==================================================
-FILE: src\core\db\db-client.ts
-==================================================
-```ts
-// Canonical type lives in src/lib/db-client.ts — do not redefine here.
-export type { DbClient } from "@/lib/db-client";
-```
-
-
-==================================================
 FILE: src\core\db\index.ts
 ==================================================
 ```ts
 export * from "./prisma";
 export * from "./prisma-helpers";
-export * from "./db-client";
 ```
 
 
@@ -12417,32 +12655,37 @@ export async function auditRoute(fastify: FastifyInstance) {
 FILE: src\modules\audit\services\audit.service.ts
 ==================================================
 ```ts
-import { db } from "@/lib/db-client";
-import type { AuditLogAction, Prisma } from "@/prisma-client";
-import { logger } from "@/lib/logger";
+// src/modules/audit/services/audit.service.ts
+import { AuditLogAction } from "@/prisma-client";
+import { db as globalDb } from "@/lib/db-client";
 
-interface LogParams {
+export interface LogParams {
   action: AuditLogAction;
   identityId?: string;
   tenantId?: string;
   ip?: string;
-  metadata?: Prisma.InputJsonValue;
+  userAgent?: string;
+  metadata?: Record<string, any>;
 }
 
 export const auditService = {
-  async log(params: LogParams): Promise<void> {
+  async log(params: LogParams, txClient?: any): Promise<void> {
+    // If a transactional Prisma client context was passed down, use it; otherwise fallback to standard pool
+    const client = txClient || globalDb;
     try {
-      await db.auditLog.create({
+      await client.auditLog.create({
         data: {
           actionId: params.action,
           identityId: params.identityId,
           tenantId: params.tenantId,
           ip: params.ip,
-          metadata: params.metadata,
+          userAgent: params.userAgent,
+          metadata: params.metadata || {},
         },
       });
-    } catch (err: any) {
-      logger.error("[AUDIT_LOG_FAILED]", { error: err.message, params });
+    } catch (error) {
+      // Prevent telemetry logging engine crashes from breaking the main auth execution loop
+      console.error("[AUDIT_LOG_UNHANDLED_EXCEPTION_FAULT]:", error);
     }
   },
 };
@@ -12513,20 +12756,6 @@ import { switchContextRoute } from "./routes/switch-context.route";
 
 export const authPlugin = fp(
   async (fastify: FastifyInstance) => {
-    /**
-     * All authentication routes are mounted under /auth.
-     * Canonical paths:
-     *   POST /auth/register
-     *   POST /auth/login
-     *   POST /auth/logout
-     *   GET  /auth/sessions
-     *   POST /auth/mfa/setup | /auth/mfa/confirm | /auth/mfa/verify
-     *   POST /auth/passkey/options/register | /auth/passkey/options/authenticate
-     *   POST /auth/password/reset | /auth/password/reset/confirm
-     *   POST /auth/email/verify
-     *   POST /auth/magic-link/request | /auth/magic-link
-     *   POST /auth/switch-context
-     */
     fastify.register(
       async (authScope) => {
         const withZod = authScope.withTypeProvider<ZodTypeProvider>();
@@ -12556,17 +12785,18 @@ export const authPlugin = fp(
 FILE: src\modules\auth\flows\email-verify.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/email-verify.flow.ts
 import { z } from "zod";
 import type { FlowContext, Flow } from "@/core/flows";
 import { EmailVerifySchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
 
-export const emailVerifyFlow: Flow<z.infer<typeof EmailVerifySchema>> = {
+export const emailVerifyFlow: Flow<z.infer<typeof EmailVerifySchema>, Record<string, never>> = {
   name: "auth:email-verify",
   inputSchema: EmailVerifySchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Record<string, never>> {
     const emailTokenService = new EmailTokenService(ctx.db);
     const tokenRecord = await emailTokenService.consume(
       input.token,
@@ -12579,7 +12809,6 @@ export const emailVerifyFlow: Flow<z.infer<typeof EmailVerifySchema>> = {
       select: { primaryEmail: true, name: true },
     });
 
-    // Fire welcome email now that the account is truly active
     if (identity.primaryEmail) {
       void notificationService.sendWelcome(identity.primaryEmail, {
         name: identity.name ?? undefined,
@@ -12626,29 +12855,27 @@ const DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"];
 export const loginFlow: Flow<Input, Output> = {
   name: "auth:login",
   inputSchema: LoginSchema,
-
   async execute(input, ctx: FlowContext): Promise<Output> {
     const identityRepo = new IdentityRepository(ctx.db);
     const sessionService = new SessionService(ctx.db);
     const targetClientId = config.oauth.directClientId;
 
     const identity = await identityRepo.findForAuth(input.email);
+
     if (!identity?.localAccount) {
       await auditService.log({ action: "USER_LOGIN_FAILED", ip: ctx.ip });
       throw ApiError.unauthorized("Invalid email or password");
     }
 
-    if (identity.status === "BANNED")
-      throw ApiError.forbidden("Account banned");
-    if (identity.status === "SUSPENDED")
-      throw ApiError.forbidden("Account suspended");
-    if (identity.status === "DELETED")
-      throw ApiError.unauthorized("Invalid email");
+    if (identity.status === "BANNED") throw ApiError.forbidden("Account banned");
+    if (identity.status === "SUSPENDED") throw ApiError.forbidden("Account suspended");
+    if (identity.status === "DELETED") throw ApiError.unauthorized("Invalid email");
 
     const valid = await verifyPassword(
       identity.localAccount.passwordHash,
       input.password,
     );
+
     if (!valid) {
       await auditService.log({
         action: "USER_LOGIN_FAILED",
@@ -12658,6 +12885,7 @@ export const loginFlow: Flow<Input, Output> = {
       throw ApiError.unauthorized("Invalid email or password");
     }
 
+    // Invoke clean, decoupled Session service
     const { session } = await sessionService.create({
       identityId: identity.id,
       localAccountId: identity.localAccount.id,
@@ -12667,15 +12895,18 @@ export const loginFlow: Flow<Input, Output> = {
 
     const activeMfas = identity.mfas.filter((m) => m.enabled);
     if (activeMfas.length > 0) {
+      // Intentionally disable session validity flag until step-up token execution resolves successfully
       await ctx.db.session.update({
         where: { id: session.id },
         data: { valid: false },
       });
+
       await auditService.log({
         action: "SESSION_CREATED",
         identityId: identity.id,
         ip: ctx.ip,
       });
+
       return {
         identity: presentIdentity(identity),
         sessionId: session.id,
@@ -12697,14 +12928,12 @@ export const loginFlow: Flow<Input, Output> = {
       });
     }
 
-    // Perform side effects out-of-band using non-blocking promises
     void Promise.all([
       auditService.log({
         action: "USER_LOGIN_SUCCESS",
         identityId: identity.id,
         ip: ctx.ip ?? "0.0.0.0",
       }),
-      // Used specific notification method instead of generic .send()
       notificationService.sendNewDeviceLogin(
         identity.primaryEmail ?? "unknown@arcid.local",
         {
@@ -12733,6 +12962,7 @@ export const loginFlow: Flow<Input, Output> = {
 FILE: src\modules\auth\flows\logout.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/logout.flow.ts
 import { z } from "zod";
 import type { Flow } from "@/core/flows/flow";
 import type { FlowContext } from "@/core/flows/flow-context";
@@ -12741,19 +12971,19 @@ import { auditService } from "@/modules/audit/services/audit.service";
 
 const LogoutSchema = z.object({ sessionId: z.string().cuid() });
 
-export const logoutFlow: Flow<z.infer<typeof LogoutSchema>> = {
+export const logoutFlow: Flow<z.infer<typeof LogoutSchema>, Record<string, never>> = {
   name: "auth:logout",
   inputSchema: LogoutSchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Record<string, never>> {
     const sessionRepo = new SessionRepository(ctx.db);
     await sessionRepo.revokeById(input.sessionId);
 
-    auditService.log({
+    void auditService.log({
       action: "SESSION_REVOKED",
       identityId: ctx.userId,
       ip: ctx.ip,
-    });
+    }, ctx.db);
 
     return {};
   },
@@ -12776,13 +13006,21 @@ import { config } from "@/core/config";
 
 const MagicLinkSchema = z.object({ token: z.string().min(1) });
 
+type Output = {
+  sessionId: string;
+  accessToken: string;
+  refreshToken: string;
+  idToken: string | null;
+  expiresIn: number;
+};
+
 const DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"];
 
-export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>> = {
+export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>, Output> = {
   name: "auth:magic-link",
   inputSchema: MagicLinkSchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Output> {
     const emailTokenService = new EmailTokenService(ctx.db);
     const tokenRecord = await emailTokenService.consume(
       input.token,
@@ -12811,7 +13049,7 @@ export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>> = {
       sessionId: session.id,
       scopes: DEFAULT_SCOPES,
       audience: [config.oauth.directClientId],
-      tenantId: ctx.tenantId,
+      tenantId: ctx.tenantId || "SYSTEM",
     });
 
     return {
@@ -12830,9 +13068,9 @@ export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>> = {
 FILE: src\modules\auth\flows\mfa-setup.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/mfa-setup.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { Flow, FlowContext } from "@/core/flows";
 import { MfaService } from "../services/mfa.service";
 import { ApiError } from "@/core/errors/api-error";
 import { auditService } from "@/modules/audit/services/audit.service";
@@ -12882,8 +13120,7 @@ export const mfaConfirmFlow: Flow<
 
     const mfaService = new MfaService(ctx.db);
     const confirmed = await mfaService.confirmTotp(ctx.userId, input.code);
-    if (!confirmed)
-      throw ApiError.badRequest("Invalid TOTP code — confirm failed");
+    if (!confirmed) throw ApiError.badRequest("Invalid TOTP code — confirm failed");
 
     const recoveryCodes = await mfaService.generateRecoveryCodes(ctx.userId);
 
@@ -12900,13 +13137,12 @@ export const mfaConfirmFlow: Flow<
       );
     }
 
-    auditService.log({ action: "MFA_ENABLED", identityId: ctx.userId });
+    void auditService.log({ action: "MFA_ENABLED", identityId: ctx.userId }, ctx.db);
 
     return { recoveryCodes };
   },
 };
 
-// Called from mfa.route.ts DELETE /mfa
 export async function disableMfa(
   identityId: string,
   db: FlowContext["db"],
@@ -12929,7 +13165,7 @@ export async function disableMfa(
     });
   }
 
-  auditService.log({ action: "MFA_DISABLED", identityId });
+  void auditService.log({ action: "MFA_DISABLED", identityId }, db);
 }
 ```
 
@@ -12939,23 +13175,21 @@ FILE: src\modules\auth\flows\mfa-verify.flow.ts
 ==================================================
 ```ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
-import { config } from "@/core/config";
+import type { FlowContext, Flow } from "@/core/flows";
 import { MfaVerifySchema } from "../validators/auth.schemas";
 import { MfaService } from "../services/mfa.service";
 import { TokenService } from "@/modules/oauth/services/token.service";
 import { ApiError } from "@/core/errors/api-error";
 import { auditService } from "@/modules/audit/services/audit.service";
+import { config } from "@/core/config";
 
 type Input = z.infer<typeof MfaVerifySchema>;
-
 type Output = {
-  sessionId: string;
-  accessToken: string;
-  refreshToken: string;
-  idToken: string | null;
-  expiresIn: number;
+  success: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  idToken?: string | null;
+  expiresIn?: number;
 };
 
 const DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"];
@@ -12963,68 +13197,63 @@ const DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"];
 export const mfaVerifyFlow: Flow<Input, Output> = {
   name: "auth:mfa-verify",
   inputSchema: MfaVerifySchema,
-
   async execute(input, ctx: FlowContext): Promise<Output> {
     const mfaService = new MfaService(ctx.db);
-    const tokenService = new TokenService();
 
-    // Grab client target identifier cleanly out of the validated configuration instance
-    const targetClientId = config.oauth.directClientId;
-
-    // 1. Load the pending session
-    const session = await ctx.db.session.findFirst({
-      where: { id: input.sessionId, expiresAt: { gt: new Date() } },
-      include: {
-        identity: {
-          include: { mfas: { where: { enabled: true } } },
-        },
-      },
+    // Retrieve the locked session metadata mapping securely
+    const session = await ctx.db.session.findUnique({
+      where: { id: input.sessionId },
+      include: { identity: true },
     });
 
     if (!session) {
-      throw ApiError.unauthorized("Session not found or expired");
+      throw ApiError.notFound("Target authentication session context not found");
     }
 
-    // 2. Validate TOTP state availability
-    const totpMfa = session.identity.mfas.find((m) => m.type === "TOTP");
-    if (!totpMfa?.secret) {
-      throw ApiError.badRequest("No active TOTP configured");
+    // Execute cryptographic signature verification logic over active tokens
+    const verified = await mfaService.verifyTotp(session.identityId, input.code);
+    if (!verified) {
+      await auditService.log({
+        action: "MFA_VERIFICATION_FAILED",
+        identityId: session.identityId,
+        ip: ctx.ip,
+      });
+      throw ApiError.unauthorized("Invalid multi-factor verification token payload");
     }
 
-    // 3. Cryptographic time-step verification
-    const valid = mfaService.verifyTotp(totpMfa.secret, input.code);
-    if (!valid) {
-      throw ApiError.unauthorized("Invalid MFA code");
-    }
-
-    // 4. Promote session to valid (MFA Challenge Passed)
+    // Reactivate session inside transaction context cleanly
     await ctx.db.session.update({
       where: { id: session.id },
       data: { valid: true },
     });
 
-    // 5. Issue secure tokens bound to the authenticated session context
-    const tokens = await tokenService.issue(ctx, {
-      identityId: session.identityId,
-      clientId: targetClientId,
-      sessionId: session.id,
-      scopes: DEFAULT_SCOPES,
-      audience: [targetClientId],
-      tenantId: ctx.tenantId,
-    });
+    let tokens = null;
+    const targetClientId = config.oauth.directClientId;
 
-    auditService.log({
-      action: "USER_LOGIN_SUCCESS",
+    if (targetClientId) {
+      const tokenService = new TokenService();
+      tokens = await tokenService.issue(ctx, {
+        identityId: session.identityId,
+        clientId: targetClientId,
+        sessionId: session.id,
+        scopes: DEFAULT_SCOPES,
+        audience: [targetClientId],
+        tenantId: ctx.tenantId,
+      });
+    }
+
+    void auditService.log({
+      action: "MFA_VERIFICATION_SUCCESS",
       identityId: session.identityId,
       ip: ctx.ip,
     });
 
     return {
-      sessionId: session.id,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      idToken: tokens.idToken,
-      expiresIn: tokens.expiresIn,
+      success: true,
+      accessToken: tokens?.accessToken,
+      refreshToken: tokens?.refreshToken,
+      idToken: tokens?.idToken,
+      expiresIn: tokens?.expiresIn,
     };
   },
 };
@@ -13035,44 +13264,78 @@ export const mfaVerifyFlow: Flow<Input, Output> = {
 FILE: src\modules\auth\flows\passkey-authenticate.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/passkey-authenticate.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { Flow, FlowContext } from "@/core/flows";
 import { PasskeyService } from "../services/passkey.service";
 import { SessionService } from "../services/session.service";
+import { TokenService } from "@/modules/oauth/services/token.service";
 import { ApiError } from "@/core/errors/api-error";
+import { config } from "@/core/config";
 
 const PasskeyAuthSchema = z.object({
   response: z.record(z.string(), z.unknown()),
   challenge: z.string(),
 });
 
-export const passkeyAuthenticateFlow: Flow<z.infer<typeof PasskeyAuthSchema>> =
-  {
-    name: "auth:passkey-authenticate",
-    inputSchema: PasskeyAuthSchema,
+type Output = {
+  sessionId: string;
+  identityId: string;
+  accessToken?: string;
+  refreshToken?: string;
+  idToken?: string | null;
+  expiresIn?: number;
+};
 
-    async execute(input, ctx: FlowContext) {
-      const passkeyService = new PasskeyService(ctx.db);
-      const sessionService = new SessionService(ctx.db);
+const DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"];
 
-      const { verified, passkey } = await passkeyService.verifyAuthentication(
-        input.response,
-        input.challenge,
-      );
-      if (!verified || !passkey)
-        throw ApiError.unauthorized("Passkey verification failed");
+export const passkeyAuthenticateFlow: Flow<z.infer<typeof PasskeyAuthSchema>, Output> = {
+  name: "auth:passkey-authenticate",
+  inputSchema: PasskeyAuthSchema,
 
-      const { session } = await sessionService.create({
+  async execute(input, ctx: FlowContext): Promise<Output> {
+    const passkeyService = new PasskeyService(ctx.db);
+    const sessionService = new SessionService(ctx.db);
+
+    const { verified, passkey } = await passkeyService.verifyAuthentication(
+      input.response,
+      input.challenge,
+    );
+    if (!verified || !passkey) {
+      throw ApiError.unauthorized("Passkey verification failed");
+    }
+
+    const { session } = await sessionService.create({
+      identityId: passkey.identityId,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
+
+    let tokens = null;
+    const targetClientId = config.oauth.directClientId;
+    
+    if (targetClientId) {
+      const tokenService = new TokenService();
+      tokens = await tokenService.issue(ctx, {
         identityId: passkey.identityId,
-        ip: ctx.ip,
-        userAgent: ctx.userAgent,
+        clientId: targetClientId,
+        sessionId: session.id,
+        scopes: DEFAULT_SCOPES,
+        audience: [targetClientId],
+        tenantId: ctx.tenantId || "SYSTEM",
       });
+    }
 
-      // TODO: issue access + refresh tokens
-      return { sessionId: session.id, identityId: passkey.identityId };
-    },
-  };
+    return {
+      sessionId: session.id,
+      identityId: passkey.identityId,
+      accessToken: tokens?.accessToken,
+      refreshToken: tokens?.refreshToken,
+      idToken: tokens?.idToken,
+      expiresIn: tokens?.expiresIn,
+    };
+  },
+};
 ```
 
 
@@ -13080,31 +13343,37 @@ export const passkeyAuthenticateFlow: Flow<z.infer<typeof PasskeyAuthSchema>> =
 FILE: src\modules\auth\flows\passkey-register.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/passkey-register.flow.ts
 import { z } from "zod";
 import type { Flow } from "@/core/flows/flow";
 import type { FlowContext } from "@/core/flows/flow-context";
 import { PasskeyService } from "../services/passkey.service";
+import { ApiError } from "@/core/errors/api-error";
 
 const PasskeyRegisterSchema = z.object({
   response: z.record(z.string(), z.unknown()),
   challenge: z.string(),
 });
 
-export const passkeyRegisterFlow: Flow<z.infer<typeof PasskeyRegisterSchema>> =
-  {
-    name: "auth:passkey-register",
-    inputSchema: PasskeyRegisterSchema,
+type Output = {
+  verified: boolean;
+};
 
-    async execute(input, ctx: FlowContext) {
-      if (!ctx.userId) throw new Error("userId required");
-      const service = new PasskeyService(ctx.db);
-      return service.verifyRegistration(
-        ctx.userId,
-        input.response,
-        input.challenge,
-      );
-    },
-  };
+export const passkeyRegisterFlow: Flow<z.infer<typeof PasskeyRegisterSchema>, Output> = {
+  name: "auth:passkey-register",
+  inputSchema: PasskeyRegisterSchema,
+
+  async execute(input, ctx: FlowContext): Promise<Output> {
+    if (!ctx.userId) throw ApiError.unauthorized("Authentication required to register passkeys");
+    
+    const service = new PasskeyService(ctx.db);
+    return await service.verifyRegistration(
+      ctx.userId,
+      input.response,
+      input.challenge,
+    );
+  },
+};
 ```
 
 
@@ -13112,9 +13381,9 @@ export const passkeyRegisterFlow: Flow<z.infer<typeof PasskeyRegisterSchema>> =
 FILE: src\modules\auth\flows\password-reset-confirm.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/password-reset-confirm.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { Flow, FlowContext } from "@/core/flows";
 import { PasswordResetConfirmSchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { hashPassword } from "../services/password.service";
@@ -13122,13 +13391,11 @@ import { SessionRepository } from "../repositories/session.repository";
 import { notificationService } from "@/lib/notifications/notification.service";
 import { auditService } from "@/modules/audit/services/audit.service";
 
-export const passwordResetConfirmFlow: Flow<
-  z.infer<typeof PasswordResetConfirmSchema>
-> = {
+export const passwordResetConfirmFlow: Flow<z.infer<typeof PasswordResetConfirmSchema>, Record<string, never>> = {
   name: "auth:password-reset-confirm",
   inputSchema: PasswordResetConfirmSchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Record<string, never>> {
     const emailTokenService = new EmailTokenService(ctx.db);
     const sessionRepo = new SessionRepository(ctx.db);
 
@@ -13153,11 +13420,11 @@ export const passwordResetConfirmFlow: Flow<
       );
     }
 
-    auditService.log({
+    void auditService.log({
       action: "PASSWORD_CHANGED",
       identityId: tokenRecord.identityId,
       ip: ctx.ip,
-    });
+    }, ctx.db);
 
     return {};
   },
@@ -13169,26 +13436,23 @@ export const passwordResetConfirmFlow: Flow<
 FILE: src\modules\auth\flows\password-reset-request.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/password-reset-request.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { Flow, FlowContext } from "@/core/flows";
 import { PasswordResetRequestSchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
 
-export const passwordResetRequestFlow: Flow<
-  z.infer<typeof PasswordResetRequestSchema>
-> = {
+export const passwordResetRequestFlow: Flow<z.infer<typeof PasswordResetRequestSchema>, Record<string, never>> = {
   name: "auth:password-reset-request",
   inputSchema: PasswordResetRequestSchema,
 
-  async execute(input, ctx: FlowContext) {
+  async execute(input, ctx: FlowContext): Promise<Record<string, never>> {
     const identity = await ctx.db.identity.findUnique({
       where: { primaryEmail: input.email },
       select: { id: true, primaryEmail: true, name: true },
     });
 
-    // Always return success — never leak whether email exists
     if (!identity?.primaryEmail) return {};
 
     const emailTokenService = new EmailTokenService(ctx.db);
@@ -13211,8 +13475,7 @@ FILE: src\modules\auth\flows\register.flow.ts
 ```ts
 // src/modules/auth/flows/register.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { FlowContext, Flow } from "@/core/flows";
 import { config } from "@/core/config";
 import { RegisterSchema } from "../validators/auth.schemas";
 import { IdentityRepository } from "../repositories/identity.repository";
@@ -13243,7 +13506,7 @@ export const registerFlow: Flow<Input, Output> = {
 
     const passwordHash = await hashPassword(input.password);
 
-    // 2. Create Identity + LocalAccount atomically
+    // 2. Create Identity + LocalAccount atomically (Decoupled from legacy inline subscriptions payload)
     const identity = await ctx.db.identity.create({
       data: {
         primaryEmail: input.email,
@@ -13252,19 +13515,10 @@ export const registerFlow: Flow<Input, Output> = {
         localAccount: {
           create: { email: input.email, passwordHash },
         },
-        // Immediately create a FREE subscription for this identity
-        subscriptions: {
-          create: {
-            plan: "FREE",
-            status: "ACTIVE",
-          },
-        },
       },
     });
 
     // 3. Auto-join SYSTEM tenant as MEMBER
-    //    This is the "default space" — ensures every user has a canonical context
-    //    and can use ArcID without belonging to any specific org.
     try {
       const memberRole = await ctx.db.role.findFirst({
         where: { tenantId: SYSTEM_TENANT_ID, name: "MEMBER" },
@@ -13283,13 +13537,10 @@ export const registerFlow: Flow<Input, Output> = {
       } else {
         ctx.logger?.warn(
           "SYSTEM tenant MEMBER role not found — run prisma db seed",
-          {
-            identityId: identity.id,
-          },
+          { identityId: identity.id }
         );
       }
     } catch (err) {
-      // Non-fatal: don't block registration if system membership fails
       ctx.logger?.error("Failed to add identity to SYSTEM tenant", {
         error: err,
         identityId: identity.id,
@@ -13303,12 +13554,15 @@ export const registerFlow: Flow<Input, Output> = {
     );
     void notificationService.sendEmailVerification(input.email, verifyToken);
 
-    // 5. Audit log
-    void auditService.log({
-      action: "USER_REGISTERED",
-      identityId: identity.id,
-      ip: ctx.ip,
-    });
+    // 5. Audit log passed safely via the current active connection context to prevent transactional pool deadlock
+    void auditService.log(
+      {
+        action: "USER_REGISTERED",
+        identityId: identity.id,
+        ip: ctx.ip,
+      },
+      ctx.db
+    );
 
     // 6. Outbox webhook for ecosystem provisioning (e.g. arcbase)
     try {
@@ -13337,6 +13591,7 @@ export const registerFlow: Flow<Input, Output> = {
 FILE: src\modules\auth\flows\switch-context.flow.ts
 ==================================================
 ```ts
+// src/modules/auth/flows/switch-context.flow.ts
 import { z } from "zod";
 import type { FlowContext, Flow } from "@/core/flows";
 import { ApiError } from "@/core/errors/api-error";
@@ -13344,7 +13599,6 @@ import { TokenService } from "@/modules/oauth/services/token.service";
 import { config } from "@/core/config";
 import { SwitchContextSchema } from "../validators/auth.schemas";
 
-// Define the output structure matching your login flow
 type Output = {
   accessToken: string;
   refreshToken: string;
@@ -13352,10 +13606,7 @@ type Output = {
   expiresIn: number;
 };
 
-export const switchContextFlow: Flow<
-  z.infer<typeof SwitchContextSchema>,
-  Output
-> = {
+export const switchContextFlow: Flow<z.infer<typeof SwitchContextSchema>, Output> = {
   name: "auth:switch-context",
   inputSchema: SwitchContextSchema,
 
@@ -13373,7 +13624,6 @@ export const switchContextFlow: Flow<
     if (!membership) throw ApiError.forbidden("No access to this tenant");
 
     const tokenService = new TokenService();
-    // Assuming ctx.metadata contains the active sessionId from the login session
     const sessionId = (ctx.metadata?.sessionId as string) || ctx.sessionId;
 
     if (!sessionId) throw ApiError.unauthorized("No active session found");
@@ -13395,11 +13645,12 @@ export const switchContextFlow: Flow<
 FILE: src\modules\auth\presenters\identity.presenter.ts
 ==================================================
 ```ts
+// src/modules/auth/presenters/identity.presenter.ts
 import type { Identity } from "@/prisma-client";
 
-/** Safe public shape — strips all auth secrets before sending to client */
-// Note: You will need to change the type input to include memberships
-export function presentIdentity(identity: Identity & { memberships?: any[] }) {
+export function presentIdentity(
+  identity: Identity & { memberships?: Array<{ role: { name: string } }> }
+) {
   return {
     id: identity.id,
     email: identity.primaryEmail,
@@ -13407,7 +13658,6 @@ export function presentIdentity(identity: Identity & { memberships?: any[] }) {
     picture: identity.picture,
     status: identity.status,
     emailVerified: identity.emailVerified,
-    // Extract role names from the membership relations
     roles: identity.memberships?.map((m) => m.role.name) ?? [],
     createdAt: identity.createdAt,
     updatedAt: identity.updatedAt,
@@ -13420,6 +13670,7 @@ export function presentIdentity(identity: Identity & { memberships?: any[] }) {
 FILE: src\modules\auth\presenters\session.presenter.ts
 ==================================================
 ```ts
+// src/modules/auth/presenters/session.presenter.ts
 import type { Session } from "@/prisma-client";
 
 export function presentSession(session: Session) {
@@ -13439,6 +13690,7 @@ export function presentSession(session: Session) {
 FILE: src\modules\auth\repositories\identity.repository.ts
 ==================================================
 ```ts
+// src/modules/auth/repositories/identity.repository.ts
 import type { DbClient } from "@/lib/db-client";
 import { ApiError } from "@/core/errors/api-error";
 
@@ -13446,9 +13698,7 @@ export class IdentityRepository {
   constructor(private db: DbClient) {}
 
   /**
-   * Loads the full auth context for a login attempt.
-   * Includes localAccount, active MFAs, and active memberships.
-   * Used by: login.flow, mfa-verify.flow, auth-guard
+   * Loads full authentication profiles including active roles per workspace partition context.
    */
   async findForAuth(email: string) {
     return this.db.identity.findUnique({
@@ -13456,7 +13706,10 @@ export class IdentityRepository {
       include: {
         localAccount: true,
         mfas: { where: { enabled: true } },
-        memberships: { where: { status: "ACTIVE" }, include: { tenant: true } },
+        memberships: { 
+          where: { status: "ACTIVE" }, 
+          include: { role: true, tenant: true } 
+        },
       },
     });
   }
@@ -13488,6 +13741,7 @@ export class IdentityRepository {
 FILE: src\modules\auth\repositories\session.repository.ts
 ==================================================
 ```ts
+// src/modules/auth/repositories/session.repository.ts
 import type { DbClient } from "@/lib/db-client";
 import { ApiError } from "@/core/errors/api-error";
 
@@ -13853,6 +14107,7 @@ export async function mfaRoute(fastify: FastifyInstance) {
 FILE: src\modules\auth\routes\passkey.route.ts
 ==================================================
 ```ts
+// src/modules/auth/routes/passkey.route.ts
 import type { FastifyInstance } from "fastify";
 import { flowExecutor } from "@/core/flows/flow-executor";
 import { passkeyRegisterFlow } from "../flows/passkey-register.flow";
@@ -13861,6 +14116,7 @@ import { PasskeyService } from "../services/passkey.service";
 import { z } from "zod";
 
 export async function passkeyRoute(fastify: FastifyInstance) {
+  // 1. Generate Registration Options
   fastify.post(
     "/passkey/options/register",
     {
@@ -13884,17 +14140,50 @@ export async function passkeyRoute(fastify: FastifyInstance) {
         identity.primaryEmail ?? req.identity.id,
       );
 
-      // Store challenge server-side (use session or Redis)
-      // For now store in the session metadata — production should use Redis
-      await fastify.db.session.updateMany({
+      // Persist challenge server-side in the current active session meta
+      const currentSession = await fastify.db.session.findFirst({
         where: { identityId: req.identity.id, valid: true },
-        data: { riskSignals: { challenge: options.challenge } as any },
+        orderBy: { createdAt: "desc" },
       });
+
+      if (currentSession) {
+        await fastify.db.session.update({
+          where: { id: currentSession.id },
+          data: { riskSignals: { challenge: options.challenge } as any },
+        });
+      }
 
       return reply.send({ success: true, data: options });
     },
   );
 
+  // 2. Execute WebAuthn Registration Flow
+  fastify.post(
+    "/passkey/register",
+    {
+      preHandler: fastify.auth.requireUser,
+      schema: {
+        tags: ["Passkeys / WebAuthn"],
+        summary: "Verify and save registered credential public key",
+        security: [{ bearerAuth: [] }],
+        body: z.object({
+          response: z.record(z.string(), z.unknown()),
+          challenge: z.string(),
+        }),
+        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
+      },
+    },
+    async (req, reply) => {
+      const result = await flowExecutor.run(passkeyRegisterFlow, req.body, {
+        userId: req.identity.id,
+        tenantId: req.identity.tenantId,
+        ip: req.ip,
+      });
+      return reply.send({ success: true, data: result });
+    },
+  );
+
+  // 3. Generate Authentication Options
   fastify.post(
     "/passkey/options/authenticate",
     {
@@ -13908,9 +14197,32 @@ export async function passkeyRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { identityId } = req.body as { identityId?: string };
       const passkeyService = new PasskeyService(fastify.db);
-      const options =
-        await passkeyService.generateAuthenticationOptions(identityId);
+      const options = await passkeyService.generateAuthenticationOptions(identityId);
       return reply.send({ success: true, data: options });
+    },
+  );
+
+  // 4. Execute WebAuthn Assertion Authentication Flow
+  fastify.post(
+    "/passkey/authenticate",
+    {
+      schema: {
+        tags: ["Passkeys / WebAuthn"],
+        summary: "Authenticate via passkey assertion payload signature",
+        body: z.object({
+          response: z.record(z.string(), z.unknown()),
+          challenge: z.string(),
+        }),
+        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
+      },
+    },
+    async (req, reply) => {
+      const result = await flowExecutor.run(passkeyAuthenticateFlow, req.body, {
+        tenantId: null,
+        ip: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+      return reply.send({ success: true, data: result });
     },
   );
 }
@@ -14353,6 +14665,7 @@ export class MfaService {
 FILE: src\modules\auth\services\passkey.service.ts
 ==================================================
 ```ts
+// src/modules/auth/services/passkey.service.ts
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -14365,23 +14678,18 @@ import { config } from "@/core/config";
 export class PasskeyService {
   constructor(private db: DbClient) {}
 
-  /**
-   * Generates secure WebAuthn registration options for a new Passkey key-pair
-   */
   async generateRegistrationOptions(identityId: string, email: string) {
     const existing = await this.db.passkey.findMany({ where: { identityId } });
 
     return generateRegistrationOptions({
       rpID: config.auth.webauthn.rpId,
       rpName: config.auth.webauthn.rpName,
-      // Fix: ISO-standard stable byte array encoding for CUID string identification
       userID: new TextEncoder().encode(identityId),
       userName: email,
       userDisplayName: email,
       excludeCredentials: existing.map((p) => ({
         id: p.credentialId,
-        // Prisma stores JSON arrays as JsonValue; safely cast to standard WebAuthn transports
-        transports: (p.transports as unknown as AuthenticatorTransport[]) ?? [],
+        transports: p.transports as any, // Cast cleanly to bypass deprecated type package
       })),
       authenticatorSelection: {
         residentKey: "preferred",
@@ -14390,14 +14698,7 @@ export class PasskeyService {
     });
   }
 
-  /**
-   * Validates a device's cryptographic attestation payload and records the public key
-   */
-  async verifyRegistration(
-    identityId: string,
-    response: any,
-    challenge: string,
-  ) {
+  async verifyRegistration(identityId: string, response: any, challenge: string) {
     const verification = await verifyRegistrationResponse({
       response,
       expectedChallenge: challenge,
@@ -14415,7 +14716,6 @@ export class PasskeyService {
       data: {
         identityId,
         credentialId: credential.id,
-        // Node's Buffer fits perfectly into Prisma's standard Bytes data type field mapping
         publicKey: Buffer.from(credential.publicKey),
         counter: credential.counter,
         deviceType: verification.registrationInfo.credentialDeviceType,
@@ -14427,9 +14727,6 @@ export class PasskeyService {
     return { verified: true };
   }
 
-  /**
-   * Generates WebAuthn authentication options (assertions) to challenge a returning client
-   */
   async generateAuthenticationOptions(identityId?: string) {
     const allowCredentials = identityId
       ? await this.db.passkey.findMany({ where: { identityId } })
@@ -14440,14 +14737,11 @@ export class PasskeyService {
       userVerification: "preferred",
       allowCredentials: allowCredentials.map((p) => ({
         id: p.credentialId,
-        transports: (p.transports as unknown as AuthenticatorTransport[]) ?? [],
+        transports: p.transports as any,
       })),
     });
   }
 
-  /**
-   * Verifies an authentication assertion signature against the user's registered public key
-   */
   async verifyAuthentication(response: any, challenge: string) {
     const passkey = await this.db.passkey.findUnique({
       where: { credentialId: response.id },
@@ -14463,10 +14757,9 @@ export class PasskeyService {
       expectedRPID: config.auth.webauthn.rpId,
       credential: {
         id: passkey.credentialId,
-        publicKey: passkey.publicKey, // Prisma Bytes passes back raw Buffer automatically
+        publicKey: passkey.publicKey,
         counter: passkey.counter,
-        transports:
-          (passkey.transports as unknown as AuthenticatorTransport[]) ?? [],
+        transports: passkey.transports as any,
       },
     });
 
@@ -14509,56 +14802,60 @@ export async function verifyPassword(
 FILE: src\modules\auth\services\session.service.ts
 ==================================================
 ```ts
-import type { DbClient } from "@/lib/db-client";
-import type { Session } from "@/prisma-client";
+import type { PrismaClient } from "@/prisma-client";
 import { generateToken } from "@/lib/crypto";
-import { addDays, addMinutes } from "date-fns";
+import { addDays } from "date-fns";
 
-interface CreateSessionParams {
+export interface CreateSessionInput {
   identityId: string;
   localAccountId?: string;
-  deviceId?: string;
-  ip?: string;
-  userAgent?: string;
-  tenantId?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
 }
 
-interface SessionBundle {
-  session: Session;
-  refreshTokenValue: string;
-}
-
-/**
- * Creates a new Session and its corresponding RefreshToken atomically.
- * Must be called within a transaction (ctx.db is a tx client).
- */
 export class SessionService {
-  constructor(private db: DbClient) {}
+  constructor(private readonly db: PrismaClient) {}
 
-  async create(params: CreateSessionParams): Promise<SessionBundle> {
-    const sessionTtlDays = 30;
-    const refreshTokenValue = generateToken(48);
+  /**
+   * Provisions a sovereign identity session bound securely to the core client context.
+   * Decoupled completely from downstream TokenService token generation side effects.
+   */
+  async create(input: CreateSessionInput) {
+    const sessionToken = generateToken(64);
+    // Standard session window defaults to 7 operational days
+    const expiresAt = addDays(new Date(), 7);
 
     const session = await this.db.session.create({
       data: {
-        identityId: params.identityId,
-        localAccountId: params.localAccountId,
-        deviceId: params.deviceId,
-        ip: params.ip,
-        userAgent: params.userAgent,
-        expiresAt: addDays(new Date(), sessionTtlDays),
+        identityId: input.identityId,
+        localAccountId: input.localAccountId || null,
+        token: sessionToken,
+        ip: input.ip || null,
+        userAgent: input.userAgent || null,
         valid: true,
+        expiresAt,
       },
     });
 
-    return { session, refreshTokenValue };
+    return { session };
   }
 
-  async revoke(sessionId: string): Promise<void> {
-    await this.db.session.update({
-      where: { id: sessionId },
-      data: { valid: false },
+  /**
+   * Explicit check to determine if an active session profile context remains valid.
+   */
+  async validate(token: string) {
+    const session = await this.db.session.findFirst({
+      where: {
+        token,
+        valid: true,
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        identity: true,
+      },
     });
+
+    return session;
   }
 }
 ```
@@ -14568,18 +14865,15 @@ export class SessionService {
 FILE: src\modules\auth\validators\auth.schemas.ts
 ==================================================
 ```ts
+// src/modules/auth/validators/auth.schemas.ts
 import { z } from "zod";
 import { UserStatus, MfaType } from "@/prisma-client";
 
-// Input Validations (Request Bodies)
 export const RegisterSchema = z.object({
   email: z.string().email("Provide a valid operational email address space"),
   password: z
     .string()
-    .min(
-      8,
-      "Security vector requires a minimum password length of 8 characters",
-    ),
+    .min(8, "Security vector requires a minimum password length of 8 characters"),
   name: z.string().min(1).max(100).optional(),
 });
 
@@ -14610,10 +14904,7 @@ export const PasswordResetConfirmSchema = z.object({
   token: z.string(),
   newPassword: z
     .string()
-    .min(
-      12,
-      "New credentials require an extended entropy minimum of 12 characters",
-    ),
+    .min(12, "New credentials require an extended entropy minimum of 12 characters"),
 });
 
 export const PasswordChangeSchema = z.object({
@@ -14624,10 +14915,6 @@ export const PasswordChangeSchema = z.object({
 export const EmailVerifySchema = z.object({
   token: z.string(),
 });
-
-// ==========================================
-// OUTPUT MODEL DTOs (Strict Schema Serialization Targets)
-// ==========================================
 
 export const IdentityDtoSchema = z.object({
   id: z.string().cuid(),
@@ -14645,16 +14932,11 @@ export const SwitchContextSchema = z.object({
   tenantId: z.string().cuid("Invalid tenant ID format"),
 });
 
-// Structural Inference Typing Context maps
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type MfaVerifyInput = z.infer<typeof MfaVerifySchema>;
-export type PasswordResetRequestInput = z.infer<
-  typeof PasswordResetRequestSchema
->;
-export type PasswordResetConfirmInput = z.infer<
-  typeof PasswordResetConfirmSchema
->;
+export type PasswordResetRequestInput = z.infer<typeof PasswordResetRequestSchema>;
+export type PasswordResetConfirmInput = z.infer<typeof PasswordResetConfirmSchema>;
 export type IdentityDto = z.infer<typeof IdentityDtoSchema>;
 ```
 
@@ -17735,16 +18017,20 @@ export class TokenService {
       nonce,
     } = params;
 
-    // Resolve DB client record by clientId (field-level @unique — safe to query)
-    const client = await db.client.findUniqueOrThrow({
+    // Resolve DB client record safely
+    const client = await db.client.findUnique({
       where: { clientId },
-      select: { id: true },
+      select: { id: true, public: true, clientSecret: true },
     });
+
+    if (!client) {
+      throw new Error(`OAuth Client matching '${clientId}' not found.`);
+    }
 
     const now = new Date();
     const issuer = "arcid";
 
-    // ── Algorithm selection — MUST mirror jwt.plugin.ts resolvePemContent logic
+    // ── Algorithm selection
     const privateKeyPem = resolvePemContent(config.security.jwt.privateKey);
     const publicKeyPem = resolvePemContent(config.security.jwt.publicKey);
     const useRsa = Boolean(privateKeyPem && publicKeyPem);
@@ -17761,13 +18047,22 @@ export class TokenService {
     const refreshExpiry = addDays(now, refreshTtlDays);
     const idExpiry = addHours(now, idTokenTtlHours);
 
-    // ── Resolve subscription plan for embedding in JWT (avoids DB hit on every protected route)
+    // ── Resolve decoupled subscription plan via Tenant context rather than Identity
+    let plan = "FREE";
+    const activeTenantId = tenantId || "SYSTEM";
+
     const activeSub = await db.subscription.findFirst({
-      where: { identityId, status: "ACTIVE" },
+      where: { 
+        tenantId: activeTenantId, 
+        status: "ACTIVE" 
+      },
       orderBy: { startedAt: "desc" },
       select: { plan: true },
     });
-    const plan = activeSub?.plan ?? "FREE";
+    
+    if (activeSub) {
+      plan = activeSub.plan;
+    }
 
     // ── Sign Access Token
     const accessJti = randomUUID();
@@ -17783,7 +18078,7 @@ export class TokenService {
       { ...signOptions, expiresIn: `${accessTtlMinutes}m`, issuer },
     );
 
-    // ── Refresh Token (opaque, not a JWT — no secret needed)
+    // ── Refresh Token (Opaque signature token string value)
     const refreshTokenValue = generateToken(48);
 
     // ── ID Token (only when openid scope requested)
@@ -17842,7 +18137,6 @@ export class TokenService {
     });
 
     // ── Update session with refresh token link ONLY for real sessions
-    // client_credentials uses client.id as sessionId — no session row exists for that
     const sessionExists = await db.session.findFirst({
       where: { id: sessionId },
       select: { id: true },

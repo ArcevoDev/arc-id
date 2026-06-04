@@ -10,6 +10,7 @@ import { auditService } from "@/modules/audit/services/audit.service";
 import { presentIdentity } from "../presenters/identity.presenter";
 import { notificationService } from "@/lib/notifications/notification.service";
 import { config } from "@/core/config";
+import { prisma } from "@/core/db/prisma";
 
 type Input = z.infer<typeof LoginSchema>;
 type Output = {
@@ -29,11 +30,10 @@ export const loginFlow: Flow<Input, Output> = {
   name: "auth:login",
   inputSchema: LoginSchema,
   async execute(input, ctx: FlowContext): Promise<Output> {
-    const identityRepo = new IdentityRepository(ctx.db);
-    const sessionService = new SessionService(ctx.db);
-    const targetClientId = config.oauth.directClientId;
-
-    const identity = await identityRepo.findForAuth(input.email);
+    // 1. READ & VERIFY OUTSIDE THE TRANSACTION BOUNDARY
+    // We fetch using the global client to avoid tying up transaction locks during slow crypto tasks.
+    const baseIdentityRepo = new IdentityRepository(prisma);
+    const identity = await baseIdentityRepo.findForAuth(input.email);
 
     if (!identity?.localAccount) {
       await auditService.log({ action: "USER_LOGIN_FAILED", ip: ctx.ip });
@@ -44,6 +44,7 @@ export const loginFlow: Flow<Input, Output> = {
     if (identity.status === "SUSPENDED") throw ApiError.forbidden("Account suspended");
     if (identity.status === "DELETED") throw ApiError.unauthorized("Invalid email");
 
+    // Heavy cryptographic evaluation occurs out-of-band safely here
     const valid = await verifyPassword(
       identity.localAccount.passwordHash,
       input.password,
@@ -58,7 +59,10 @@ export const loginFlow: Flow<Input, Output> = {
       throw ApiError.unauthorized("Invalid email or password");
     }
 
-    // Invoke clean, decoupled Session service
+    // 2. TRANSACTION OPERATIONS FOR MUTATIONS ONLY
+    const sessionService = new SessionService(ctx.db);
+    const targetClientId = config.oauth.directClientId;
+
     const { session } = await sessionService.create({
       identityId: identity.id,
       localAccountId: identity.localAccount.id,
@@ -68,7 +72,6 @@ export const loginFlow: Flow<Input, Output> = {
 
     const activeMfas = identity.mfas.filter((m) => m.enabled);
     if (activeMfas.length > 0) {
-      // Intentionally disable session validity flag until step-up token execution resolves successfully
       await ctx.db.session.update({
         where: { id: session.id },
         data: { valid: false },
@@ -101,7 +104,9 @@ export const loginFlow: Flow<Input, Output> = {
       });
     }
 
-    void Promise.all([
+    // 3. EXPLICITLY AWAIT SIDE-EFFECTS
+    // Resolving these completely removes the pg @9.0 concurrent pipeline query execution warning
+    await Promise.all([
       auditService.log({
         action: "USER_LOGIN_SUCCESS",
         identityId: identity.id,

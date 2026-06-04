@@ -80,7 +80,7 @@ export const registerFlow: Flow<Input, Output> = {
     void notificationService.sendEmailVerification(input.email, verifyToken);
 
     // 5. Audit log passed safely via the current active connection context to prevent transactional pool deadlock
-    void auditService.log(
+    await auditService.log(
       {
         action: "USER_REGISTERED",
         identityId: identity.id,

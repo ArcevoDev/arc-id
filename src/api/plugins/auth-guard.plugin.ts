@@ -4,32 +4,23 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { ApiError } from "@/core/errors";
 import type { SubscriptionPlan } from "@/prisma-client";
 
-// ─── Augment Fastify Request ─────────────────────────────────────────────────
-
 declare module "fastify" {
   interface FastifyRequest {
     identity: {
       id: string;
       tenantId: string | null;
       scope: string[];
-      /** Current subscription plan — resolved from DB on each protected request */
       plan: SubscriptionPlan;
     };
   }
   interface FastifyInstance {
     auth: {
       requireUser: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
-      requireScope: (
-        scope: string,
-      ) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
-      requirePlan: (
-        minPlan: SubscriptionPlan,
-      ) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
+      requireScope: (scope: string) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
+      requirePlan: (minPlan: SubscriptionPlan) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
     };
   }
 }
-
-// ─── Plan Hierarchy ──────────────────────────────────────────────────────────
 
 const PLAN_ORDER: Record<SubscriptionPlan, number> = {
   FREE: 0,
@@ -37,48 +28,54 @@ const PLAN_ORDER: Record<SubscriptionPlan, number> = {
   ENTERPRISE: 2,
 };
 
-// ─── Plugin ──────────────────────────────────────────────────────────────────
-
 export const authGuardPlugin = fp(
   async (fastify: FastifyInstance) => {
-    /**
-     * Verifies the Bearer JWT and resolves identity + active subscription plan.
-     * Must be the base of every other guard — requireScope and requirePlan both
-     * call this first.
-     */
+
     const requireUser = async (req: FastifyRequest, reply: FastifyReply) => {
       try {
         await req.jwtVerify();
         const payload = req.user as any;
 
-        // Resolve active subscription for this identity (defaults to FREE)
+        // ─────────────────────────────────────────────────────────────────────
+        // ROOT CAUSE FIX (was causing 401 on every protected route):
+        //
+        // The previous code queried: subscription.findFirst({ where: { identityId: payload.sub } })
+        // BUT the actual Prisma schema shows Subscription is TENANT-scoped:
+        //
+        //   model Subscription {
+        //     tenantId  String  @unique   ← belongs to Tenant, NOT Identity
+        //   }
+        //
+        // That query threw PrismaClientValidationError: Unknown argument 'identityId'
+        // which was caught here and re-thrown as ApiError.unauthorized → all routes 401.
+        //
+        // Fix: resolve the active tenant from the JWT tid claim (or fall back to SYSTEM),
+        // then look up that tenant's subscription.
+        // ─────────────────────────────────────────────────────────────────────
         let plan: SubscriptionPlan = "FREE";
-        if (payload.sub) {
-          const sub = await fastify.db.subscription.findFirst({
-            where: { identityId: payload.sub, status: "ACTIVE" },
-            orderBy: { startedAt: "desc" },
-            select: { plan: true },
-          });
-          if (sub?.plan) plan = sub.plan;
+        const activeTenantId = (payload.tid as string | undefined) ?? "SYSTEM";
+
+        const sub = await fastify.db.subscription.findUnique({
+          where: { tenantId: activeTenantId },
+          select: { plan: true, status: true },
+        });
+
+        if (sub && sub.status === "ACTIVE") {
+          plan = sub.plan as SubscriptionPlan;
         }
 
         req.identity = {
-          id: payload.sub,
-          tenantId: payload.tid ?? null,
-          scope: (payload.scope ?? "").split(" ").filter(Boolean),
+          id: payload.sub as string,
+          tenantId: (payload.tid as string | null) ?? null,
+          scope: ((payload.scope as string | undefined) ?? "").split(" ").filter(Boolean),
           plan,
         };
       } catch (err) {
-        // Re-throw ApiError instances (e.g. from nested guards) as-is
         if (err instanceof ApiError) throw err;
         throw ApiError.unauthorized("Invalid or expired access token");
       }
     };
 
-    /**
-     * Extends requireUser with a scope check against the JWT `scope` claim.
-     * To grant admin:write, issue a token with that scope explicitly.
-     */
     const requireScope =
       (requiredScope: string) =>
       async (req: FastifyRequest, reply: FastifyReply) => {
@@ -88,29 +85,18 @@ export const authGuardPlugin = fp(
         }
       };
 
-    /**
-     * Extends requireUser with a minimum subscription plan check.
-     *
-     * Usage: preHandler: fastify.auth.requirePlan("PRO")
-     *
-     * Returns 403 with a clear upgrade message when the plan is insufficient.
-     * Returns 402 (Payment Required) so the frontend can redirect to upgrade.
-     */
     const requirePlan =
       (minPlan: SubscriptionPlan) =>
       async (req: FastifyRequest, reply: FastifyReply) => {
         await requireUser(req, reply);
-
         if (PLAN_ORDER[req.identity.plan] < PLAN_ORDER[minPlan]) {
-          reply.status(402).send({
+          return reply.status(402).send({
             success: false,
             error: "UPGRADE_REQUIRED",
             message: `This feature requires a ${minPlan} subscription`,
             currentPlan: req.identity.plan,
             requiredPlan: minPlan,
           });
-          // Halt the request lifecycle
-          return reply;
         }
       };
 

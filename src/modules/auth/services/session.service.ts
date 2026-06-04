@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@/prisma-client";
+import { Prisma } from "@/prisma-client";
 import { generateToken } from "@/lib/crypto";
 import { addDays } from "date-fns";
 
@@ -10,7 +10,10 @@ export interface CreateSessionInput {
 }
 
 export class SessionService {
-  constructor(private readonly db: PrismaClient) {}
+  // Bypasses internal sub-namespace mapping variations across engine runtimes cleanly
+  constructor(
+    private readonly db: Prisma.TransactionClient | Record<string, any>
+  ) {}
 
   /**
    * Provisions a sovereign identity session bound securely to the core client context.
@@ -21,11 +24,11 @@ export class SessionService {
     // Standard session window defaults to 7 operational days
     const expiresAt = addDays(new Date(), 7);
 
-    const session = await this.db.session.create({
+    const session = await (this.db as any).session.create({
       data: {
+        id: sessionToken,
         identityId: input.identityId,
         localAccountId: input.localAccountId || null,
-        token: sessionToken,
         ip: input.ip || null,
         userAgent: input.userAgent || null,
         valid: true,
@@ -40,9 +43,9 @@ export class SessionService {
    * Explicit check to determine if an active session profile context remains valid.
    */
   async validate(token: string) {
-    const session = await this.db.session.findFirst({
+    const session = await (this.db as any).session.findFirst({
       where: {
-        token,
+        id: token,
         valid: true,
         expiresAt: { gt: new Date() },
       },

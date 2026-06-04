@@ -37,7 +37,7 @@ export const passwordResetConfirmFlow: Flow<z.infer<typeof PasswordResetConfirmS
       );
     }
 
-    void auditService.log({
+    await auditService.log({
       action: "PASSWORD_CHANGED",
       identityId: tokenRecord.identityId,
       ip: ctx.ip,
