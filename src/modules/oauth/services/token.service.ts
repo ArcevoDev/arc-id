@@ -111,7 +111,7 @@ export class TokenService {
       select: { plan: true, status: true },
     });
     
-    if (activeSub?.status === "ACTIVE")
+    if (activeSub?.status === "ACTIVE") {
       plan = activeSub.plan;
     }
 

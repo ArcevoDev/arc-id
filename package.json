@@ -8,9 +8,9 @@
     "seed": "tsx prisma/seed.ts"
   },
   "scripts": {
-    "dev:web": "next dev",
-    "build:web": "next build",
-    "start:web": "next start",
+    "dev:web": "cross-env NODE_OPTIONS='--max-old-space-size=4096' next dev",
+    "build:web": "cross-env NODE_OPTIONS='--max-old-space-size=4096' next build",
+       "start:web": "next start",
     "dev:api": "tsx watch --tsconfig tsconfig.api.json src/api/server.ts",
     "build:api": "tsc -p tsconfig.api.json",
     "start:api": "node dist/api/server.js",
@@ -70,6 +70,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
