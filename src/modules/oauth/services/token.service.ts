@@ -105,14 +105,13 @@ export class TokenService {
 
     const activeSub = await db.subscription.findFirst({
       where: { 
-        tenantId: activeTenantId, 
-        status: "ACTIVE" 
+        tenantId: activeTenantId
       },
       orderBy: { startedAt: "desc" },
-      select: { plan: true },
+      select: { plan: true, status: true },
     });
     
-    if (activeSub) {
+    if (activeSub?.status === "ACTIVE")
       plan = activeSub.plan;
     }
 

@@ -51,20 +51,23 @@ export const authGuardPlugin = fp(
         await req.jwtVerify();
         const payload = req.user as any;
 
-        // Resolve active subscription for this identity (defaults to FREE)
+        // Resolve active tenant context (use tid from token if present, else SYSTEM)
+        const activeTenantId = payload.tid ?? "SYSTEM"
+
+        // Look up subscription by tenant
         let plan: SubscriptionPlan = "FREE";
-        if (payload.sub) {
-          const sub = await fastify.db.subscription.findFirst({
-            where: { identityId: payload.sub, status: "ACTIVE" },
-            orderBy: { startedAt: "desc" },
-            select: { plan: true },
-          });
-          if (sub?.plan) plan = sub.plan;
+        const sub = await fastify.db.subscription.findUnique ({
+          where: { tenantId: activeTenantId },
+          select: { plan: true, status: true },
+        });
+
+        if (sub?.status === "ACTIVE" && sub.plan) {
+          plan = sub.plan
         }
 
         req.identity = {
           id: payload.sub,
-          tenantId: payload.tid ?? null,
+          tenantId: activeTenantId,
           scope: (payload.scope ?? "").split(" ").filter(Boolean),
           plan,
         };
