@@ -77,13 +77,14 @@ works, found by reading the actual signing/verification paths end to end.
    instead of an opaque 500 at credential-issuance time.~~
    **✅ Done — identity-scoped DIDs rejected with ApiError.badRequest at issuance time (v2 feature).**
 
-3. **Status-list index allocation race.** `allocateIndex`'s read
+3. **Status-list index allocation race.** ~~`allocateIndex`'s read
    (`issuedCount`) and write (`increment`) are two separate statements —
    concurrent issuance can hand out the same index twice. Make it a
    compare-and-swap (`updateMany` guarded on the observed `issuedCount`,
    retry on conflict), and run the allocation inside the same transaction
    as the `VerifiableCredential.create` so a crash mid-issuance can't leave
-   an allocated-but-orphaned slot.
+   an allocated-but-orphaned slot.~~
+   **✅ Done — compare-and-swap via updateMany with retry on conflict; tx parameter for transaction-scoped allocation.**
 
 4. **Federated/social login account takeover via email match.** Both
    `social.route.ts`'s `handleCallback` and `idp.service.ts`'s

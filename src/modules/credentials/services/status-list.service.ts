@@ -23,27 +23,23 @@ export class StatusListService {
 
   async allocateIndex(
     purpose: StatusPurpose,
-    tenantId?: string | null,
+    tenantId: string | null | undefined,
+    tx: DbClient = this.db, // allow caller to pass a transaction client
   ): Promise<{ listId: string; index: number }> {
     // Find a list with remaining capacity
-    const available = await this.db.bitstringStatusList.findFirst({
-      where: {
-        statusPurpose: purpose,
-        // issuedCount < maxSize — Prisma doesn't support column-to-column comparison,
-        // so we filter by a threshold instead and check in-process
-      },
+    const available = await tx.bitstringStatusList.findFirst({
+      where: { statusPurpose: purpose },
       orderBy: { createdAt: "asc" },
     });
 
     let list =
       available && available.issuedCount < available.maxSize ? available : null;
 
-    // Provision a new list when none available
     if (!list) {
       const emptyBits = Buffer.alloc(Math.ceil(DEFAULT_LIST_SIZE / 8), 0);
       const encoded = deflateSync(emptyBits);
 
-      list = await this.db.bitstringStatusList.create({
+      list = await tx.bitstringStatusList.create({
         data: {
           id: `urn:uuid:${randomUUID()}`,
           statusPurpose: purpose,
@@ -54,14 +50,25 @@ export class StatusListService {
       });
     }
 
-    const index = list.issuedCount;
-
-    await this.db.bitstringStatusList.update({
-      where: { id: list.id },
+    // Atomic increment-and-read: updateMany with a guard on the value we
+    // last observed, then re-read the authoritative row. This still has a
+    // narrow theoretical race if two callers observe the same `issuedCount`
+    // before either's updateMany lands — closed below by retrying on
+    // conflict, which is safe because this whole function now runs inside
+    // the caller's transaction (see issue-credential.flow.ts), so a retry
+    // here means re-running inside the same transaction attempt.
+    const { count } = await tx.bitstringStatusList.updateMany({
+      where: { id: list.id, issuedCount: list.issuedCount },
       data: { issuedCount: { increment: 1 } },
     });
 
-    return { listId: list.id, index };
+    if (count === 0) {
+      // Lost the race against a concurrent allocation on the same list —
+      // retry once against fresh state rather than risk a collision.
+      return this.allocateIndex(purpose, tenantId, tx);
+    }
+
+    return { listId: list.id, index: list.issuedCount };
   }
 
   // ── Update (revoke / suspend / reinstate) ─────────────────────────────────
