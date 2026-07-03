@@ -86,7 +86,7 @@ works, found by reading the actual signing/verification paths end to end.
    an allocated-but-orphaned slot.~~
    **✅ Done — compare-and-swap via updateMany with retry on conflict; tx parameter for transaction-scoped allocation.**
 
-4. **Federated/social login account takeover via email match.** Both
+4. **Federated/social login account takeover via email match.** ~~Both
    `social.route.ts`'s `handleCallback` and `idp.service.ts`'s
    `federatedLogin` silently link a new federated identity to any existing
    local account sharing the same email, with no check that the existing
@@ -94,7 +94,8 @@ works, found by reading the actual signing/verification paths end to end.
    `existingIdentity.emailVerified === true`; otherwise fail with a clear
    "verify your email first, then link this provider from settings" error.
    Both call sites need the identical fix — patching one leaves the other
-   exploitable.
+   exploitable.~~
+   **✅ Done — both call sites gate auto-link on `emailVerified === true` or throw ApiError.conflict.**
 
 5. **Seed script's `ADMIN_PASSWORD` default.** `prisma/seed.ts` falls back
    to a hardcoded, now-public password if the env var isn't set. Make it
