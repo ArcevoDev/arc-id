@@ -97,10 +97,11 @@ works, found by reading the actual signing/verification paths end to end.
    exploitable.~~
    **✅ Done — both call sites gate auto-link on `emailVerified === true` or throw ApiError.conflict.**
 
-5. **Seed script's `ADMIN_PASSWORD` default.** `prisma/seed.ts` falls back
+5. **Seed script's `ADMIN_PASSWORD` default.** ~~`prisma/seed.ts` falls back
    to a hardcoded, now-public password if the env var isn't set. Make it
    required (process.exit) when `NODE_ENV === "production"`, mirroring the
-   `superRefine` pattern `env.validator.ts` already uses elsewhere.
+   `superRefine` pattern `env.validator.ts` already uses elsewhere.~~
+   **✅ Done — production seed requires ADMIN_PASSWORD (exit-on-fail with defense-in-depth check against dev default).**
 
 6. **Misnamed migration folder.** Rename
    `20260617125316_add_identity_banned_audit_action` to something like
