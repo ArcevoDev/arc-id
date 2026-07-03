@@ -5,7 +5,7 @@ import { AuditLogAction } from "@/prisma-client";
 
 export const AuditQuerySchema = z.object({
   identityId: z.string().cuid().optional(),
-  tenantId: z.string().cuid().optional(),
+  tenantId: z.string().optional(),
   /**
    * Filter by action type. Enum sourced from DB — new actions only require
    * a Prisma migration, not a validator update.

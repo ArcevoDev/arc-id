@@ -1,6 +1,7 @@
 // src/modules/audit/services/audit.service.ts
 import { AuditLogAction } from "@/prisma-client";
-import { db as globalDb } from "@/lib/db-client";
+import { prisma as globalDb } from "@/core/db";
+import { logger } from "@/lib/logger";
 
 export interface LogParams {
   action: AuditLogAction;
@@ -13,7 +14,6 @@ export interface LogParams {
 
 export const auditService = {
   async log(params: LogParams, txClient?: any): Promise<void> {
-    // If a transactional Prisma client context was passed down, use it; otherwise fallback to standard pool
     const client = txClient || globalDb;
     try {
       await client.auditLog.create({
@@ -27,8 +27,7 @@ export const auditService = {
         },
       });
     } catch (error) {
-      // Prevent telemetry logging engine crashes from breaking the main auth execution loop
-      console.error("[AUDIT_LOG_UNHANDLED_EXCEPTION_FAULT]:", error);
+      logger.error({ err: error }, "[AUDIT_LOG_UNHANDLED_EXCEPTION_FAULT]");
     }
   },
 };

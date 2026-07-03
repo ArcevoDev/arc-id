@@ -1,6 +1,12 @@
+// src/modules/auth/routes/register.route.ts
+//
+// FIX: added per-route rate limit.
+// Previous version had none — inherited global 200/min which is far too
+// generous for account creation (enables bulk account farming).
+// 5 registrations per hour per IP is a sensible ceiling for legitimate use.
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
-import { registerFlow } from "../flows/register.flow"; // 👈 Fixed path string target
+import { flowExecutor } from "@/core/flows";
+import { registerFlow } from "../flows/register.flow";
 import { RegisterSchema, IdentityDtoSchema } from "../validators/auth.schemas";
 import { z } from "zod";
 
@@ -8,18 +14,23 @@ export async function registerRoute(fastify: FastifyInstance) {
   fastify.post(
     "/register",
     {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: "1 hour",
+        },
+      },
       schema: {
-        tags: ["Authentication Architecture"],
-        summary: "Register a fresh sovereign digital identity space",
+        tags: ["Authentication"],
+        summary: "Register a new identity",
         description:
-          "Atomically creates a baseline Identity tracking context and local secure account credential vector inside a unified transaction shell.",
+          "Creates an Identity and LocalAccount atomically. Sends an email verification link. " +
+          "The identity starts as PENDING until the email is verified.",
         body: RegisterSchema,
         response: {
           201: z.object({
             success: z.boolean(),
-            data: z.object({
-              identity: IdentityDtoSchema, // 👈 Shared, reusable structural DTO mapping contract
-            }),
+            data: z.object({ identity: IdentityDtoSchema }),
           }),
         },
       },
@@ -31,12 +42,9 @@ export async function registerRoute(fastify: FastifyInstance) {
         userAgent: req.headers["user-agent"],
       });
 
-      // Pass the flow results out cleanly. The DTO will map and sanitize fields automatically.
       return reply.status(201).send({
         success: true,
-        data: {
-          identity: result.identity,
-        },
+        data: { identity: result.identity },
       });
     },
   );

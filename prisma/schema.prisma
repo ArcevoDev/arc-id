@@ -1,6 +1,4 @@
-// =========================================================================
 // GENERATOR & DATASOURCE CONFIGURATION
-// =========================================================================
 
 datasource db {
   provider = "postgresql"
@@ -13,9 +11,7 @@ generator client {
   previewFeatures = ["partialIndexes"]
 }
 
-// =========================================================================
 // ENUMS
-// =========================================================================
 
 enum MfaType {
   TOTP
@@ -50,6 +46,7 @@ enum TokenType {
   VERIFY_EMAIL
   RESET_PASSWORD
   MAGIC_LINK
+  TENANT_INVITE
 }
 
 enum KeyType {
@@ -90,6 +87,7 @@ enum AuditLogAction {
   USER_DELETED
   PROFILE_UPDATED
   PASSWORD_CHANGED
+  USERNAME_SET
   MFA_ENABLED
   MFA_DISABLED
   MFA_RECOVERY_USED
@@ -98,7 +96,24 @@ enum AuditLogAction {
   TOKEN_REVOKED
   SESSION_CREATED
   SESSION_REVOKED
+  SESSION_REVOKED_ALL
   PASSKEY_REGISTERED
+  PASSKEY_REMOVED
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
+  EMAIL_VERIFIED
+  EMAIL_VERIFICATION_SENT
+  TENANT_CREATED
+  TENANT_UPDATED
+  SUBSCRIPTION_UPGRADED
+  SUBSCRIPTION_CANCELLED
+  WEBHOOK_DELIVERY_FAILED
+  WEBHOOK_DELIVERED
+  OAUTH_CLIENT_CREATED
+  OAUTH_CLIENT_UPDATED
+  ROLE_CREATED
+  ROLE_UPDATED
+  ROLE_ASSIGNED
   PASSKEY_USED
   CREDENTIAL_ISSUED
   CREDENTIAL_REVOKED
@@ -111,20 +126,23 @@ enum AuditLogAction {
   SIGNING_KEY_REVOKED
   IDENTITY_CREATED
   IDENTITY_SUSPENDED
+  IDENTITY_BANNED
   IDENTITY_DELETED
   IDP_CONNECTION_CREATED
   IDP_CONNECTION_UPDATED
+  DELEGATION_GRANTED
+  DELEGATION_REVOKED
+  SESSION_ELEVATED
 }
 
-// =========================================================================
 // CENTRAL CORE: IDENTITY (INDIVIDUAL ACCOUNT HOLDERS)
-// =========================================================================
 
 model Identity {
   id            String     @id @default(cuid())
   primaryEmail  String?    @unique
   emailVerified Boolean    @default(false)
   name          String?
+  username      String?    @unique
   picture       String?
   status        UserStatus @default(PENDING)
   metadata      Json?
@@ -140,6 +158,8 @@ model Identity {
   emailTokens      EmailToken[]
 
   memberships TenantMembership[]
+
+  onboardingProgress OnboardingProgress[]
 
   dids                DecentralizedIdentifier[] @relation("IdentityDids")
   heldCredentials     VerifiableCredential[]    @relation("CredentialHolder")
@@ -163,9 +183,7 @@ model Identity {
   @@index([status])
 }
 
-// =========================================================================
 // DECENTRALIZED IDENTIFIER (DID) LAYER
-// =========================================================================
 
 model DecentralizedIdentifier {
   id         String    @id
@@ -184,11 +202,10 @@ model DecentralizedIdentifier {
   subjectCredentials VerifiableCredential[] @relation("CredentialSubject")
 
   @@index([identityId])
+  @@index([tenantId])
 }
 
-// =========================================================================
 // W3C VERIFIABLE CREDENTIAL MODULE
-// =========================================================================
 
 model VerifiableCredential {
   id      String   @id
@@ -257,9 +274,7 @@ model StatusListEntry {
   @@unique([statusListId, index])
 }
 
-// =========================================================================
 // MULTI-TENANCY, B2B & ENTERPRISE SSO
-// =========================================================================
 
 model Tenant {
   id        String   @id @default(cuid())
@@ -280,6 +295,7 @@ model Tenant {
   branding          TenantBranding?
   roles             Role[]
   auditLogs         AuditLog[]
+  webhookEndpoints  WebhookEndpoint[]
 
   // Handled structurally at the organization scale
   subscription Subscription?
@@ -339,9 +355,7 @@ model IdpConnection {
   @@index([tenantId])
 }
 
-// =========================================================================
 // DYNAMIC AUTHORIZATION (RBAC / FINE-GRAINED ACCESS CONTROL)
-// =========================================================================
 
 model Role {
   id          String   @id @default(cuid())
@@ -400,11 +414,51 @@ model Project {
   tenantId  String
   name      String
   slug      String   @unique
+  category  String?
   createdAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  onboardingFlows OnboardingFlow[]
+
+  clients Client[]
+
   @@index([tenantId])
+  @@index([category])
+}
+
+model OnboardingFlow {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  steps     Json // ordered array of OnboardingStepDef
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  progresses OnboardingProgress[]
+
+  @@index([projectId])
+}
+
+model OnboardingProgress {
+  id             String    @id @default(cuid())
+  identityId     String
+  flowId         String
+  currentStep    Int       @default(0)
+  completedSteps Json      @default("[]")
+  data           Json      @default("{}")
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  identity Identity       @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  flow     OnboardingFlow @relation(fields: [flowId], references: [id])
+
+  @@unique([identityId, flowId])
+  @@index([identityId])
 }
 
 model TenantPolicy {
@@ -423,9 +477,7 @@ model TenantPolicy {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-// =========================================================================
 // AUTHENTICATION SECURITY VECTORS
-// =========================================================================
 
 model LocalAccount {
   id                String    @id @default(cuid())
@@ -487,20 +539,19 @@ model MfaRecoveryCode {
   @@index([identityId])
 }
 
-// =========================================================================
 // OAUTH2 / OIDC PROVIDER LAYER
-// =========================================================================
 
 model Client {
   id                    String   @id @default(cuid())
   tenantId              String?
+  projectId             String?
   name                  String
   clientId              String   @unique
   clientSecret          String?
   grantTypes            Json
   scopes                Json
   public                Boolean  @default(false)
-  requirePkce           Boolean  @default(false)
+  requirePkce           Boolean  @default(true)
   frontChannelLogoutUri String?
   backChannelLogoutUri  String?
   logoUri               String?
@@ -509,6 +560,7 @@ model Client {
   createdAt             DateTime @default(now())
 
   tenant        Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project       Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
   redirectUris  ClientRedirectUri[]
   authCodes     AuthorizationCode[]
   accessTokens  AccessToken[]
@@ -518,6 +570,7 @@ model Client {
 
   @@unique([tenantId, clientId])
   @@index([tenantId])
+  @@index([projectId])
 }
 
 model ClientRedirectUri {
@@ -532,13 +585,15 @@ model ClientRedirectUri {
 }
 
 model AuthorizationCode {
-  id                  String   @id @default(cuid())
-  code                String   @unique
-  clientId            String
-  identityId          String
-  redirectUri         String?
-  scopes              Json
-  nonce               String?
+  id          String  @id @default(cuid())
+  code        String  @unique
+  clientId    String
+  identityId  String
+  redirectUri String?
+  scopes      Json
+  nonce       String?
+  state       String?
+
   codeChallenge       String?
   codeChallengeMethod String?
   createdAt           DateTime @default(now())
@@ -575,6 +630,10 @@ model AccessToken {
 model RefreshToken {
   id         String    @id @default(cuid())
   token      String    @unique
+  jti        String    @unique // JWT ID claim — the thing you track
+  familyId   String // all tokens in one login share this
+  parentJti  String? // null for root token
+  used       Boolean   @default(false) // flip to true the moment it's consumed
   clientId   String
   identityId String
   sessionId  String?
@@ -587,6 +646,8 @@ model RefreshToken {
   client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
 
+  @@index([familyId])
+  @@index([jti])
   @@index([token, revoked])
   @@index([identityId])
   @@index([sessionId])
@@ -609,9 +670,7 @@ model IdToken {
   @@index([expiresAt])
 }
 
-// =========================================================================
 // SYSTEM BRIDGES & UTILITIES
-// =========================================================================
 
 model AccessDelegation {
   id        String    @id @default(cuid())
@@ -656,6 +715,13 @@ model Session {
   createdAt      DateTime @default(now())
   expiresAt      DateTime
   valid          Boolean  @default(true)
+
+  // Auth assurance level — set on session creation and updated on MFA/passkey completion.
+  // NULL on existing sessions — treated as "aal1" by auth guards.
+  // Values: "aal1" | "aal2" | "elevated"
+  authLevel  String?
+  // Timestamp of last step-up re-authentication (Phase B: step-up auth guard uses this).
+  elevatedAt DateTime?
 
   identity     Identity      @relation(fields: [identityId], references: [id], onDelete: Cascade)
   localAccount LocalAccount? @relation("LocalAccountSessions", fields: [localAccountId], references: [id])
@@ -747,15 +813,15 @@ model EmailToken {
   consumed   Boolean   @default(false)
   createdAt  DateTime  @default(now())
 
+  tenantId String?
   identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
 
   @@index([identityId, type])
   @@index([expiresAt])
+  @@index([tenantId])
 }
 
-// =========================================================================
 // COUPLING-SAFE DECOUPLED SUBSCRIPTION INFRASTRUCTURE
-// =========================================================================
 
 model Subscription {
   id        String             @id @default(cuid())
@@ -789,9 +855,7 @@ model ExternalBillingIntegration {
   @@index([subscriptionId])
 }
 
-// =========================================================================
 // SYSTEM LOGISTICS & TELEMETRY
-// =========================================================================
 
 model AuditLog {
   id         String         @id @default(cuid())
@@ -810,14 +874,17 @@ model AuditLog {
   @@index([tenantId])
   @@index([actionId])
   @@index([createdAt(sort: Desc)])
+  @@index([tenantId, createdAt(sort: Desc)])
 }
 
 model RevokedJti {
   id        String   @id @default(cuid())
   jti       String   @unique
   revokedAt DateTime @default(now())
+  expiresAt DateTime
 
   @@index([revokedAt])
+  @@index([expiresAt])
 }
 
 model WebhookEvent {
@@ -827,6 +894,8 @@ model WebhookEvent {
   tenantId    String?
   payload     Json
   targetUrl   String
+  secret      String? // HMAC secret copied from WebhookEndpoint at dispatch time.
+  // Nullable for backward-compat with rows queued before this field existed.
   attempts    Int            @default(0)
   maxAttempts Int            @default(5)
   deliveredAt DateTime?
@@ -835,6 +904,28 @@ model WebhookEvent {
   updatedAt   DateTime       @default(now()) @updatedAt
   nextRetryAt DateTime?      @default(now())
 
+  processingAt DateTime?
+  processingBy String?
+
   @@index([nextRetryAt], map: "idx_webhook_processing", where: { deliveredAt: null })
   @@index([identityId])
+  @@index([processingBy])
+  @@index([processingAt])
+}
+
+model WebhookEndpoint {
+  id         String   @id @default(cuid())
+  tenantId   String
+  url        String
+  secret     String // HMAC secret for X-ArcID-Signature validation by receiver
+  eventTypes String[] // empty = all events; non-empty = filter to these AuditLogAction values
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  createdBy  String // identityId of the admin who registered it
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([enabled])
 }

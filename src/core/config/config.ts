@@ -1,4 +1,3 @@
-// src/core/config/config.ts
 import { rawEnv } from "./env.validator";
 
 export const config = {
@@ -18,6 +17,27 @@ export const config = {
   oauth: {
     directClientId: rawEnv.ARCID_DIRECT_CLIENT_ID,
   },
+  social: {
+    google: {
+      clientId: rawEnv.GOOGLE_CLIENT_ID,
+      clientSecret: rawEnv.GOOGLE_CLIENT_SECRET,
+    },
+    github: {
+      clientId: rawEnv.GITHUB_CLIENT_ID,
+      clientSecret: rawEnv.GITHUB_CLIENT_SECRET,
+    },
+    apple: {
+      clientId: rawEnv.APPLE_CLIENT_ID,
+      teamId: rawEnv.APPLE_TEAM_ID,
+      keyId: rawEnv.APPLE_KEY_ID,
+      privateKey: rawEnv.APPLE_PRIVATE_KEY,
+    },
+    microsoft: {
+      clientId: rawEnv.MICROSOFT_CLIENT_ID,
+      clientSecret: rawEnv.MICROSOFT_CLIENT_SECRET,
+      tenantId: rawEnv.MICROSOFT_TENANT_ID,
+    },
+  },
   integration: {
     arcbaseWebhookUrl: rawEnv.ARCBASE_WEBHOOK_URL,
   },
@@ -26,13 +46,11 @@ export const config = {
     jwt: {
       privateKey: rawEnv.PRIVATE_KEY_PEM,
       publicKey: rawEnv.PUBLIC_KEY_PEM,
+      secret: rawEnv.JWT_SECRET,
+      issuer: rawEnv.JWT_ISSUER,
+      accessTtl: rawEnv.JWT_ACCESS_TTL,
+      refreshTtl: rawEnv.JWT_REFRESH_TTL,
     },
-  },
-  jwt: {
-    secret: rawEnv.JWT_SECRET,
-    issuer: rawEnv.JWT_ISSUER,
-    accessTtl: rawEnv.JWT_ACCESS_TTL,
-    refreshTtl: rawEnv.JWT_REFRESH_TTL,
   },
   redis: {
     url: rawEnv.UPSTASH_REDIS_REST_URL ?? null,
@@ -53,7 +71,6 @@ export const config = {
     from: rawEnv.EMAIL_FROM,
   },
   sms: {
-    // Skipped at MVP — Brevo costs not justified yet
     apiKey: rawEnv.BREVO_API_KEY ?? null,
     sender: rawEnv.SMS_SENDER,
   },
@@ -61,19 +78,16 @@ export const config = {
     signingSecret: rawEnv.WEBHOOK_SIGNING_SECRET,
   },
   billing: {
-    // Stripe — global
     stripe: {
       secretKey: rawEnv.STRIPE_SECRET_KEY,
       webhookSecret: rawEnv.STRIPE_WEBHOOK_SECRET,
       enabled: Boolean(rawEnv.STRIPE_SECRET_KEY),
     },
-    // Paystack — Nigeria / Africa (primary for local market)
     paystack: {
       secretKey: rawEnv.PAYSTACK_SECRET_KEY,
       webhookSecret: rawEnv.PAYSTACK_WEBHOOK_SECRET,
       enabled: Boolean(rawEnv.PAYSTACK_SECRET_KEY),
     },
-    // Flutterwave — Africa
     flutterwave: {
       secretKey: rawEnv.FLUTTERWAVE_SECRET_KEY,
       secretHash: rawEnv.FLUTTERWAVE_SECRET_HASH,

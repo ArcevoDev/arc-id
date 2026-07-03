@@ -1,5 +1,15 @@
 // src/modules/tenant/routes/did.route.ts
 // NOTE: Mounted under /tenants prefix — full paths are /tenants/:tenantId/did
+//
+// Plan gating:
+//   POST /:tenantId/did — requirePlan("PRO")
+//     Provisioning a did:web DID is an enterprise identity capability.
+//     It anchors the tenant as a verifiable issuer on the open web.
+//     FREE tenants have no need for it — they can't issue VCs anyway.
+//
+//   GET /:tenantId/did — requireUser (no plan gate)
+//     Reading a DID document is a low-risk read. Any tenant member may
+//     need to inspect their tenant's DID for integration purposes.
 import type { FastifyInstance } from "fastify";
 import { generateKeyPair, exportSPKI } from "jose";
 import { z } from "zod";
@@ -10,18 +20,16 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
   fastify.post(
     "/:tenantId/did",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: fastify.auth.requirePlan("PRO"),
       schema: {
         tags: ["Tenant Management Architecture"],
-        summary: "Provision a did:web Decentralized Identifier for this tenant",
+        summary:
+          "Provision a did:web Decentralized Identifier for this tenant (PRO)",
         security: [{ bearerAuth: [] }],
-        // FIXED: was z.string().uuid() — tenants use cuid()
         params: z.object({ tenantId: z.string().cuid() }),
         body: z.object({
           domain: z.string().min(1).describe("e.g. health.arcevocirqle.com.ng"),
         }),
-        // FIXED: removed conflicting 409 response schema (causes Fastify schema conflict)
-        // Errors are handled via the global error handler
         response: {
           201: z.object({
             success: z.boolean(),
@@ -53,7 +61,6 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
         });
       }
 
-      // Generate EC keypair for this tenant's DID
       const { publicKey } = await generateKeyPair("ES256");
       const publicKeySpki = await exportSPKI(publicKey);
       const cleanBase64 = publicKeySpki
@@ -97,7 +104,7 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
     },
   );
 
-  // GET /tenants/:tenantId/did
+  // GET /tenants/:tenantId/did — requireUser, no plan gate
   fastify.get(
     "/:tenantId/did",
     {

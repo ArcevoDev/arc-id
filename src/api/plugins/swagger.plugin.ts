@@ -1,52 +1,47 @@
+// src/api/plugins/swagger.plugin.ts
+
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
-import fastifySwagger from "@fastify/swagger";
-import fastifySwaggerUi from "@fastify/swagger-ui";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import { jsonSchemaTransform } from "fastify-type-provider-zod";
-import { config } from "@/core/config";
 
 const SWAGGER_DESCRIPTION = `
 ## ArcID — Sovereign Identity Engine
-
 ArcID is a high-performance, multi-tenant identity platform integrating traditional OAuth2/OIDC flows with W3C Decentralized Identity (DID) and Verifiable Credential (VC) standards.
-
-### Core Architecture Modules:
-* **Identity & Auth:** Central user registry, Passkey/MFA/Local account security, and session management.
-* **SSI / DID Layer:** Decentralized identifier management and Verifiable Credential issuance/verification.
-* **Multi-Tenancy:** Siloed tenant management with custom branding, SSO (SAML/OIDC), and signing keys.
-* **RBAC / Authorization:** Fine-grained dynamic roles and permissions for enterprise access control.
-* **Governance:** Audit logging, webhook event processing, and legal consent tracking.
-`;
-
-const customCss = `
-  body { background-color: #fafafa; font-family: 'Inter', system-ui, sans-serif; }
-  .swagger-ui .topbar { background-color: #09090b; padding: 14px 0; border-bottom: 1px solid #27272a; }
-  .swagger-ui .topbar-wrapper::before { content: 'ArcID System Kernel'; color: #ffffff; font-weight: 700; font-size: 1.25rem; }
-  .swagger-ui .opblock { border-radius: 8px; border: 1px solid #e4e4e7; }
-  .swagger-ui .btn.execute { background-color: #09090b; border-radius: 6px; font-weight: 600; }
 `;
 
 export const swaggerGeneratorPlugin = fp(
-  async (fastify) => {
-    await fastify.register(fastifySwagger, {
+  async (fastify: FastifyInstance) => {
+    await fastify.register(swagger, {
+      mode: "dynamic",
       openapi: {
+        openapi: "3.1.0",
         info: {
           title: "ArcID — Sovereign Identity Engine",
           description: SWAGGER_DESCRIPTION,
-          version: "0.1.0",
+          version: "1.0.0-alpha",
         },
         servers: [
           {
-            url: `http://localhost:${config.base.port}`,
-            description: "Local Dev",
+            url: "http://localhost:4000",
+            description: "Local development",
           },
         ],
         components: {
           securitySchemes: {
-            bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+            bearerAuth: {
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "JWT",
+            },
           },
         },
       },
+      // Clean transform — delegate entirely to jsonSchemaTransform.
+      // No defensive heuristics, no response stripping, no silent catch.
+      // If a route schema causes jsonSchemaTransform to throw, the error
+      // will surface at startup so it can be fixed at the source.
       transform: jsonSchemaTransform,
     });
   },
@@ -54,14 +49,16 @@ export const swaggerGeneratorPlugin = fp(
 );
 
 export const swaggerUiPlugin = fp(
-  async (fastify) => {
-    await fastify.register(fastifySwaggerUi, {
+  async (fastify: FastifyInstance) => {
+    await fastify.register(swaggerUi, {
       routePrefix: "/docs",
-      theme: {
-        title: "ArcID Interface Portal",
-        css: [{ filename: "theme.css", content: customCss }],
+      uiConfig: {
+        docExpansion: "list",
+        deepLinking: true,
+        persistAuthorization: true,
+        defaultModelRendering: "example", // Finishes your comment intent safely
       },
     });
   },
-  { name: "arc-id:swagger-ui", dependencies: ["arc-id:swagger-gen"] },
+  { name: "arc-id:swagger-ui" },
 );

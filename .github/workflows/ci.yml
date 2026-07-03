@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same branch/PR to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Husky's `prepare` script tries to install git hooks on `pnpm install`.
+  # There's no .git hook dir guarantee in a CI checkout — this disables it cleanly.
+  HUSKY: 0
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Generates the Prisma client so typecheck/build can resolve @prisma/client
+      # types. Does NOT touch any database — schema-to-client only.
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema=prisma/schema.prisma
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build API
+        run: pnpm build:api
+
+      - name: Build web
+        run: pnpm build:web
+        env:
+          # Next.js build needs *some* value for every NEXT_PUBLIC_* var it
+          # references at build time, even if the real value is injected at
+          # deploy time on Vercel. Placeholder values only — never real secrets.
+          NEXT_PUBLIC_API_URL: http://localhost:4000

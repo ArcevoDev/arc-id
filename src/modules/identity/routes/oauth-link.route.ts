@@ -1,25 +1,28 @@
+// src/modules/identity/routes/oauth-link.route.ts
+// FIXED: paths had /me/ prefix inside /identity scope → /identity/me/linked-accounts
+// Correct paths now: /identity/linked-accounts
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 export async function oauthLinkRoute(fastify: FastifyInstance) {
   fastify.get(
-    "/me/linked-accounts",
+    "/linked-accounts",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Identity Vault"],
-        summary: "List linked third-party social OAuth references",
+        summary: "List linked OAuth providers",
         security: [{ bearerAuth: [] }],
         response: {
           200: z.object({
             success: z.boolean(),
             data: z.array(
               z.object({
-                id: z.string().uuid(),
-                identityId: z.string().uuid(),
+                id: z.string(),
+                identityId: z.string(),
                 provider: z.string(),
                 providerUserId: z.string(),
-                createdAt: z.date(),
+                createdAt: z.coerce.string(),
               }),
             ),
           }),
@@ -35,21 +38,15 @@ export async function oauthLinkRoute(fastify: FastifyInstance) {
   );
 
   fastify.delete(
-    "/me/linked-accounts/:id",
+    "/linked-accounts/:id",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Identity Vault"],
-        summary: "Sever federation link from provider",
+        summary: "Unlink provider",
         security: [{ bearerAuth: [] }],
-        params: z.object({
-          id: z.string().uuid("Invalid tracking verification mapping handle"),
-        }),
-        response: {
-          200: z.object({
-            success: z.boolean(),
-          }),
-        },
+        params: z.object({ id: z.string().min(1) }),
+        response: { 200: z.object({ success: z.boolean() }) },
       },
     },
     async (req, reply) => {

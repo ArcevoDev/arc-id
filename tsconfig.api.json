@@ -4,8 +4,10 @@
     "noEmit": false,
     "outDir": "dist",
     "rootDir": "src",
-    "module": "commonjs",
-    "moduleResolution": "node",
+
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],

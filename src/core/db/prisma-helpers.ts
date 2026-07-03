@@ -1,15 +1,15 @@
 import { Prisma } from "@/prisma-client";
 import { prisma } from "./prisma";
-import { ApiError } from "@/core/errors/api-error";
+import { ApiError } from "@/core/errors";
 
 export async function withTransaction<T>(
-  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  fn: (tx: any) => Promise<T>,
   options?: { timeout?: number; maxWait?: number },
 ): Promise<T> {
-  return prisma.$transaction(fn, {
+  return (prisma as any).$transaction(fn, {
     timeout: options?.timeout ?? 10_000,
     maxWait: options?.maxWait ?? 5_000,
-  });
+  }) as Promise<T>;
 }
 
 export async function assertUnique<T>(

@@ -1,7 +1,19 @@
 // src/modules/oauth/routes/clients.route.ts
-// FIX: was gated behind requireScope("admin:write") — no standard token ever has this
-// scope, making client management completely inaccessible.
-// Now checks ADMIN role in the target tenant instead.
+//
+// UPDATED: OAuth clients can now optionally be scoped to a Project
+// (ArcID, ArcWallet, ArcVerify, etc) via projectId, in addition to the
+// existing tenantId scoping. projectId is OPTIONAL — existing clients with
+// no project (e.g. the SYSTEM tenant's direct-login client) are unaffected.
+//
+// When projectId is supplied at creation, it's validated to belong to the
+// target tenant (a project from a different tenant can't be attached to
+// this client — that would be a cross-tenant data leak).
+//
+// GET /clients now also accepts ?projectId= to filter the list down to one
+// product's OAuth apps, which is the whole point of adding this field —
+// previously, 5 products registering clients under one tenant were
+// indistinguishable from each other in the list view.
+
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { hashPassword } from "@/modules/auth/services/password.service";
@@ -11,13 +23,16 @@ import { ApiError } from "@/core/errors";
 const CreateClientSchema = z.object({
   name: z.string().min(1),
   grantTypes: z
-    .array(z.enum(["authorization_code", "refresh_token", "client_credentials"]))
+    .array(
+      z.enum(["authorization_code", "refresh_token", "client_credentials"]),
+    )
     .default(["authorization_code", "refresh_token"]),
   scopes: z.array(z.string()).default(["openid", "profile", "email"]),
   redirectUris: z.array(z.string().url()).default([]),
   public: z.boolean().default(false),
   requirePkce: z.boolean().default(true),
   tenantId: z.string().cuid().optional(),
+  projectId: z.string().cuid().optional(), // ← NEW
   logoUri: z.string().url().optional(),
   tosUri: z.string().url().optional(),
   policyUri: z.string().url().optional(),
@@ -32,22 +47,45 @@ async function assertTenantAdmin(
     where: { identityId, tenantId, status: "ACTIVE" },
     include: { role: { select: { name: true } } },
   });
-  if (!membership) throw ApiError.forbidden("You are not a member of this tenant");
+  if (!membership)
+    throw ApiError.forbidden("You are not a member of this tenant");
   if (membership.role.name !== "ADMIN") {
     throw ApiError.forbidden("Only tenant ADMINs can manage OAuth clients");
   }
 }
 
-export async function clientsRoute(fastify: FastifyInstance) {
+/**
+ * Validates that, if projectId is supplied, the project actually belongs to
+ * targetTenantId. Prevents attaching a client to a project owned by a
+ * different tenant — which would otherwise let a tenant ADMIN silently
+ * leak association data about a project they don't own.
+ */
+async function assertProjectBelongsToTenant(
+  fastify: FastifyInstance,
+  projectId: string,
+  targetTenantId: string,
+) {
+  const project = await fastify.db.project.findFirst({
+    where: { id: projectId, tenantId: targetTenantId },
+    select: { id: true },
+  });
+  if (!project) {
+    throw ApiError.badRequest(
+      "projectId does not exist or does not belong to this tenant",
+    );
+  }
+}
 
+export async function clientsRoute(fastify: FastifyInstance) {
   // POST /oauth/clients
   fastify.post(
     "/clients",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: fastify.auth.requirePlan("PRO"),
       schema: {
         tags: ["OAuth2 / OIDC Server"],
-        summary: "Register an OAuth application client — requires ADMIN role in the target tenant",
+        summary:
+          "Register an OAuth application client — requires PRO plan + ADMIN role (PRO)",
         security: [{ bearerAuth: [] }],
         body: CreateClientSchema,
         response: {
@@ -57,6 +95,7 @@ export async function clientsRoute(fastify: FastifyInstance) {
               clientId: z.string(),
               clientSecret: z.string().nullable(),
               name: z.string(),
+              projectId: z.string().nullable(),
               grantTypes: z.array(z.string()),
               scopes: z.array(z.string()),
               redirectUris: z.array(z.string()),
@@ -69,9 +108,18 @@ export async function clientsRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const input = CreateClientSchema.parse(req.body);
-      const targetTenantId = input.tenantId ?? req.identity.tenantId ?? "SYSTEM";
+      const targetTenantId =
+        input.tenantId ?? req.identity.tenantId ?? "SYSTEM";
 
       await assertTenantAdmin(fastify, req.identity.id, targetTenantId);
+
+      if (input.projectId) {
+        await assertProjectBelongsToTenant(
+          fastify,
+          input.projectId,
+          targetTenantId,
+        );
+      }
 
       const clientId = generateToken(16);
       const clientSecret = input.public ? null : generateToken(32);
@@ -87,6 +135,7 @@ export async function clientsRoute(fastify: FastifyInstance) {
           public: input.public,
           requirePkce: input.requirePkce,
           tenantId: targetTenantId,
+          projectId: input.projectId ?? null,
           logoUri: input.logoUri,
           tosUri: input.tosUri,
           policyUri: input.policyUri,
@@ -97,11 +146,15 @@ export async function clientsRoute(fastify: FastifyInstance) {
 
       await fastify.db.auditLog.create({
         data: {
-          actionId: "SIGNING_KEY_CREATED",
+          actionId: "OAUTH_CLIENT_CREATED",
           tenantId: targetTenantId,
           identityId: req.identity.id,
           ip: req.ip,
-          metadata: { clientId, name: input.name },
+          metadata: {
+            clientId,
+            name: input.name,
+            projectId: input.projectId ?? null,
+          },
         },
       });
 
@@ -109,8 +162,9 @@ export async function clientsRoute(fastify: FastifyInstance) {
         success: true,
         data: {
           clientId,
-          clientSecret: clientSecret ?? null, // returned once — not stored
+          clientSecret: clientSecret ?? null,
           name: client.name,
+          projectId: client.projectId,
           grantTypes: client.grantTypes as string[],
           scopes: client.scopes as string[],
           redirectUris: client.redirectUris.map((r) => r.uri),
@@ -125,27 +179,47 @@ export async function clientsRoute(fastify: FastifyInstance) {
   fastify.get(
     "/clients",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: fastify.auth.requirePlan("PRO"),
       schema: {
         tags: ["OAuth2 / OIDC Server"],
-        summary: "List OAuth clients for your active tenant",
+        summary:
+          "List OAuth clients for your active tenant, optionally filtered by project (PRO)",
         security: [{ bearerAuth: [] }],
-        querystring: z.object({ tenantId: z.string().cuid().optional() }),
-        response: { 200: z.object({ success: z.boolean(), data: z.array(z.any()) }) },
+        querystring: z.object({
+          tenantId: z.string().cuid().optional(),
+          projectId: z.string().cuid().optional(), // ← NEW
+        }),
+        response: {
+          200: z.object({ success: z.boolean(), data: z.array(z.any()) }),
+        },
       },
     },
     async (req, reply) => {
-      const { tenantId } = req.query as { tenantId?: string };
+      const { tenantId, projectId } = req.query as {
+        tenantId?: string;
+        projectId?: string;
+      };
       const targetTenantId = tenantId ?? req.identity.tenantId ?? "SYSTEM";
 
       await assertTenantAdmin(fastify, req.identity.id, targetTenantId);
 
       const clients = await fastify.db.client.findMany({
-        where: { tenantId: targetTenantId },
+        where: {
+          tenantId: targetTenantId,
+          ...(projectId ? { projectId } : {}),
+        },
         select: {
-          id: true, name: true, clientId: true, public: true,
-          grantTypes: true, scopes: true, tenantId: true, createdAt: true,
-          requirePkce: true, redirectUris: { select: { uri: true } },
+          id: true,
+          name: true,
+          clientId: true,
+          public: true,
+          grantTypes: true,
+          scopes: true,
+          tenantId: true,
+          projectId: true,
+          createdAt: true,
+          requirePkce: true,
+          redirectUris: { select: { uri: true } },
         },
         orderBy: { createdAt: "desc" },
       });
@@ -158,10 +232,10 @@ export async function clientsRoute(fastify: FastifyInstance) {
   fastify.delete(
     "/clients/:clientId",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: fastify.auth.requirePlan("PRO"),
       schema: {
         tags: ["OAuth2 / OIDC Server"],
-        summary: "Delete an OAuth client",
+        summary: "Delete an OAuth client (PRO)",
         security: [{ bearerAuth: [] }],
         params: z.object({ clientId: z.string().min(1) }),
         response: { 200: z.object({ success: z.boolean() }) },
@@ -172,7 +246,11 @@ export async function clientsRoute(fastify: FastifyInstance) {
       const client = await fastify.db.client.findFirst({ where: { clientId } });
       if (!client) throw ApiError.notFound("Client not found");
 
-      await assertTenantAdmin(fastify, req.identity.id, client.tenantId ?? "SYSTEM");
+      await assertTenantAdmin(
+        fastify,
+        req.identity.id,
+        client.tenantId ?? "SYSTEM",
+      );
       await fastify.db.client.delete({ where: { id: client.id } });
 
       return reply.send({ success: true });

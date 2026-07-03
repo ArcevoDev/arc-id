@@ -14,7 +14,8 @@ export async function consentRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["OAuth 2.0 / OIDC Protocol"],
-        summary: "Grant scopes for an OAuth client on behalf of the current user",
+        summary:
+          "Grant scopes for an OAuth client on behalf of the current user",
         security: [{ bearerAuth: [] }],
         body: z.object({
           clientId: z.string().min(1),
@@ -27,7 +28,10 @@ export async function consentRoute(fastify: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      const { clientId, scopes } = req.body as { clientId: string; scopes: string[] };
+      const { clientId, scopes } = req.body as {
+        clientId: string;
+        scopes: string[];
+      };
 
       const client = await db.client.findFirst({
         where: { clientId },
@@ -35,11 +39,18 @@ export async function consentRoute(fastify: FastifyInstance) {
       });
 
       if (!client) {
-        return reply.status(404).send({ success: false, error: "CLIENT_NOT_FOUND" });
+        return reply
+          .status(404)
+          .send({ success: false, error: "CLIENT_NOT_FOUND" });
       }
 
       // Cast JsonValue to string array for includes()
-      const clientScopes = (client.scopes as string[]) || [];
+
+      // Parse JSON primitives into a reliable string matrix arry
+      const clientScopes = Array.isArray(client.scopes)
+        ? (client.scopes as string[])
+        : [];
+
       const allowed = scopes.filter((s) => clientScopes.includes(s));
 
       // Explicitly types and calls the upsert layout payload
@@ -50,7 +61,7 @@ export async function consentRoute(fastify: FastifyInstance) {
             clientId: client.id,
           },
         },
-        update: { 
+        update: {
           scopes: allowed,
           updatedAt: new Date(),
         },
@@ -90,7 +101,10 @@ export async function consentRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const { clientId } = req.params as { clientId: string };
-      const client = await db.client.findFirst({ where: { clientId }, select: { id: true } });
+      const client = await db.client.findFirst({
+        where: { clientId },
+        select: { id: true },
+      });
       if (client) {
         await db.oAuthConsent.deleteMany({
           where: { identityId: req.identity.id, clientId: client.id },

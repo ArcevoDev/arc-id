@@ -1,6 +1,6 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
-import { prisma } from "@/core/db/prisma";
+import { prisma } from "@/core/db";
 
 declare module "fastify" {
   interface FastifyInstance {

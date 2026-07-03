@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
+import { flowExecutor } from "@/core/flows";
 import { verifyCredentialFlow } from "../flows/verify-credential.flow";
 import { z } from "zod";
 

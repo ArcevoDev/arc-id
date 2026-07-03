@@ -14,7 +14,7 @@ export async function userinfoRoute(fastify: FastifyInstance) {
         security: [{ bearerAuth: [] }],
         response: {
           200: z.object({
-            sub: z.string(),          // FIX: was z.string().uuid() — identities are cuid
+            sub: z.string(), // FIX: was z.string().uuid() — identities are cuid
             email: z.string().nullable(),
             email_verified: z.boolean(),
             name: z.string().nullable(),

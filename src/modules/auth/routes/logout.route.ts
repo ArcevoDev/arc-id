@@ -1,7 +1,11 @@
+// src/modules/auth/routes/logout.route.ts
+
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
-import { logoutFlow } from "../flows/logout.flow";
 import { z } from "zod";
+import { flowExecutor } from "@/core/flows";
+import { logoutFlow } from "../flows/logout.flow";
+
+const SessionIdSchema = z.string().min(40).max(128);
 
 export async function logoutRoute(fastify: FastifyInstance) {
   fastify.post(
@@ -10,28 +14,38 @@ export async function logoutRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Authentication"],
-        summary: "Invalidate current user session",
+        summary: "Invalidate the current authentication session",
         security: [{ bearerAuth: [] }],
         body: z.object({
-          sessionId: z.string().cuid(),
+          sessionId: SessionIdSchema,
         }),
+
         response: {
-          200: z.object({ success: z.boolean() }),
+          200: z.object({
+            success: z.boolean(),
+          }),
         },
       },
     },
+
     async (req, reply) => {
-      const { sessionId } = req.body as { sessionId: string };
+      const { sessionId } = req.body as {
+        sessionId: string;
+      };
+
       await flowExecutor.run(
         logoutFlow,
         { sessionId },
         {
-          userId: req.identity.id,
+          identityId: req.identity.id,
           tenantId: req.identity.tenantId,
           ip: req.ip,
         },
       );
-      return reply.send({ success: true });
+
+      return reply.send({
+        success: true,
+      });
     },
   );
 }

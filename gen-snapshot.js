@@ -1,21 +1,40 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 const IGNORED_ITEMS = new Set([
+  // Build outputs & deps
   ".next",
   "node_modules",
   ".git",
+  ".husky",
   "out",
   ".vercel",
   "coverage",
   ".DS_Store",
   "generated",
   "repo_structure.txt",
-  "codebase_snapshot.txt",
-  "gen-snapshot.js",
+  "arcid_codebase_snapshot.txt",
+  "scripts",
   "gen-structure.js",
   "pnpm-lock.yaml",
   "tsconfig.tsbuildinfo",
+  // "migrations",
+  "public",
+
+  // ── SECURITY: Never include in snapshots ──────────────────────────────────
+  // These files contain secrets, private keys, and credentials.
+  // Sharing a snapshot that includes them exposes credentials to whoever
+  // receives it — AI tools, collaborators, issue trackers, etc.
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.production",
+  ".env.staging",
+  ".env.test",
+  "certs", // RSA private keys
+  "*.pem", // any PEM files at root level
+  "secrets", // common secrets directory name
+  ".secrets",
 ]);
 
 const EXTENSION_BLACKLIST = new Set([
@@ -29,6 +48,12 @@ const EXTENSION_BLACKLIST = new Set([
   ".mp3",
   ".pdf",
   ".zip",
+  // Also skip PEM/key files wherever they appear in the tree
+  ".pem",
+  ".key",
+  ".p12",
+  ".pfx",
+  ".der",
 ]);
 
 function generateTree(dir, indent = "") {
@@ -81,7 +106,7 @@ function extractContents(dir, rootDir, accumulator = { text: "" }) {
         accumulator.text += `\n==================================================\nFILE: ${relativePath}\n==================================================\n`;
 
         if (EXTENSION_BLACKLIST.has(ext)) {
-          accumulator.text += `[Binary Skipped]\n\n`;
+          accumulator.text += `[Binary/Sensitive Skipped]\n\n`;
           return;
         }
 
@@ -104,10 +129,10 @@ const visualTree = `${path.basename(rootDir)}/\n${generateTree(rootDir)}`;
 const fileContentsDump = extractContents(rootDir, rootDir);
 
 fs.writeFileSync(
-  "codebase_snapshot.txt",
+  "arcid_codebase_snapshot.txt",
   `=== STRUCTURE ===\n${visualTree}\n=== CONTENTS ===\n${fileContentsDump}`,
   "utf-8",
 );
 console.log(
-  "✨ Success! Structure and all contents written to codebase_snapshot.txt",
+  "✨ Success! Structure and all contents written to arcid_codebase_snapshot.txt",
 );

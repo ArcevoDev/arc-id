@@ -22,15 +22,15 @@ export const mfaSetupFlow: Flow<
   inputSchema: MfaSetupSchema,
 
   async execute(input, ctx: FlowContext) {
-    if (!ctx.userId) throw ApiError.unauthorized();
+    if (!ctx.identityId) throw ApiError.unauthorized();
 
     const identity = await ctx.db.identity.findUniqueOrThrow({
-      where: { id: ctx.userId },
+      where: { id: ctx.identityId },
     });
 
     const mfaService = new MfaService(ctx.db);
     const { secret, uri, qrCode } = await mfaService.setupTotp(
-      ctx.userId,
+      ctx.identityId,
       identity.primaryEmail ?? "",
     );
 
@@ -46,16 +46,19 @@ export const mfaConfirmFlow: Flow<
   inputSchema: MfaConfirmSchema,
 
   async execute(input, ctx: FlowContext) {
-    if (!ctx.userId) throw ApiError.unauthorized();
+    if (!ctx.identityId) throw ApiError.unauthorized();
 
     const mfaService = new MfaService(ctx.db);
-    const confirmed = await mfaService.confirmTotp(ctx.userId, input.code);
-    if (!confirmed) throw ApiError.badRequest("Invalid TOTP code — confirm failed");
+    const confirmed = await mfaService.confirmTotp(ctx.identityId, input.code);
+    if (!confirmed)
+      throw ApiError.badRequest("Invalid TOTP code — confirm failed");
 
-    const recoveryCodes = await mfaService.generateRecoveryCodes(ctx.userId);
+    const recoveryCodes = await mfaService.generateRecoveryCodes(
+      ctx.identityId,
+    );
 
     const identity = await ctx.db.identity.findUnique({
-      where: { id: ctx.userId },
+      where: { id: ctx.identityId },
       select: { primaryEmail: true, name: true },
     });
 
@@ -67,7 +70,10 @@ export const mfaConfirmFlow: Flow<
       );
     }
 
-    await auditService.log({ action: "MFA_ENABLED", identityId: ctx.userId }, ctx.db);
+    await auditService.log(
+      { action: "MFA_ENABLED", identityId: ctx.identityId },
+      ctx.db,
+    );
 
     return { recoveryCodes };
   },

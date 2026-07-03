@@ -2,7 +2,7 @@
 // POST /auth/switch-context — allows a logged-in user to issue a new token
 // scoped to a specific tenant they belong to.
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
+import { flowExecutor } from "@/core/flows";
 import { switchContextFlow } from "../flows/switch-context.flow";
 import { SwitchContextSchema } from "../validators/auth.schemas";
 import { z } from "zod";
@@ -47,7 +47,7 @@ export async function switchContextRoute(fastify: FastifyInstance) {
         switchContextFlow,
         req.body as any,
         {
-          userId: req.identity.id,
+          identityId: req.identity.id,
           tenantId: req.identity.tenantId,
           sessionId: activeSession?.id,
           ip: req.ip,

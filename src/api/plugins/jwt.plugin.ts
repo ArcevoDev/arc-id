@@ -56,7 +56,7 @@ export const jwtPlugin = fp(
         "[JWT] Using HS256 symmetric secret for token verification",
       );
       await fastify.register(fastifyJwt, {
-        secret: config.jwt.secret,
+        secret: config.security.jwt.secret,
         sign: { algorithm: "HS256" },
         verify: {
           algorithms: ["HS256"],

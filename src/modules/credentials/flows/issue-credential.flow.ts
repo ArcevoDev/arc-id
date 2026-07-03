@@ -1,15 +1,16 @@
+// src/modules/credentials/flows/issue-credential.flow.ts
 import { z } from "zod";
-import type { Flow } from "@/core/flows/flow";
-import type { FlowContext } from "@/core/flows/flow-context";
+import type { Flow, FlowContext } from "@/core/flows";
 import { config } from "@/core/config";
 import { IssueCredentialSchema } from "../validators/credential.schemas";
 import { DidService } from "../services/did.service";
 import { SigningService } from "../services/signing.service";
 import { StatusListService } from "../services/status-list.service";
-import { ApiError } from "@/core/errors/api-error";
+import { ApiError } from "@/core/errors";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { randomUUID } from "crypto";
 import { notificationService } from "@/lib/notifications/notification.service";
+import { dispatchWebhookEvent } from "@/lib/webhooks/webhook-dispatcher";
 
 type Input = z.infer<typeof IssueCredentialSchema>;
 
@@ -31,7 +32,6 @@ export const issueCredentialFlow: Flow<Input, Output> = {
     const signingService = new SigningService(ctx.db);
     const statusListService = new StatusListService(ctx.db);
 
-    // 1. Resolve issuer DID (Must belong to executing business tenant sandbox)
     const tenantDid = await ctx.db.decentralizedIdentifier.findUnique({
       where: { tenantId: ctx.tenantId },
     });
@@ -39,71 +39,86 @@ export const issueCredentialFlow: Flow<Input, Output> = {
       throw ApiError.notFound("Tenant DID not configured");
     }
 
-    // 2. Validate cryptographic target verification relationship
     await didService.resolveOrThrow(input.subjectDid);
 
-    // 3. Allocate tracking slot inside the explicit Bitstring Status List layout
-    const { listId, index } =
-      await statusListService.allocateIndex("REVOCATION");
-
-    // 4. Construct structural payload adhering strictly to W3C Credential Core specifications
     const vcId = `urn:uuid:${randomUUID()}`;
     const baseApiUrl = config.base.apiUrl;
 
-    const payload = {
-      vc: {
-        "@context": ["https://www.w3.org/2018/credentials/v1"],
-        id: vcId,
-        type: ["VerifiableCredential"],
-        issuer: tenantDid.id,
-        issuanceDate: new Date().toISOString(),
-        expirationDate: input.expiresAt,
-        credentialSubject: {
-          id: input.subjectDid,
-          ...input.credentialSubject,
-        },
-        credentialStatus: {
-          id: `${baseApiUrl}/credentials/status-lists/${listId}#${index}`,
-          type: "BitstringStatusListEntry",
-          statusPurpose: "revocation",
-          statusListIndex: String(index),
-          statusListCredential: `${baseApiUrl}/credentials/status-lists/${listId}`,
-        },
-      },
-    };
+    // Allocation + VC creation now share a single database transaction.
+    // If the process crashes or an error throws mid-flight (e.g. during sign),
+    // the allocated index rolls back automatically, eliminating dead slots.
+    const result = await (ctx.db as any).$transaction(
+      async (tx: any) => {
+        // Pass the transaction client 'tx' down to enforce the optimistic locking guard
+        const { listId, index } = await statusListService.allocateIndex(
+          "REVOCATION",
+          ctx.tenantId,
+          tx,
+        );
 
-    // 5. Compute cryptographic data proof context (e.g., JWT, SD-JWT, or Data Integrity signatures)
-    const { signedCredential, proof } = await signingService.sign(
-      payload,
-      tenantDid.id,
-      input.format,
+        const payload = {
+          vc: {
+            "@context": ["https://www.w3.org/2018/credentials/v1"],
+            id: vcId,
+            type: ["VerifiableCredential"],
+            issuer: tenantDid.id,
+            issuanceDate: new Date().toISOString(),
+            expirationDate: input.expiresAt,
+            credentialSubject: {
+              id: input.subjectDid,
+              ...input.credentialSubject,
+            },
+            credentialStatus: {
+              id: `${baseApiUrl}/credentials/status-lists/${listId}#${index}`,
+              type: "BitstringStatusListEntry",
+              statusPurpose: "revocation",
+              statusListIndex: String(index),
+              statusListCredential: `${baseApiUrl}/credentials/status-lists/${listId}`,
+            },
+          },
+        };
+
+        const { signedCredential, proof } = await signingService.sign(
+          payload,
+          tenantDid.id,
+          input.format,
+        );
+
+        const created = await tx.verifiableCredential.create({
+          data: {
+            id: vcId,
+            context: ["https://www.w3.org/2018/credentials/v1"],
+            type: ["VerifiableCredential"],
+            format: input.format,
+            issuerDid: tenantDid.id,
+            subjectDid: input.subjectDid,
+            holderId: input.holderId,
+            credentialSubject: input.credentialSubject as any,
+            proof: proof as any,
+            statusListId: listId,
+            statusListIndex: index,
+            schemaId: input.schemaId,
+            issuedAt: new Date(),
+            expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
+          },
+        });
+
+        return { created, signedCredential };
+      },
+      {
+        timeout: 10000, // Mitigation if signingService.sign calls out to an external KMS
+      },
     );
 
-    // 6. Persist structured metadata into cold storage ledger metrics
-    const vc = await ctx.db.verifiableCredential.create({
-      data: {
-        id: vcId,
-        context: ["https://www.w3.org/2018/credentials/v1"],
-        type: ["VerifiableCredential"],
-        format: input.format,
-        issuerDid: tenantDid.id,
-        subjectDid: input.subjectDid,
-        holderId: input.holderId,
-        credentialSubject: input.credentialSubject as any, // Cast securely to Prisma JsonValue representation
-        proof: proof as any,
-        statusListId: listId,
-        statusListIndex: index,
-        schemaId: input.schemaId,
-        issuedAt: new Date(),
-        expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
-      },
-    });
-
-    auditService.log({
-      action: "CREDENTIAL_ISSUED",
-      identityId: ctx.userId,
-      tenantId: ctx.tenantId,
-    });
+    // Side effects (Audit, Notification, Webhook) remain completely outside the transaction
+    // block to ensure we don't hold database connections open for long operations.
+    void auditService
+      .log({
+        action: "CREDENTIAL_ISSUED",
+        identityId: ctx.identityId,
+        tenantId: ctx.tenantId,
+      })
+      .catch(() => {});
 
     if (input.holderId) {
       const holder = await ctx.db.identity.findUnique({
@@ -121,9 +136,21 @@ export const issueCredentialFlow: Flow<Input, Output> = {
       }
     }
 
+    void dispatchWebhookEvent(ctx.db, {
+      tenantId: ctx.tenantId,
+      identityId: ctx.identityId,
+      eventType: "CREDENTIAL_ISSUED",
+      payload: {
+        credentialId: vcId,
+        subjectDid: input.subjectDid,
+        holderId: input.holderId ?? null,
+        format: input.format,
+      },
+    }).catch(() => {});
+
     return {
-      credentialId: vc.id,
-      credential: signedCredential,
+      credentialId: result.created.id,
+      credential: result.signedCredential,
     };
   },
 };

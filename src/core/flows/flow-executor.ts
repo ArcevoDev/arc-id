@@ -13,14 +13,14 @@ type InboundCtx = Omit<FlowContext, "requestId" | "db" | "tenantId"> & {
 };
 
 async function withTx<T>(
-  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  fn: (tx: any) => Promise<T>,
   options?: { timeout?: number; maxWait?: number },
 ): Promise<T> {
-  return prisma.$transaction(fn, {
+  return (prisma as any).$transaction(fn, {
     // Increased standard timeout threshold safely to 25 seconds for long-lived orchestration steps
     timeout: options?.timeout ?? 25_000,
     maxWait: options?.maxWait ?? 10_000,
-  });
+  }) as Promise<T>;
 }
 
 export class FlowExecutor {
@@ -48,11 +48,11 @@ export class FlowExecutor {
             ...ctx,
             tenantId: resolvedTenantId,
             requestId: traceId,
-            db: tx, 
+            db: tx,
           };
           const result = await flow.execute(parsedInput, enrichedCtx);
           if (flow.outputSchema) flow.outputSchema.parse(result);
-          
+
           logger.info(`[FLOW OK] ${flow.name}`, {
             traceId,
             ms: Date.now() - start,

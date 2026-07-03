@@ -1,41 +1,54 @@
+// src/core/db/prisma.ts
+//
+// CHANGE: The exported `prisma` singleton is now wrapped with
+// withTenantIsolation(). Every route and flow that uses ctx.db (which is
+// this singleton, or a $transaction derived from it) automatically gets the
+// tenant write guard — no per-route changes needed.
+//
+// The raw PrismaClient (before the extension) is NOT exported. If you
+// genuinely need to bypass isolation (seeding, migrations, sys-admin scripts
+// that run outside the HTTP server), instantiate a new PrismaClient directly
+// in that script rather than importing from here.
+
 import { PrismaClient } from "@/prisma-client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { config } from "@/core/config";
+import { withTenantIsolation } from "./tenant-isolation";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: ReturnType<typeof withTenantIsolation<PrismaClient>> | undefined;
 };
 
-let prismaInstance: PrismaClient;
-
-if (config.base.env === "production") {
-  const pool = new Pool({
+function buildPool(max: number) {
+  return new Pool({
     connectionString: config.db.url,
-    max: 20,
+    max,
     idleTimeoutMillis: 30000,
   });
-  const adapter = new PrismaPg(pool);
-  prismaInstance = new PrismaClient({ adapter });
-} else {
-  // Prevent hot-reloading from breaking local developer pool limits
-  if (!globalForPrisma.prisma) {
-    const pool = new Pool({
-      connectionString: config.db.url,
-      max: 10,
-      idleTimeoutMillis: 15000,
-    });
-    const adapter = new PrismaPg(pool);
-    globalForPrisma.prisma = ClientWithLogging(adapter);
-  }
-  prismaInstance = globalForPrisma.prisma;
 }
 
-function ClientWithLogging(adapter: PrismaPg): PrismaClient {
-  return new PrismaClient({
+function buildClient(pool: Pool) {
+  const adapter = new PrismaPg(pool);
+  const base = new PrismaClient({
     adapter,
-    log: ["query", "error", "warn"],
+    ...(config.base.env !== "production" && {
+      log: ["query", "error", "warn"],
+    }),
   });
+  return withTenantIsolation(base);
+}
+
+let prismaInstance: ReturnType<typeof withTenantIsolation<PrismaClient>>;
+
+if (config.base.env === "production") {
+  prismaInstance = buildClient(buildPool(20));
+} else {
+  // Prevent hot-reload from exhausting connection pool limits in dev
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = buildClient(buildPool(10));
+  }
+  prismaInstance = globalForPrisma.prisma;
 }
 
 export const prisma = prismaInstance;
