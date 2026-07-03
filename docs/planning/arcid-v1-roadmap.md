@@ -59,21 +59,23 @@ dead, it's _pending_ — exactly what ArcWallet's account-linking will need.
 Not roadmap-scale work — these are bugs sitting in code that otherwise
 works, found by reading the actual signing/verification paths end to end.
 
-1. **Verification algorithm mismatch.** `verify-credential.flow.ts` must
+1. **Verification algorithm mismatch.** ~~`verify-credential.flow.ts` must
    read the issuer DID's `keyType` (or better, look up the `kid`/algorithm
    from the credential's JWT header, which `signJwt` already sets) and
    select the correct `importSPKI`/verification algorithm instead of
    hardcoding ES256. Until this lands, any credential signed with a
-   non-ES256 key fails to verify through your own endpoint.
+   non-ES256 key fails to verify through your own endpoint.~~
+   **✅ Done — reads `alg` from JWT header via `decodeProtectedHeader`.
 
-2. **Identity-owned DID signing key gap.** `signing.service.ts`'s
+2. **Identity-owned DID signing key gap.** ~~`signing.service.ts`'s
    `loadSigningKey` needs an `identityId` branch, or — more consistent with
    the current design — `TenantSigningKey` needs to support keys scoped to
    an `Identity` as well as a `Tenant`. Decide now whether v1 actually needs
    individually-owned DIDs (separate from tenant-issued ones) or whether
    that's a v2 feature; if it's v2, explicitly disable/validate against
    issuing identity-scoped DIDs for now so the failure is a clear 4xx
-   instead of an opaque 500 at credential-issuance time.
+   instead of an opaque 500 at credential-issuance time.~~
+   **✅ Done — identity-scoped DIDs rejected with ApiError.badRequest at issuance time (v2 feature).**
 
 3. **Status-list index allocation race.** `allocateIndex`'s read
    (`issuedCount`) and write (`increment`) are two separate statements —
