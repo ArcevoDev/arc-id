@@ -4,7 +4,13 @@ import type { FlowContext } from "@/core/flows/flow-context";
 import { VerifyCredentialSchema } from "../validators/credential.schemas";
 import { DidService } from "../services/did.service";
 import { StatusListService } from "../services/status-list.service";
-import { jwtVerify, importSPKI, createRemoteJWKSet, decodeJwt } from "jose";
+import {
+  jwtVerify,
+  importSPKI,
+  createRemoteJWKSet,
+  decodeJwt,
+  decodeProtectedHeader,
+} from "jose";
 
 interface VerifyResult {
   valid: boolean;
@@ -33,17 +39,30 @@ export const verifyCredentialFlow: Flow<
 
       let verifiedPayload: Record<string, unknown>;
 
-      if (didRecord) {
-        // Local DID — use stored public key
-        const pem = derToPem(
-          Buffer.from(didRecord.publicKeyBytes),
-          "PUBLIC KEY",
-        );
-        const publicKey = await importSPKI(pem, "ES256"); // or RS256 depending on keyType
-        const { payload } = await jwtVerify(input.credential, publicKey, {
-          issuer: issuerDid,
-        });
-        verifiedPayload = payload as Record<string, unknown>;
+if (didRecord) {
+         // Local DID — use stored public key
+         const pem = derToPem(
+           Buffer.from(didRecord.publicKeyBytes),
+           "PUBLIC KEY",
+         );
+        // Read the actual signing algorithm from the JWT header rather than
+        // guessing from keyType — keyType (JsonWebKey2020, etc.) describes
+        // the W3C key format, not the JWA algorithm used to sign. The
+        // header's `alg` is authoritative: signJwt/SignJWT always sets it
+        // to match the real signing key (see signing.service.ts).
+        const header = decoded as unknown as { alg?: string };
+        const alg = decodeProtectedHeader(input.credential).alg;
+        if (!alg) {
+          return {
+            valid: false,
+            reason: "Credential is missing an algorithm (alg) header",
+          };
+        }
+        const publicKey = await importSPKI(pem, alg);
+         const { payload } = await jwtVerify(input.credential, publicKey, {
+           issuer: issuerDid,
+         });
+         verifiedPayload = payload as Record<string, unknown>;
       } else {
         // External DID — attempt did:web JWKS resolution
         if (!issuerDid.startsWith("did:web:")) {
