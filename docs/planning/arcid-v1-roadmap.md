@@ -103,10 +103,11 @@ works, found by reading the actual signing/verification paths end to end.
    `superRefine` pattern `env.validator.ts` already uses elsewhere.~~
    **✅ Done — production seed requires ADMIN_PASSWORD (exit-on-fail with defense-in-depth check against dev default).**
 
-6. **Misnamed migration folder.** Rename
+6. **Misnamed migration folder.** ~~Rename
    `20260617125316_add_identity_banned_audit_action` to something like
    `20260617125316_add_username_set_audit_action` for future readability.
-   Do not edit the SQL inside it or touch already-applied migrations.
+   Do not edit the SQL inside it or touch already-applied migrations.~~
+   **✅ Done — folder renamed to `20260617125316_add_username_set_audit_action` (SQL untouched, already-applied migrations not modified).**
 
 None of this blocks anything else below — do it first because it's cheap,
 contained, and some of it (the email-linking bug) is a real security hole
