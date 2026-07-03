@@ -5,7 +5,10 @@ import { EmailVerifySchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
 
-export const emailVerifyFlow: Flow<z.infer<typeof EmailVerifySchema>, Record<string, never>> = {
+export const emailVerifyFlow: Flow<
+  z.infer<typeof EmailVerifySchema>,
+  Record<string, never>
+> = {
   name: "auth:email-verify",
   inputSchema: EmailVerifySchema,
 

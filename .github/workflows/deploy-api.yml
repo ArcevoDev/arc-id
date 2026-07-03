@@ -1,0 +1,84 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    # Only redeploy when something that actually affects the API changed —
+    # avoids redeploying the whole API service on a pure console/docs commit.
+    paths:
+      - "src/api/**"
+      - "src/core/**"
+      - "src/modules/**"
+      - "src/lib/**"
+      - "src/jobs/**"
+      - "prisma/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.api.json"
+
+# Prevents two deploys (and worse, two concurrent `migrate deploy` runs
+# against the same database) racing if commits land close together.
+concurrency:
+  group: deploy-api-production
+  cancel-in-progress: false
+
+env:
+  HUSKY: 0
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Applies committed migration files only. Fails (does not attempt to
+      # "fix") if the migration history and schema have drifted — that's
+      # intentional; drift must be resolved locally, never auto-patched in CI.
+      - name: Run database migrations
+        run: pnpm prisma:deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  deploy:
+    needs: migrate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      # Deploys the API service. Railway builds from this same repo using
+      # the `start:api` script — see railway.json / service settings for
+      # which script each Railway service runs (api vs workers are two
+      # separate Railway services pointed at the same repo).
+      - name: Deploy to Railway
+        run: railway up --service arcid-api --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  deploy-workers:
+    needs: migrate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy workers to Railway
+        run: railway up --service arcid-workers --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

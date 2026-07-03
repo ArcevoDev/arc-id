@@ -8,7 +8,10 @@ import { SessionRepository } from "../repositories/session.repository";
 import { notificationService } from "@/lib/notifications/notification.service";
 import { auditService } from "@/modules/audit/services/audit.service";
 
-export const passwordResetConfirmFlow: Flow<z.infer<typeof PasswordResetConfirmSchema>, Record<string, never>> = {
+export const passwordResetConfirmFlow: Flow<
+  z.infer<typeof PasswordResetConfirmSchema>,
+  Record<string, never>
+> = {
   name: "auth:password-reset-confirm",
   inputSchema: PasswordResetConfirmSchema,
 
@@ -37,11 +40,14 @@ export const passwordResetConfirmFlow: Flow<z.infer<typeof PasswordResetConfirmS
       );
     }
 
-    await auditService.log({
-      action: "PASSWORD_CHANGED",
-      identityId: tokenRecord.identityId,
-      ip: ctx.ip,
-    }, ctx.db);
+    await auditService.log(
+      {
+        action: "PASSWORD_CHANGED",
+        identityId: tokenRecord.identityId,
+        ip: ctx.ip,
+      },
+      ctx.db,
+    );
 
     return {};
   },

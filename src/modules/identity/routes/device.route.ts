@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { presentDevice } from "../presenters/device.presenter";
 import { z } from "zod";
+import { presentDevice } from "../presenters/device.presenter";
 
 export async function deviceRoute(fastify: FastifyInstance) {
   fastify.get(
-    "/me/devices",
+    "/devices",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
@@ -28,7 +28,7 @@ export async function deviceRoute(fastify: FastifyInstance) {
   );
 
   fastify.delete(
-    "/me/devices/:id",
+    "/devices/:id",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
@@ -36,14 +36,10 @@ export async function deviceRoute(fastify: FastifyInstance) {
         summary: "Revoke device endpoint authorization status",
         security: [{ bearerAuth: [] }],
         params: z.object({
-          id: z
-            .string()
-            .uuid("Invalid tracking identification standard format"),
+          id: z.string().min(1),
         }),
         response: {
-          200: z.object({
-            success: z.boolean(),
-          }),
+          200: z.object({ success: z.boolean() }),
         },
       },
     },

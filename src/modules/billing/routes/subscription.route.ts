@@ -3,7 +3,7 @@
 // The previous version used identityId which doesn't exist on Subscription → all billing
 // routes were crashing. Provider webhook data goes in ExternalBillingIntegration.
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
+import { flowExecutor } from "@/core/flows";
 import { upgradePlanFlow } from "../flows/upgrade-plan.flow";
 import { SubscriptionService } from "../services/subscription.service";
 import { config } from "@/core/config";
@@ -25,20 +25,29 @@ const STRIPE_PLAN_MAP: Record<string, "FREE" | "PRO" | "ENTERPRISE"> = {
 function verifyPaystackWebhook(payload: string, signature: string): boolean {
   if (!config.billing.paystack.webhookSecret) return false;
   const expected = createHmac("sha512", config.billing.paystack.webhookSecret)
-    .update(payload).digest("hex");
-  try { return timingSafeEqual(Buffer.from(expected), Buffer.from(signature)); } catch { return false; }
+    .update(payload)
+    .digest("hex");
+  try {
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  } catch {
+    return false;
+  }
 }
 
 function verifyStripeWebhook(payload: string, signature: string): boolean {
   if (!config.billing.stripe.webhookSecret) return false;
   const expected = createHmac("sha256", config.billing.stripe.webhookSecret)
-    .update(payload).digest("hex");
-  try { return timingSafeEqual(Buffer.from(expected), Buffer.from(signature)); } catch { return false; }
+    .update(payload)
+    .digest("hex");
+  try {
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  } catch {
+    return false;
+  }
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 export async function subscriptionRoute(fastify: FastifyInstance) {
-
   // GET /subscription — returns the calling user's active tenant subscription
   fastify.get(
     "/subscription",
@@ -46,16 +55,22 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Billing & Subscriptions"],
-        summary: "Get the current subscription plan for the authenticated user's tenant",
+        summary:
+          "Get the current subscription plan for the authenticated user's tenant",
         security: [{ bearerAuth: [] }],
-        response: { 200: z.object({ success: z.boolean(), data: z.any().nullable() }) },
+        response: {
+          200: z.object({ success: z.boolean(), data: z.any().nullable() }),
+        },
       },
     },
     async (req, reply) => {
       const tenantId = req.identity.tenantId ?? "SYSTEM";
       const subService = new SubscriptionService(fastify.db);
       const sub = await subService.getForTenant(tenantId);
-      return reply.send({ success: true, data: sub ?? { tenantId, plan: "FREE", status: "ACTIVE" } });
+      return reply.send({
+        success: true,
+        data: sub ?? { tenantId, plan: "FREE", status: "ACTIVE" },
+      });
     },
   );
 
@@ -66,7 +81,8 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Billing & Subscriptions"],
-        summary: "Upgrade the tenant subscription plan (ADMIN only for org tenants)",
+        summary:
+          "Upgrade the tenant subscription plan (ADMIN only for org tenants)",
         security: [{ bearerAuth: [] }],
         body: z.object({ plan: z.enum(["FREE", "PRO", "ENTERPRISE"]) }),
         response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
@@ -74,7 +90,7 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const result = await flowExecutor.run(upgradePlanFlow, req.body, {
-        userId: req.identity.id,
+        identityId: req.identity.id,
         tenantId: req.identity.tenantId,
       });
       return reply.send({ success: true, data: result });
@@ -102,28 +118,44 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
         data?.metadata?.tenantId ?? data?.customer?.metadata?.tenantId;
 
       if (!tenantId) {
-        fastify.log.warn("[BILLING][PAYSTACK] No tenantId in metadata — ignoring event");
+        fastify.log.warn(
+          "[BILLING][PAYSTACK] No tenantId in metadata — ignoring event",
+        );
         return reply.status(200).send({ received: true });
       }
 
       const subService = new SubscriptionService(fastify.db);
 
-      if (eventName === "subscription.create" || eventName === "charge.success") {
+      if (
+        eventName === "subscription.create" ||
+        eventName === "charge.success"
+      ) {
         const planCode = data?.plan?.plan_code ?? data?.plan_code;
         const plan = PAYSTACK_PLAN_MAP[planCode];
         if (plan) {
           await subService.activateFromProvider(
-            tenantId, plan, "PAYSTACK",
+            tenantId,
+            plan,
+            "PAYSTACK",
             data?.customer?.customer_code,
             data?.subscription_code ?? data?.reference,
           );
-          fastify.log.info({ tenantId, plan }, "[BILLING][PAYSTACK] Plan activated");
+          fastify.log.info(
+            { tenantId, plan },
+            "[BILLING][PAYSTACK] Plan activated",
+          );
         }
       }
 
-      if (eventName === "subscription.not_renew" || eventName === "subscription.disable") {
+      if (
+        eventName === "subscription.not_renew" ||
+        eventName === "subscription.disable"
+      ) {
         await subService.cancelFromProvider(tenantId);
-        fastify.log.info({ tenantId }, "[BILLING][PAYSTACK] Subscription cancelled → FREE");
+        fastify.log.info(
+          { tenantId },
+          "[BILLING][PAYSTACK] Subscription cancelled → FREE",
+        );
       }
 
       return reply.status(200).send({ received: true });
@@ -151,28 +183,40 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
       const tenantId: string | undefined = obj?.metadata?.tenantId;
 
       if (!tenantId) {
-        fastify.log.warn("[BILLING][STRIPE] No tenantId in metadata — ignoring event");
+        fastify.log.warn(
+          "[BILLING][STRIPE] No tenantId in metadata — ignoring event",
+        );
         return reply.status(200).send({ received: true });
       }
 
-      if (event.type === "customer.subscription.created" || event.type === "invoice.payment_succeeded") {
+      if (
+        event.type === "customer.subscription.created" ||
+        event.type === "invoice.payment_succeeded"
+      ) {
         const priceId =
-          obj?.items?.data?.[0]?.price?.id ??
-          obj?.lines?.data?.[0]?.price?.id;
+          obj?.items?.data?.[0]?.price?.id ?? obj?.lines?.data?.[0]?.price?.id;
         const plan = STRIPE_PLAN_MAP[priceId];
         if (plan) {
           await subService.activateFromProvider(
-            tenantId, plan, "STRIPE",
+            tenantId,
+            plan,
+            "STRIPE",
             obj?.customer,
             obj?.subscription ?? obj?.id,
           );
-          fastify.log.info({ tenantId, plan }, "[BILLING][STRIPE] Plan activated");
+          fastify.log.info(
+            { tenantId, plan },
+            "[BILLING][STRIPE] Plan activated",
+          );
         }
       }
 
       if (event.type === "customer.subscription.deleted") {
         await subService.cancelFromProvider(tenantId);
-        fastify.log.info({ tenantId }, "[BILLING][STRIPE] Subscription cancelled → FREE");
+        fastify.log.info(
+          { tenantId },
+          "[BILLING][STRIPE] Subscription cancelled → FREE",
+        );
       }
 
       return reply.status(200).send({ received: true });

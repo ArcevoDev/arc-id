@@ -5,7 +5,10 @@ import { PasswordResetRequestSchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
 
-export const passwordResetRequestFlow: Flow<z.infer<typeof PasswordResetRequestSchema>, Record<string, never>> = {
+export const passwordResetRequestFlow: Flow<
+  z.infer<typeof PasswordResetRequestSchema>,
+  Record<string, never>
+> = {
   name: "auth:password-reset-request",
   inputSchema: PasswordResetRequestSchema,
 

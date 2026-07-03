@@ -1,13 +1,15 @@
-// src/modules/auth/presenters/identity.presenter.ts
-import type { Identity } from "@/prisma-client";
+import type { Identity, TenantMembership, Role } from "@/prisma-client";
 
-export function presentIdentity(
-  identity: Identity & { memberships?: Array<{ role: { name: string } }> }
-) {
+export type IdentityWithMemberships = Identity & {
+  memberships?: (TenantMembership & { role: Role })[];
+};
+
+export function presentIdentity(identity: IdentityWithMemberships) {
   return {
     id: identity.id,
     email: identity.primaryEmail,
     name: identity.name,
+    username: identity.username,
     picture: identity.picture,
     status: identity.status,
     emailVerified: identity.emailVerified,

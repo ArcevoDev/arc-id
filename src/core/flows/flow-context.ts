@@ -1,3 +1,4 @@
+// src/core/flows/flow-context.ts
 import type { DbClient } from "@/lib/db-client";
 import type { FlowLogger } from "@/lib/logger";
 
@@ -8,7 +9,7 @@ import type { FlowLogger } from "@/lib/logger";
  */
 export interface FlowContext {
   requestId: string;
-  userId?: string;
+  identityId?: string;
   tenantId: string | null;
   sessionId?: string;
   ip?: string;
@@ -16,4 +17,8 @@ export interface FlowContext {
   metadata?: Record<string, unknown>;
   db: DbClient;
   logger?: FlowLogger;
+  // Caller's subscription plan — populated by routes that call requireUser/requirePlan.
+  // Used by MembershipService.add() to enforce per-plan member caps.
+  // Defaults to "FREE" in any flow that doesn't pass it.
+  plan?: string;
 }

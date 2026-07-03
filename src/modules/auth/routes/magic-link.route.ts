@@ -2,7 +2,7 @@
 // NOTE: This route is mounted under the /auth prefix by auth.plugin.ts
 // So these paths become /auth/magic-link/request and /auth/magic-link
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
+import { flowExecutor } from "@/core/flows";
 import { magicLinkFlow } from "../flows/magic-link.flow";
 import { z } from "zod";
 
@@ -15,7 +15,7 @@ export async function magicLinkRoute(fastify: FastifyInstance) {
       schema: {
         tags: ["Authentication"],
         summary: "Request a passwordless magic link",
-        body: z.object({ email: z.string().email() }),
+        body: z.object({ email: z.email() }),
         response: { 200: z.object({ success: z.boolean() }) },
       },
     },

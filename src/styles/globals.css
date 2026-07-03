@@ -1,0 +1,213 @@
+/* src/styles/globals.css */
+/*
+ * FONT FIX:
+ * --font-sans was set to var(--font-sans) — a self-reference resolving to
+ * nothing. Now maps to --font-inter which is set by next/font on <html>.
+ * --font-mono maps to --font-mono from JetBrains Mono next/font variable.
+ * --font-heading maps to Inter too (heavier weight applied via font-bold class).
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* ── Typography ──────────────────────────────────────────────────────────── */
+  --font-sans: var(--font-inter); /* Inter — loaded by next/font */
+  --font-mono: var(--font-mono); /* JetBrains Mono — loaded by next/font */
+  --font-heading: var(--font-inter); /* Same as sans — weight via class */
+
+  /* ── Core semantic colour tokens ─────────────────────────────────────────── */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* ── Brand palette (Tailwind utility classes) ────────────────────────────── */
+  --color-navy-900: oklch(0.18 0.03 234);
+  --color-navy-950: oklch(0.12 0.03 234);
+  --color-indigo-glow: oklch(0.61 0.22 277);
+
+  /* ── Sidebar tokens ─────────────────────────────────────────────────────── */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ── Chart tokens ───────────────────────────────────────────────────────── */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* ── Radius scale ───────────────────────────────────────────────────────── */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+
+  /* ── Animations ─────────────────────────────────────────────────────────── */
+  --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes pulse-ring {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.3;
+      transform: scale(1.05);
+    }
+  }
+}
+
+/* ── Design tokens — dark-first (no media query, app is always dark) ──────── */
+:root {
+  /* Backgrounds — deep navy, not pure black */
+  --background: oklch(0.12 0.02 240);
+  --foreground: oklch(0.95 0.01 240);
+
+  /* Cards — slightly elevated from background */
+  --card: oklch(0.155 0.02 240);
+  --card-foreground: oklch(0.95 0.01 240);
+
+  /* Popover — dropdown menus, tooltips */
+  --popover: oklch(0.14 0.02 240);
+  --popover-foreground: oklch(0.95 0.01 240);
+
+  /* Primary — indigo, ArcID brand colour */
+  --primary: oklch(0.58 0.23 273);
+  --primary-foreground: oklch(0.99 0 0);
+
+  /* Secondary — subtle surface */
+  --secondary: oklch(0.19 0.02 240);
+  --secondary-foreground: oklch(0.95 0.01 240);
+
+  /* Muted — de-emphasised text and backgrounds */
+  --muted: oklch(0.19 0.02 240);
+  --muted-foreground: oklch(0.65 0.02 240);
+
+  /* Accent — hover state surface */
+  --accent: oklch(0.22 0.03 240);
+  --accent-foreground: oklch(0.98 0 0);
+
+  /* Destructive — error / danger */
+  --destructive: oklch(0.577 0.245 27.325);
+
+  /* Borders and inputs */
+  --border: oklch(0.22 0.02 240);
+  --input: oklch(0.22 0.02 240);
+  --ring: oklch(0.58 0.23 273 / 50%);
+  --radius: 0.5rem;
+
+  /* Charts */
+  --chart-1: oklch(0.58 0.23 273); /* indigo */
+  --chart-2: oklch(0.696 0.17 162); /* teal */
+  --chart-3: oklch(0.398 0.07 227); /* slate */
+  --chart-4: oklch(0.828 0.189 84); /* amber */
+  --chart-5: oklch(0.769 0.188 70); /* gold */
+
+  /* Sidebar — slightly different from card for depth */
+  --sidebar: oklch(0.135 0.02 240);
+  --sidebar-foreground: oklch(0.95 0.01 240);
+  --sidebar-primary: oklch(0.58 0.23 273);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.19 0.02 240);
+  --sidebar-accent-foreground: oklch(0.95 0.01 240);
+  --sidebar-border: oklch(0.22 0.02 240);
+  --sidebar-ring: oklch(0.58 0.23 273 / 50%);
+}
+
+/* ── Base layer ────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    /* Improve font rendering and layout scaling across browsers */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    /* Prevent layout shift from scrollbar appearance */
+    overflow-y: scroll;
+  }
+
+  /* Mono text — API keys, JWTs, DIDs, credential IDs */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono), ui-monospace, monospace;
+  }
+
+  /* Better focus rings for accessibility */
+  :focus-visible {
+    outline: 2px solid oklch(0.58 0.23 273 / 60%);
+    outline-offset: 2px;
+  }
+}
+
+/* ── Custom utilities ──────────────────────────────────────────────────────── */
+
+/* Subtle indigo glow — used on primary CTAs and active sidebar items */
+@utility glow-indigo {
+  box-shadow:
+    0 0 25px -5px oklch(0.58 0.23 273 / 15%),
+    0 0 10px -6px oklch(0.58 0.23 273 / 20%);
+}
+
+/* Faint indigo border — used on active or highlighted borders */
+@utility border-glow {
+  border-color: oklch(0.58 0.23 273 / 25%);
+}
+
+/* Glass-effect surface — cards and modals */
+@utility glass {
+  background: oklch(0.155 0.02 240 / 80%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Gradient text — for headings on marketing / landing surfaces */
+@utility text-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.75 0.15 273) 0%,
+    oklch(0.85 0.08 220) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

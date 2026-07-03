@@ -1,18 +1,21 @@
 // src/modules/identity/routes/profile.route.ts
-// NOTE: Routes are at /me (no prefix change needed — identity plugin has no prefix by design)
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { Prisma } from "@/prisma-client";
 import { presentIdentity } from "../presenters/identity.presenter";
+import { UpdateProfileSchema } from "../validators/identity.schemas";
+import { auditService } from "@/modules/audit/services/audit.service";
 
 export async function profileRoute(fastify: FastifyInstance) {
-  // GET /me
+  // GET /profile
   fastify.get(
-    "/me",
+    "/profile",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Identity & Profile"],
-        summary: "Retrieve canonical identity profile with tenant memberships and roles",
+        summary:
+          "Retrieve canonical identity profile with tenant memberships and roles",
         security: [{ bearerAuth: [] }],
         response: {
           200: z.object({ success: z.boolean(), data: z.any() }),
@@ -20,8 +23,6 @@ export async function profileRoute(fastify: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      // FIXED: was missing { include: { memberships: { include: { role: true } } } }
-      // causing roles to always return []
       const identity = await fastify.db.identity.findUniqueOrThrow({
         where: { id: req.identity.id },
         include: {
@@ -38,7 +39,6 @@ export async function profileRoute(fastify: FastifyInstance) {
           ...presentIdentity(identity),
           plan: req.identity.plan,
           tenantId: req.identity.tenantId,
-          // Surface active tenant memberships with role names
           memberships: identity.memberships.map((m) => ({
             tenantId: m.tenantId,
             role: m.role.name,
@@ -50,29 +50,33 @@ export async function profileRoute(fastify: FastifyInstance) {
     },
   );
 
-  // PATCH /me
+  // PATCH /profile — requireUser is sufficient (low-risk mutation)
   fastify.patch(
-    "/me",
+    "/profile",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Identity & Profile"],
         summary: "Update display name and profile picture",
         security: [{ bearerAuth: [] }],
-        body: z.object({
-          name: z.string().min(1).max(100).optional(),
-          picture: z.string().url().optional(),
-        }),
+        body: UpdateProfileSchema,
         response: {
           200: z.object({ success: z.boolean(), data: z.any() }),
         },
       },
     },
     async (req, reply) => {
-      const body = req.body as { name?: string; picture?: string };
+      const body = req.body as z.infer<typeof UpdateProfileSchema>;
+
       const identity = await fastify.db.identity.update({
         where: { id: req.identity.id },
-        data: body,
+        data: {
+          name: body.name,
+          picture: body.picture,
+          metadata: body.metadata
+            ? (body.metadata as Prisma.InputJsonValue)
+            : undefined,
+        },
         include: {
           memberships: {
             where: { status: "ACTIVE" },
@@ -81,28 +85,31 @@ export async function profileRoute(fastify: FastifyInstance) {
         },
       });
 
-      await fastify.db.auditLog.create({
-        data: {
-          actionId: "PROFILE_UPDATED",
+      void auditService
+        .log({
+          action: "PROFILE_UPDATED",
           identityId: req.identity.id,
           ip: req.ip,
-          userAgent: req.headers["user-agent"],
-          metadata: Object.keys(body),
-        },
-      });
+          metadata: { fields: Object.keys(body) },
+        })
+        .catch(() => {});
 
       return reply.send({ success: true, data: presentIdentity(identity) });
     },
   );
 
-  // DELETE /me
+  // DELETE /profile
+  // requireElevated: destroys the account, all sessions, and all tokens.
+  // A compromised bearer token alone is not sufficient — the user must have
+  // re-authenticated within the last 15 minutes via POST /auth/step-up.
   fastify.delete(
-    "/me",
+    "/profile",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: fastify.auth.requireElevated,
       schema: {
         tags: ["Identity & Profile"],
-        summary: "Initiate account deletion — revokes all sessions and schedules cleanup",
+        summary:
+          "Permanently delete account (requires step-up re-authentication)",
         security: [{ bearerAuth: [] }],
         response: {
           200: z.object({ success: z.boolean(), message: z.string() }),
@@ -112,58 +119,41 @@ export async function profileRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const identityId = req.identity.id;
 
-      // Get email for notification before deletion
       const identity = await fastify.db.identity.findUniqueOrThrow({
         where: { id: identityId },
         select: { primaryEmail: true, name: true },
       });
 
-      // 1. Revoke all active sessions
-      await fastify.db.session.updateMany({
-        where: { identityId, valid: true },
-        data: { valid: false },
-      });
+      // Revoke all live sessions and tokens before deletion
+      await fastify.db.$transaction([
+        fastify.db.session.updateMany({
+          where: { identityId, valid: true },
+          data: { valid: false },
+        }),
+        fastify.db.accessToken.updateMany({
+          where: { identityId, revoked: false },
+          data: { revoked: true },
+        }),
+        fastify.db.refreshToken.updateMany({
+          where: { identityId, revoked: false },
+          data: { revoked: true },
+        }),
+      ]);
 
-      // 2. Revoke all active tokens
-      await fastify.db.accessToken.updateMany({
-        where: { identityId, revoked: false },
-        data: { revoked: true },
-      });
-      await fastify.db.refreshToken.updateMany({
-        where: { identityId, revoked: false },
-        data: { revoked: true },
-      });
+      await fastify.db.identity.delete({ where: { id: identityId } });
 
-      // 3. Mark identity as DELETED (soft delete — retains audit trail)
-      await fastify.db.identity.update({
-        where: { id: identityId },
-        data: { status: "DELETED" },
-      });
-
-      // 4. Audit log
-      await fastify.db.auditLog.create({
-        data: {
-          actionId: "USER_DELETED",
+      void auditService
+        .log({
+          action: "USER_DELETED",
           identityId,
           ip: req.ip,
-          userAgent: req.headers["user-agent"],
-        },
-      });
-
-      // 5. Notify
-      if (identity.primaryEmail) {
-        const { notificationService } = await import(
-          "@/lib/notifications/notification.service"
-        );
-        void notificationService.sendAccountDeletion(identity.primaryEmail, {
-          name: identity.name ?? undefined,
-          graceDays: 30,
-        });
-      }
+          metadata: { email: identity.primaryEmail },
+        })
+        .catch(() => {});
 
       return reply.send({
         success: true,
-        message: "Account deletion initiated. Your data will be purged within 30 days.",
+        message: "Account permanently deleted",
       });
     },
   );

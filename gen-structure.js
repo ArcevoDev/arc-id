@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 const IGNORED_ITEMS = new Set([
   ".next",
@@ -9,6 +9,8 @@ const IGNORED_ITEMS = new Set([
   ".vercel",
   "coverage",
   ".DS_Store",
+  "repo_structure.txt",
+  "codebase_snapshot.txt",
   "repo_structure.txt",
 ]);
 

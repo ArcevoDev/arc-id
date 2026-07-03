@@ -9,16 +9,17 @@ import { TenantService } from "../services/tenant.service";
 
 export async function signingKeyRoute(fastify: FastifyInstance) {
   // ── POST /:tenantId/signing-keys ─────────────────────────────────────────
+  // PRO: Custom signing keypairs are a PRO/ENTERPRISE feature.
+  // FREE tenants use the system-level JWT signing key for all operations.
   fastify.post(
     "/:tenantId/signing-keys",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: fastify.auth.requirePlan("PRO"),
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
         summary:
-          "Generate an asymmetric EC keypair bound to this tenant for VC/token signing",
+          "Generate an asymmetric EC keypair bound to this tenant for VC/token signing (PRO)",
         security: [{ bearerAuth: [] }],
-        // FIXED: was z.string().uuid() — tenants use cuid(), not uuid
         params: z.object({ tenantId: z.string().cuid() }),
         response: {
           201: z.object({
@@ -91,13 +92,14 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
   );
 
   // ── GET /:tenantId/signing-keys ──────────────────────────────────────────
+  // PRO: Listing signing keys is only meaningful when the tenant can create them.
   fastify.get(
     "/:tenantId/signing-keys",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: fastify.auth.requirePlan("PRO"),
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
-        summary: "List active signing key metadata for this tenant",
+        summary: "List active signing key metadata for this tenant (PRO)",
         security: [{ bearerAuth: [] }],
         params: z.object({ tenantId: z.string().cuid() }),
         response: {
@@ -128,13 +130,16 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
   );
 
   // ── DELETE /:tenantId/signing-keys/:kid ───────────────────────────────────
+  // requireElevated: revoking a signing key is irreversible and tenant-wide.
+  // This also implicitly requires PRO (you can't have keys without PRO).
   fastify.delete(
     "/:tenantId/signing-keys/:kid",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: fastify.auth.requireElevated,
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
-        summary: "Revoke a tenant signing key by KID",
+        summary:
+          "Revoke a tenant signing key by KID (requires step-up re-authentication)",
         security: [{ bearerAuth: [] }],
         params: z.object({
           tenantId: z.string().cuid(),
@@ -146,7 +151,10 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      const { tenantId, kid } = req.params as { tenantId: string; kid: string };
+      const { tenantId, kid } = req.params as {
+        tenantId: string;
+        kid: string;
+      };
 
       const tenantService = new TenantService(fastify.db);
       await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");

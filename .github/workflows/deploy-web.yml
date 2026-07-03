@@ -1,0 +1,35 @@
+name: Deploy Web
+
+# Vercel's native GitHub integration already auto-deploys on every push to
+# main with zero config — you likely don't need this file at all.
+#
+# Use this ONLY if you want the web deploy to wait until the API + migration
+# workflow succeeds (e.g. a new required env var or API shape ships in the
+# same commit as a console page that depends on it). Otherwise, delete this
+# file and let Vercel's own integration handle it independently — that's
+# simpler and is what's recommended for v1.
+
+on:
+  workflow_run:
+    workflows: ["Deploy API"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

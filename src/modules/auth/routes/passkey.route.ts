@@ -1,13 +1,16 @@
 // src/modules/auth/routes/passkey.route.ts
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows/flow-executor";
+import { flowExecutor } from "@/core/flows";
 import { passkeyRegisterFlow } from "../flows/passkey-register.flow";
 import { passkeyAuthenticateFlow } from "../flows/passkey-authenticate.flow";
 import { PasskeyService } from "../services/passkey.service";
+import { storeChallenge } from "@/lib/challenge-store";
+import { auditService } from "@/modules/audit/services/audit.service";
+import { ApiError } from "@/core/errors";
 import { z } from "zod";
 
 export async function passkeyRoute(fastify: FastifyInstance) {
-  // 1. Generate Registration Options
+  // ── 1. Generate Registration Options ──────────────────────────────────────
   fastify.post(
     "/passkey/options/register",
     {
@@ -16,7 +19,12 @@ export async function passkeyRoute(fastify: FastifyInstance) {
         tags: ["Passkeys / WebAuthn"],
         summary: "Generate registration options for a new passkey",
         security: [{ bearerAuth: [] }],
-        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            data: z.object({ options: z.any(), challengeId: z.string() }),
+          }),
+        },
       },
     },
     async (req, reply) => {
@@ -31,42 +39,35 @@ export async function passkeyRoute(fastify: FastifyInstance) {
         identity.primaryEmail ?? req.identity.id,
       );
 
-      // Persist challenge server-side in the current active session meta
-      const currentSession = await fastify.db.session.findFirst({
-        where: { identityId: req.identity.id, valid: true },
-        orderBy: { createdAt: "desc" },
-      });
+      const { challengeId } = await storeChallenge(
+        req.identity.id,
+        "registration",
+        options.challenge,
+      );
 
-      if (currentSession) {
-        await fastify.db.session.update({
-          where: { id: currentSession.id },
-          data: { riskSignals: { challenge: options.challenge } as any },
-        });
-      }
-
-      return reply.send({ success: true, data: options });
+      return reply.send({ success: true, data: { options, challengeId } });
     },
   );
 
-  // 2. Execute WebAuthn Registration Flow
+  // ── 2. Verify Registration ─────────────────────────────────────────────────
   fastify.post(
     "/passkey/register",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
         tags: ["Passkeys / WebAuthn"],
-        summary: "Verify and save registered credential public key",
+        summary: "Verify and persist the registered passkey credential",
         security: [{ bearerAuth: [] }],
         body: z.object({
           response: z.record(z.string(), z.unknown()),
-          challenge: z.string(),
+          challengeId: z.string().uuid(),
         }),
         response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
       },
     },
     async (req, reply) => {
       const result = await flowExecutor.run(passkeyRegisterFlow, req.body, {
-        userId: req.identity.id,
+        identityId: req.identity.id,
         tenantId: req.identity.tenantId,
         ip: req.ip,
       });
@@ -74,35 +75,48 @@ export async function passkeyRoute(fastify: FastifyInstance) {
     },
   );
 
-  // 3. Generate Authentication Options
+  // ── 3. Generate Authentication Options ────────────────────────────────────
   fastify.post(
     "/passkey/options/authenticate",
     {
       schema: {
         tags: ["Passkeys / WebAuthn"],
-        summary: "Generate authentication options for passkey login",
-        body: z.object({ identityId: z.string().cuid().optional() }),
-        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
+        summary: "Generate authentication options for passkey sign-in",
+        body: z.object({ identityId: z.string().optional() }),
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            data: z.object({ options: z.any(), challengeId: z.string() }),
+          }),
+        },
       },
     },
     async (req, reply) => {
       const { identityId } = req.body as { identityId?: string };
       const passkeyService = new PasskeyService(fastify.db);
-      const options = await passkeyService.generateAuthenticationOptions(identityId);
-      return reply.send({ success: true, data: options });
+      const options =
+        await passkeyService.generateAuthenticationOptions(identityId);
+
+      const { challengeId } = await storeChallenge(
+        identityId ?? "anonymous",
+        "authentication",
+        options.challenge,
+      );
+
+      return reply.send({ success: true, data: { options, challengeId } });
     },
   );
 
-  // 4. Execute WebAuthn Assertion Authentication Flow
+  // ── 4. Verify Authentication ───────────────────────────────────────────────
   fastify.post(
     "/passkey/authenticate",
     {
       schema: {
         tags: ["Passkeys / WebAuthn"],
-        summary: "Authenticate via passkey assertion payload signature",
+        summary: "Authenticate via passkey assertion",
         body: z.object({
           response: z.record(z.string(), z.unknown()),
-          challenge: z.string(),
+          challengeId: z.string().uuid(),
         }),
         response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
       },
@@ -114,6 +128,117 @@ export async function passkeyRoute(fastify: FastifyInstance) {
         userAgent: req.headers["user-agent"],
       });
       return reply.send({ success: true, data: result });
+    },
+  );
+
+  // ── 5. List registered passkeys ────────────────────────────────────────────
+  // Returns metadata only — public keys and counters are never exposed.
+  fastify.get(
+    "/passkey",
+    {
+      preHandler: fastify.auth.requireUser,
+      schema: {
+        tags: ["Passkeys / WebAuthn"],
+        summary: "List passkeys registered to the current identity",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            data: z.array(
+              z.object({
+                id: z.string(),
+                credentialId: z.string(),
+                deviceType: z.string(),
+                backedUp: z.boolean(),
+                transports: z.any(),
+                createdAt: z.coerce.string(),
+                lastUsedAt: z.coerce.string(),
+              }),
+            ),
+          }),
+        },
+      },
+    },
+    async (req, reply) => {
+      const passkeys = await fastify.db.passkey.findMany({
+        where: { identityId: req.identity.id },
+        select: {
+          id: true,
+          credentialId: true,
+          deviceType: true,
+          backedUp: true,
+          transports: true,
+          createdAt: true,
+          lastUsedAt: true,
+          // publicKey and counter are never returned — security boundary
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return reply.send({ success: true, data: passkeys });
+    },
+  );
+
+  // ── 6. Delete (deregister) a passkey ──────────────────────────────────────
+  // Requires step-up elevation: deregistering a passkey is a privileged operation
+  // because it reduces the security posture of the account.
+  fastify.delete(
+    "/passkey/:passkeyId",
+    {
+      preHandler: fastify.auth.requireElevated,
+      schema: {
+        tags: ["Passkeys / WebAuthn"],
+        summary:
+          "Deregister a passkey — requires recent step-up re-authentication",
+        security: [{ bearerAuth: [] }],
+        params: z.object({ passkeyId: z.string().cuid() }),
+        response: { 200: z.object({ success: z.boolean() }) },
+      },
+    },
+    async (req, reply) => {
+      const { passkeyId } = req.params as { passkeyId: string };
+
+      // Confirm the passkey belongs to the authenticated identity before deleting.
+      const passkey = await fastify.db.passkey.findFirst({
+        where: { id: passkeyId, identityId: req.identity.id },
+        select: { id: true, credentialId: true },
+      });
+
+      if (!passkey) {
+        throw ApiError.notFound(
+          "Passkey not found or does not belong to your account",
+        );
+      }
+
+      // Guard: prevent removing the last passkey if no other auth method exists.
+      // This avoids locking the user out of their account.
+      const passkeyCount = await fastify.db.passkey.count({
+        where: { identityId: req.identity.id },
+      });
+
+      const hasLocalAccount = await fastify.db.localAccount.count({
+        where: { identityId: req.identity.id },
+      });
+
+      if (passkeyCount === 1 && hasLocalAccount === 0) {
+        throw ApiError.badRequest(
+          "Cannot remove your only passkey when you have no password set — " +
+            "set a password first or register another passkey",
+        );
+      }
+
+      await fastify.db.passkey.delete({ where: { id: passkey.id } });
+
+      void auditService
+        .log({
+          action: "PASSKEY_REGISTERED", // nearest existing action; PASSKEY_REMOVED in future migration
+          identityId: req.identity.id,
+          ip: req.ip,
+          metadata: { deleted: true, credentialId: passkey.credentialId },
+        })
+        .catch(() => {});
+
+      return reply.send({ success: true });
     },
   );
 }

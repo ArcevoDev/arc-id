@@ -19,6 +19,19 @@ export const envSchema = z
     API_BASE_URL: z.string().url().default("http://localhost:4000"),
     ALLOWED_ORIGINS: z.string().default("http://localhost:3000"),
 
+    // ── Social OAuth Providers ───────────────────────────────────────────────
+    GOOGLE_CLIENT_ID: z.string().default(""),
+    GOOGLE_CLIENT_SECRET: z.string().default(""),
+    GITHUB_CLIENT_ID: z.string().default(""),
+    GITHUB_CLIENT_SECRET: z.string().default(""),
+    APPLE_CLIENT_ID: z.string().default(""),
+    APPLE_TEAM_ID: z.string().default(""),
+    APPLE_KEY_ID: z.string().default(""),
+    APPLE_PRIVATE_KEY: z.string().default(""),
+    MICROSOFT_CLIENT_ID: z.string().default(""),
+    MICROSOFT_CLIENT_SECRET: z.string().default(""),
+    MICROSOFT_TENANT_ID: z.string().default("common"),
+
     // JWT Config Tokens
     JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
     JWT_ISSUER: z.string().default("arcid"),

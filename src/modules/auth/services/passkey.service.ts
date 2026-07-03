@@ -31,7 +31,11 @@ export class PasskeyService {
     });
   }
 
-  async verifyRegistration(identityId: string, response: any, challenge: string) {
+  async verifyRegistration(
+    identityId: string,
+    response: any,
+    challenge: string,
+  ) {
     const verification = await verifyRegistrationResponse({
       response,
       expectedChallenge: challenge,

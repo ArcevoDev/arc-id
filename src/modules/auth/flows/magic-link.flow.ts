@@ -43,6 +43,7 @@ export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>, Output> = {
       identityId: identity.id,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
+      authLevel: "aal1",
     });
 
     const tokenService = new TokenService();
@@ -53,6 +54,7 @@ export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>, Output> = {
       scopes: DEFAULT_SCOPES,
       audience: [config.oauth.directClientId],
       tenantId: ctx.tenantId || "SYSTEM",
+      authLevel: "aal1",
     });
 
     return {

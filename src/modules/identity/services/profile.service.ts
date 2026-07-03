@@ -1,19 +1,24 @@
-import type { DbClient } from "@/lib/db-client";
-import { ApiError } from "@/core/errors/api-error";
+import { Prisma } from "@/prisma-client";
 
 export class ProfileService {
-  constructor(private db: DbClient) {}
+  constructor(private db: any) {}
 
   async update(
     identityId: string,
-    data: { name?: string; picture?: string; metadata?: unknown },
+    data: {
+      name?: string;
+      picture?: string;
+      metadata?: Record<string, unknown>;
+    },
   ) {
     return this.db.identity.update({
       where: { id: identityId },
       data: {
         name: data.name,
         picture: data.picture,
-        metadata: data.metadata as any,
+        metadata: data.metadata
+          ? (data.metadata as Prisma.InputJsonValue)
+          : undefined,
       },
     });
   }

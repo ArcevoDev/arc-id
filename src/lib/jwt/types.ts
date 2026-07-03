@@ -8,6 +8,11 @@ export interface AccessTokenClaims {
   aud: string[]; // audience (resource servers)
   scope: string; // space-separated scopes
   tid?: string; // tenantId
+  // Authentication Assurance Level. "aal1" = single factor (password,
+  // magic link, social/SSO). "aal2" = MFA or passkey completed.
+  // Absent (not null) for non-human grants — e.g. client_credentials —
+  // where assurance level doesn't apply because no end-user authenticated.
+  aal?: "aal1" | "aal2";
 }
 
 export interface IdTokenClaims {
@@ -19,6 +24,10 @@ export interface IdTokenClaims {
   email_verified?: boolean;
   name?: string;
   picture?: string;
+  // See AccessTokenClaims.aal — same semantics. ID tokens are only ever
+  // issued for human identities (openid scope), so in practice this is
+  // always present when an ID token exists, but stays optional for safety.
+  aal?: "aal1" | "aal2";
 }
 
 export interface RefreshTokenClaims {

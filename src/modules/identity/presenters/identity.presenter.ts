@@ -1,6 +1,6 @@
 import type { Identity, TenantMembership, Role } from "@/prisma-client";
 
-type IdentityWithMemberships = Identity & {
+export type IdentityWithMemberships = Identity & {
   memberships?: (TenantMembership & { role: Role })[];
 };
 

@@ -1,4 +1,6 @@
+// src/core/mail/preview/mail-preview.route.ts
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { compileMailTemplate } from "../mail.engine";
 import { TEMPLATE_REGISTRY, TEMPLATE_NAMES } from "./template-registry";
 
@@ -7,48 +9,64 @@ import { TEMPLATE_REGISTRY, TEMPLATE_NAMES } from "./template-registry";
  * Registered only when NODE_ENV !== "production".
  *
  * GET /mail/preview
- *   → HTML index listing all templates with clickable links
+ * → HTML index listing all templates with clickable links
  *
  * GET /mail/preview/:template
- *   → Rendered HTML of the template (view in browser)
+ * → Rendered HTML of the template (view in browser)
  */
 export async function mailPreviewRoute(fastify: FastifyInstance) {
   if (process.env.NODE_ENV === "production") return;
 
   // ── Index
-  fastify.get("/mail/preview", async (_req, reply) => {
-    const links = TEMPLATE_NAMES.map(
-      (name) =>
-        `<li style="margin-bottom:8px">
-         <a href="/mail/preview/${name}" target="_blank"
-            style="color:#2563eb;font-family:monospace;font-size:14px">
-           /mail/preview/${name}
-         </a>
-       </li>`,
-    ).join("");
+  fastify.get(
+    "/mail/preview",
+    {
+      schema: {
+        hide: true, // Hides dev utility route from production swagger documents
+      },
+    },
+    async (_req, reply) => {
+      const links = TEMPLATE_NAMES.map(
+        (name) =>
+          `<li style="margin-bottom:8px">
+           <a href="/mail/preview/${name}" target="_blank"
+              style="color:#2563eb;font-family:monospace;font-size:14px">
+             /mail/preview/${name}
+           </a>
+         </li>`,
+      ).join("");
 
-    return reply.type("text/html").send(`
-      <!DOCTYPE html>
-      <html>
-        <head><title>ArcID Mail Preview</title></head>
-        <body style="font-family:sans-serif;padding:40px;max-width:600px;margin:0 auto">
-          <h1 style="font-size:24px;font-weight:700;margin-bottom:4px">
-            ArcID Mail Preview
-          </h1>
-          <p style="color:#6b7280;margin-bottom:24px">
-            ${TEMPLATE_NAMES.length} templates available
-          </p>
-          <ul style="list-style:none;padding:0">${links}</ul>
-        </body>
-      </html>
-    `);
-  });
+      return reply.type("text/html").send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>ArcID Mail Preview</title></head>
+          <body style="font-family:sans-serif;padding:40px;max-width:600px;margin:0 auto">
+            <h1 style="font-size:24px;font-weight:700;margin-bottom:4px">
+              ArcID Mail Preview
+            </h1>
+            <p style="color:#6b7280;margin-bottom:24px">
+              ${TEMPLATE_NAMES.length} templates available
+            </p>
+            <ul style="list-style:none;padding:0">${links}</ul>
+          </body>
+        </html>
+      `);
+    },
+  );
 
   // ── Individual template
-  fastify.get<{ Params: { template: string } }>(
+  fastify.get(
     "/mail/preview/:template",
+    {
+      schema: {
+        hide: true,
+        params: z.object({
+          template: z.string(),
+        }),
+      },
+    },
     async (req, reply) => {
-      const { template } = req.params;
+      const { template } = req.params as { template: string };
       const element = TEMPLATE_REGISTRY[template];
 
       if (!element) {
