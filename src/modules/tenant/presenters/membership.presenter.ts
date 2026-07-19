@@ -1,4 +1,4 @@
-import type { TenantMembership, Role, Identity } from "@/prisma-client";
+import type { TenantMembership, Role, Identity } from "@prisma-client";
 
 type MembershipWithRole = TenantMembership & { role: Role };
 

@@ -3,7 +3,6 @@ import { z } from "zod";
 import { randomBytes, createHmac } from "crypto";
 import { ApiError } from "@/core/errors";
 import { assertSafeUrl } from "@/lib/url-safety";
-import { TenantService } from "@/modules/tenant/services/tenant.service";
 import { auditService } from "@/modules/audit/services/audit.service";
 import {
   EndpointBodySchema,
@@ -23,7 +22,10 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
   fastify.post(
     "/endpoints",
     {
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("webhook:manage"),
+      ],
       schema: {
         tags: ["Webhook Delivery Engine"],
         summary:
@@ -63,10 +65,6 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
 
       // SSRF defence — rejects private IPs, cloud metadata, non-HTTP(S) schemes.
       assertSafeUrl(body.url);
-
-      // Ensure the caller is an ADMIN of this tenant
-      const tenantService = new TenantService(fastify.db);
-      await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       // Cap endpoints per tenant to prevent abuse
       const count = await fastify.db.webhookEndpoint.count({
@@ -159,7 +157,10 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
   fastify.patch(
     "/endpoints/:id",
     {
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("webhook:manage"),
+      ],
       schema: {
         tags: ["Webhook Delivery Engine"],
         summary:
@@ -211,7 +212,10 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
   fastify.delete(
     "/endpoints/:id",
     {
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("webhook:manage"),
+      ],
       schema: {
         tags: ["Webhook Delivery Engine"],
         summary: "Remove a webhook endpoint (PRO)",
@@ -320,7 +324,10 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
   fastify.get(
     "/events",
     {
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("webhook:read:events"),
+      ],
       schema: {
         tags: ["Webhook Delivery Engine"],
         summary:
@@ -350,9 +357,6 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
             "Switch to a tenant context first via POST /auth/context/switch.",
         );
       }
-
-      const tenantService = new TenantService(fastify.db);
-      await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       const statusFilter =
         status === "failed"
@@ -397,7 +401,10 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
   fastify.post(
     "/events/:id/retry",
     {
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("webhook:events:retry"),
+      ],
       schema: {
         tags: ["Webhook Delivery Engine"],
         summary: "Manually re-queue a failed webhook event for delivery (PRO)",
@@ -424,9 +431,6 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
             "Switch to a tenant context first via POST /auth/context/switch.",
         );
       }
-
-      const tenantService = new TenantService(fastify.db);
-      await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       const event = await fastify.db.webhookEvent.findFirst({
         where: { id, tenantId },

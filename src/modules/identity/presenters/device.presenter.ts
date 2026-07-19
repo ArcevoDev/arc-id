@@ -1,4 +1,4 @@
-import type { Device } from "@/prisma-client";
+import type { Device } from "@prisma-client";
 
 export function presentDevice(device: Device) {
   return {

@@ -3,10 +3,10 @@ import { z } from "zod";
 import type { Flow, FlowContext } from "@/core/flows";
 import { AddMemberSchema } from "../validators/tenant.schemas";
 import { MembershipService } from "../services/membership.service";
-import { TenantService } from "../services/tenant.service";
 import { EmailTokenService } from "@/modules/auth/services/email-token.service";
 import { presentMembership } from "../presenters/membership.presenter";
 import { ApiError } from "@/core/errors";
+import { hasPermission } from "@/lib/security/rbac";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { notificationService } from "@/lib/notifications/notification.service";
 import { dispatchWebhookEvent } from "@/lib/webhooks/webhook-dispatcher";
@@ -20,16 +20,20 @@ export const addMemberFlow: Flow<z.infer<typeof Input>> = {
   async execute(input, ctx: FlowContext) {
     if (!ctx.identityId) throw ApiError.unauthorized();
 
-    const tenantService = new TenantService(ctx.db);
     const membershipService = new MembershipService(ctx.db);
     const emailTokenService = new EmailTokenService(ctx.db);
 
-    // 1. Caller must be an ADMIN of this tenant
-    await tenantService.assertMembership(
-      input.tenantId,
-      ctx.identityId,
-      "ADMIN",
-    );
+    // 1. Caller must have permission to add members
+    if (
+      !(await hasPermission(
+        ctx.db,
+        ctx.identityId,
+        input.tenantId,
+        "member:add",
+      ))
+    ) {
+      throw ApiError.forbidden("Permission required: member:add");
+    }
 
     // 2. Resolve tenant name + caller name + invitee details
     const [tenant, caller, invitee] = await Promise.all([

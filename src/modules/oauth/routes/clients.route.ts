@@ -19,6 +19,7 @@ import { z } from "zod";
 import { hashPassword } from "@/modules/auth/services/password.service";
 import { generateToken } from "@/lib/crypto";
 import { ApiError } from "@/core/errors";
+import { hasPermission } from "@/lib/security/rbac";
 
 const CreateClientSchema = z.object({
   name: z.string().min(1),
@@ -37,22 +38,6 @@ const CreateClientSchema = z.object({
   tosUri: z.string().url().optional(),
   policyUri: z.string().url().optional(),
 });
-
-async function assertTenantAdmin(
-  fastify: FastifyInstance,
-  identityId: string,
-  tenantId: string,
-) {
-  const membership = await fastify.db.tenantMembership.findFirst({
-    where: { identityId, tenantId, status: "ACTIVE" },
-    include: { role: { select: { name: true } } },
-  });
-  if (!membership)
-    throw ApiError.forbidden("You are not a member of this tenant");
-  if (membership.role.name !== "ADMIN") {
-    throw ApiError.forbidden("Only tenant ADMINs can manage OAuth clients");
-  }
-}
 
 /**
  * Validates that, if projectId is supplied, the project actually belongs to
@@ -111,7 +96,16 @@ export async function clientsRoute(fastify: FastifyInstance) {
       const targetTenantId =
         input.tenantId ?? req.identity.tenantId ?? "SYSTEM";
 
-      await assertTenantAdmin(fastify, req.identity.id, targetTenantId);
+      if (
+        !(await hasPermission(
+          fastify.db,
+          req.identity.id,
+          targetTenantId,
+          "client:create",
+        ))
+      ) {
+        throw ApiError.forbidden("Permission required: client:create");
+      }
 
       if (input.projectId) {
         await assertProjectBelongsToTenant(
@@ -167,7 +161,9 @@ export async function clientsRoute(fastify: FastifyInstance) {
           projectId: client.projectId,
           grantTypes: client.grantTypes as string[],
           scopes: client.scopes as string[],
-          redirectUris: client.redirectUris.map((r) => r.uri),
+          redirectUris: (client.redirectUris as Array<{ uri: string }>).map(
+            (r) => r.uri,
+          ),
           public: client.public,
           requirePkce: client.requirePkce,
         },
@@ -201,7 +197,16 @@ export async function clientsRoute(fastify: FastifyInstance) {
       };
       const targetTenantId = tenantId ?? req.identity.tenantId ?? "SYSTEM";
 
-      await assertTenantAdmin(fastify, req.identity.id, targetTenantId);
+      if (
+        !(await hasPermission(
+          fastify.db,
+          req.identity.id,
+          targetTenantId,
+          "client:read",
+        ))
+      ) {
+        throw ApiError.forbidden("Permission required: client:read");
+      }
 
       const clients = await fastify.db.client.findMany({
         where: {
@@ -246,11 +251,17 @@ export async function clientsRoute(fastify: FastifyInstance) {
       const client = await fastify.db.client.findFirst({ where: { clientId } });
       if (!client) throw ApiError.notFound("Client not found");
 
-      await assertTenantAdmin(
-        fastify,
-        req.identity.id,
-        client.tenantId ?? "SYSTEM",
-      );
+      const clientTenantId = client.tenantId ?? "SYSTEM";
+      if (
+        !(await hasPermission(
+          fastify.db,
+          req.identity.id,
+          clientTenantId,
+          "client:delete",
+        ))
+      ) {
+        throw ApiError.forbidden("Permission required: client:delete");
+      }
       await fastify.db.client.delete({ where: { id: client.id } });
 
       return reply.send({ success: true });

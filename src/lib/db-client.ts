@@ -7,7 +7,7 @@
 // This is a type-only change — no runtime behaviour differs.
 // The actual client is still the same singleton from src/core/db/prisma.ts.
 
-import type { Prisma } from "@/prisma-client";
+import type { Prisma } from "@prisma-client";
 import type { IsolatedPrismaClient } from "@/core/db";
 
 /**

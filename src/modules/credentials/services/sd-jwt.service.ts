@@ -1,14 +1,32 @@
 // src/modules/credentials/services/sd-jwt.service.ts
-// Selective Disclosure JWT — W3C SD-JWT VC Draft
+// Selective Disclosure JWT — W3C SD-JWT VC Draft (sd-jwt-js v0.19.x)
 //
-// FIX: Previous version hardcoded { name: "ECDSA", hash: "SHA-256" } in
-// crypto.subtle.sign/verify regardless of what `algorithm` was passed in.
-// An RSA signing key (RS256, PS256) would throw DOMException at runtime.
-// Now: algorithm → Web Crypto params mapping via algToSubtleParams().
+// FIXES IN THIS VERSION:
+// 1. Fixed Hasher type definition compatibility (handles string | ArrayBuffer).
+// 2. Kept self-contained Node.js crypto replacements.
+// 3. Maintained proper SDJwtVcInstance API usages.
 
-import { SDJwtInstance } from "@sd-jwt/core";
-import { digest, generateSalt } from "@sd-jwt/crypto-nodejs";
+import { SDJwtVcInstance } from "@sd-jwt/sd-jwt-vc";
+import type { Signer, Verifier, Hasher, SaltGenerator } from "@sd-jwt/types";
+import { createHash, randomBytes } from "crypto";
 import { importPKCS8, importSPKI } from "jose";
+
+// ── Built-in crypto replacements for @sd-jwt/crypto-nodejs ────────────────────
+
+/** SHA-256 hasher — replaces `digest` from @sd-jwt/crypto-nodejs */
+const sdJwtHasher: Hasher = async (
+  data: string | ArrayBuffer,
+): Promise<Uint8Array> => {
+  const input = typeof data === "string" ? data : Buffer.from(data);
+  return new Uint8Array(createHash("sha256").update(input).digest());
+};
+
+/** Random base64url salt — replaces `generateSalt` from @sd-jwt/crypto-nodejs */
+const sdJwtSaltGenerator: SaltGenerator = async (
+  length: number,
+): Promise<string> => {
+  return randomBytes(length).toString("base64url");
+};
 
 // ── JWA → Web Crypto parameter map ────────────────────────────────────────────
 
@@ -20,19 +38,16 @@ type SubtleParams =
 
 function algToSubtleParams(alg: string): SubtleParams {
   switch (alg) {
-    // ── ECDSA ─────────────────────────────────────────────────────────────────
     case "ES256":
       return { name: "ECDSA", hash: { name: "SHA-256" } };
     case "ES384":
       return { name: "ECDSA", hash: { name: "SHA-384" } };
     case "ES512":
       return { name: "ECDSA", hash: { name: "SHA-512" } };
-    // ── RSASSA-PKCS1-v1_5 ─────────────────────────────────────────────────────
     case "RS256":
     case "RS384":
     case "RS512":
       return { name: "RSASSA-PKCS1-v1_5" };
-    // ── RSA-PSS ───────────────────────────────────────────────────────────────
     case "PS256":
       return { name: "RSA-PSS", saltLength: 32 };
     case "PS384":
@@ -47,30 +62,17 @@ function algToSubtleParams(alg: string): SubtleParams {
   }
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type SignCallback = (data: string) => Promise<string>;
-type VerifyCallback = (data: string, sig: string) => Promise<boolean>;
-
 // ── Key helpers ───────────────────────────────────────────────────────────────
 
-/**
- * Build a Web Crypto signer from a PKCS8 PEM string or an already-imported CryptoKey.
- * The returned function is used as the `signer` callback by @sd-jwt/core.
- *
- * `algorithm` must be a JWA string (e.g. "ES256", "RS256", "PS256").
- * It determines BOTH how the PEM is imported AND which Web Crypto operation is used.
- */
 async function buildSigner(
   privateKeyInput: CryptoKey | string,
   algorithm: string,
-): Promise<SignCallback> {
+): Promise<Signer> {
   const subtleParams = algToSubtleParams(algorithm);
 
   const cryptoKey: CryptoKey =
     typeof privateKeyInput === "string"
-      ? // importPKCS8 returns KeyLike; in Node.js this is always a CryptoKey.
-        ((await importPKCS8(
+      ? ((await importPKCS8(
           privateKeyInput,
           algorithm,
         )) as unknown as CryptoKey)
@@ -87,14 +89,10 @@ async function buildSigner(
   };
 }
 
-/**
- * Build a Web Crypto verifier from an SPKI PEM string or an already-imported CryptoKey.
- * The returned function is used as the `verifier` callback by @sd-jwt/core.
- */
 async function buildVerifier(
   publicKeyInput: CryptoKey | string,
   algorithm: string,
-): Promise<VerifyCallback> {
+): Promise<Verifier> {
   const subtleParams = algToSubtleParams(algorithm);
 
   const cryptoKey: CryptoKey =
@@ -122,15 +120,15 @@ async function buildVerifier(
 
 export class SdJwtService {
   /**
-   * Issue an SD-JWT VC.
+   * Issue a W3C SD-JWT VC.
    *
-   * @param payload         The full VC payload (will be included as JWT claims).
+   * @param payload         Full VC claims object. `vct` is added automatically.
    * @param privateKey      PKCS8 PEM string or an imported CryptoKey.
-   * @param disclosableKeys Fields inside credentialSubject to make selectively disclosable.
-   *                        Empty array = all credentialSubject fields except "id".
-   * @param algorithm       JWA algorithm string matching the key type. Defaults to "ES256".
+   * @param disclosableKeys Fields to make selectively disclosable.
+   * Empty array = all credentialSubject fields except "id".
+   * @param algorithm       JWA algorithm string. Defaults to "ES256".
    *
-   * @returns The compact SD-JWT string:  "header.payload.signature~disc1~disc2~"
+   * @returns Compact SD-JWT string: "header.payload.sig~disclosure1~disclosure2~"
    */
   async sign(
     payload: Record<string, unknown>,
@@ -140,16 +138,16 @@ export class SdJwtService {
   ): Promise<string> {
     const signer = await buildSigner(privateKey, algorithm);
 
-    const instance = new SDJwtInstance<any, any>({
+    const instance = new SDJwtVcInstance({
       signer,
       signAlg: algorithm,
-      hasher: digest,
-      hashAlg: "sha-256",
-      saltGenerator: generateSalt,
-    });
+      hasher: sdJwtHasher,
+      hasherAlg: "sha-256",
+      saltGenerator: sdJwtSaltGenerator,
+    } as any);
 
-    // Auto-detect disclosable keys from credentialSubject if none provided.
-    const subject =
+    // Resolve which fields in credentialSubject to make selectively disclosable.
+    const subject: Record<string, unknown> =
       (payload as any)?.vc?.credentialSubject ??
       (payload as any)?.credentialSubject ??
       {};
@@ -159,26 +157,20 @@ export class SdJwtService {
         ? disclosableKeys
         : Object.keys(subject).filter((k) => k !== "id");
 
-    // @sd-jwt/core disclosureFrame: { fieldName: true } marks the field SD.
-    const disclosureFrame: Record<string, boolean> = {};
-    for (const key of keysToDisclose) {
-      disclosureFrame[key] = true;
-    }
-
     const claims: Record<string, unknown> = {
       ...payload,
-      vct: "VerifiableCredential",
+      vct: "VerifiableCredential", // required by SD-JWT VC spec
     };
 
-    return instance.issue(claims as any, { disclosureFrame } as any);
+    return instance.issue(claims as any, { _sd: keysToDisclose } as any);
   }
 
   /**
-   * Verify an SD-JWT VC and return the disclosed claim payload.
+   * Verify a W3C SD-JWT VC and return the disclosed claim payload.
    *
-   * @param sdJwt     The compact SD-JWT string.
+   * @param sdJwt     Compact SD-JWT string.
    * @param publicKey SPKI PEM string or an imported CryptoKey.
-   * @param algorithm JWA algorithm string. Must match the key used to sign.
+   * @param algorithm JWA algorithm. Must match the signing key.
    */
   async verify(
     sdJwt: string,
@@ -187,14 +179,14 @@ export class SdJwtService {
   ): Promise<Record<string, unknown>> {
     const verifier = await buildVerifier(publicKey, algorithm);
 
-    const instance = new SDJwtInstance<any, any>({
+    const instance = new SDJwtVcInstance({
       verifier,
-      hasher: digest,
-      hashAlg: "sha-256",
-      saltGenerator: generateSalt,
-    });
+      hasher: sdJwtHasher,
+      hasherAlg: "sha-256",
+      saltGenerator: sdJwtSaltGenerator,
+    } as any);
 
     const verified = await instance.verify(sdJwt);
-    return verified.payload as Record<string, unknown>;
+    return (verified.payload ?? {}) as Record<string, unknown>;
   }
 }

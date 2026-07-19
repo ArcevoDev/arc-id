@@ -10,7 +10,10 @@ export async function revokeRoute(fastify: FastifyInstance) {
     {
       // PRO: Credential revocation requires PRO — it's part of the VC lifecycle
       // that only PRO/ENTERPRISE tenants can issue in the first place.
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("credential:issue"),
+      ],
       schema: {
         tags: ["Verifiable Credentials Engine"],
         summary: "Revoke a previously issued credential (PRO)",

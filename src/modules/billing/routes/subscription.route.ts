@@ -3,10 +3,9 @@
 // The previous version used identityId which doesn't exist on Subscription → all billing
 // routes were crashing. Provider webhook data goes in ExternalBillingIntegration.
 import type { FastifyInstance } from "fastify";
-import { flowExecutor } from "@/core/flows";
-import { upgradePlanFlow } from "../flows/upgrade-plan.flow";
 import { SubscriptionService } from "../services/subscription.service";
 import { config } from "@/core/config";
+import { auditService } from "@/modules/audit/services/audit.service";
 import { createHmac, timingSafeEqual } from "crypto";
 import { z } from "zod";
 
@@ -74,7 +73,9 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
     },
   );
 
-  // POST /subscription/upgrade — upgrade the calling user's tenant plan
+  // POST /subscription/upgrade — intentionally removed (410 Gone).
+  // Self-service upgrades were removed — all plan changes must go through
+  // the payment-provider webhook path (Paystack/Stripe).
   fastify.post(
     "/subscription/upgrade",
     {
@@ -82,18 +83,17 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
       schema: {
         tags: ["Billing & Subscriptions"],
         summary:
-          "Upgrade the tenant subscription plan (ADMIN only for org tenants)",
+          "Upgrade the tenant subscription plan (removed — use payment provider)",
         security: [{ bearerAuth: [] }],
-        body: z.object({ plan: z.enum(["FREE", "PRO", "ENTERPRISE"]) }),
-        response: { 200: z.object({ success: z.boolean(), data: z.any() }) },
+        response: { 410: z.object({ error: z.string(), code: z.string() }) },
       },
     },
-    async (req, reply) => {
-      const result = await flowExecutor.run(upgradePlanFlow, req.body, {
-        identityId: req.identity.id,
-        tenantId: req.identity.tenantId,
+    async (_req, reply) => {
+      return reply.status(410).send({
+        error:
+          "Self-service upgrades are removed. Use your payment provider portal to change plans.",
+        code: "UPGRADE_ENDPOINT_REMOVED",
       });
-      return reply.send({ success: true, data: result });
     },
   );
 
@@ -140,6 +140,11 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
             data?.customer?.customer_code,
             data?.subscription_code ?? data?.reference,
           );
+          await auditService.log({
+            action: "SUBSCRIPTION_UPGRADED",
+            tenantId,
+            metadata: { plan, provider: "PAYSTACK" },
+          });
           fastify.log.info(
             { tenantId, plan },
             "[BILLING][PAYSTACK] Plan activated",
@@ -152,6 +157,11 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
         eventName === "subscription.disable"
       ) {
         await subService.cancelFromProvider(tenantId);
+        await auditService.log({
+          action: "SUBSCRIPTION_CANCELLED",
+          tenantId,
+          metadata: { provider: "PAYSTACK" },
+        });
         fastify.log.info(
           { tenantId },
           "[BILLING][PAYSTACK] Subscription cancelled → FREE",
@@ -204,6 +214,11 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
             obj?.customer,
             obj?.subscription ?? obj?.id,
           );
+          await auditService.log({
+            action: "SUBSCRIPTION_UPGRADED",
+            tenantId,
+            metadata: { plan, provider: "STRIPE" },
+          });
           fastify.log.info(
             { tenantId, plan },
             "[BILLING][STRIPE] Plan activated",
@@ -213,6 +228,11 @@ export async function subscriptionRoute(fastify: FastifyInstance) {
 
       if (event.type === "customer.subscription.deleted") {
         await subService.cancelFromProvider(tenantId);
+        await auditService.log({
+          action: "SUBSCRIPTION_CANCELLED",
+          tenantId,
+          metadata: { provider: "STRIPE" },
+        });
         fastify.log.info(
           { tenantId },
           "[BILLING][STRIPE] Subscription cancelled → FREE",

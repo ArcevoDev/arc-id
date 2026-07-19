@@ -1,7 +1,7 @@
 // src/modules/identity/routes/profile.route.ts
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { Prisma } from "@/prisma-client";
+import { Prisma } from "@prisma-client";
 import { presentIdentity } from "../presenters/identity.presenter";
 import { UpdateProfileSchema } from "../validators/identity.schemas";
 import { auditService } from "@/modules/audit/services/audit.service";

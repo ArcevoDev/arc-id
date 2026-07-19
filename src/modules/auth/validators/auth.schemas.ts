@@ -1,6 +1,6 @@
 // src/modules/auth/validators/auth.schemas.ts
 import { z } from "zod";
-import { UserStatus, MfaType } from "@/prisma-client";
+import { UserStatus, MfaType } from "@prisma-client";
 
 export const RegisterSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -44,7 +44,7 @@ export const LoginSchema = z.object({
 });
 
 export const MfaSetupSchema = z.object({
-  type: z.nativeEnum(MfaType),
+  type: z.enum(MfaType),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ export const IdentityDtoSchema = z.object({
   name: z.string().nullable(),
   picture: z.string().nullable(),
   roles: z.array(z.string()),
-  status: z.nativeEnum(UserStatus),
+  status: z.enum(UserStatus),
   createdAt: z.coerce.string(),
   updatedAt: z.coerce.string(),
 });

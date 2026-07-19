@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AuditLogAction } from "@/prisma-client";
+import { AuditLogAction } from "@prisma-client";
 
 // ─── Query Schemas ────────────────────────────────────────────────────────────
 
@@ -10,7 +10,7 @@ export const AuditQuerySchema = z.object({
    * Filter by action type. Enum sourced from DB — new actions only require
    * a Prisma migration, not a validator update.
    */
-  action: z.nativeEnum(AuditLogAction).optional(),
+  action: z.enum(AuditLogAction).optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -21,7 +21,7 @@ export const AuditQuerySchema = z.object({
 
 export const AuditLogDtoSchema = z.object({
   id: z.string().cuid(),
-  action: z.nativeEnum(AuditLogAction),
+  action: z.enum(AuditLogAction),
   identityId: z.string().nullable(),
   tenantId: z.string().nullable(),
   ip: z.string().nullable(),

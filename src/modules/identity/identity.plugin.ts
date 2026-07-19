@@ -14,6 +14,8 @@ import { oauthLinkRoute } from "./routes/oauth-link.route";
 import { delegationRoute } from "./routes/delegation.route";
 import { adminRoute } from "./routes/admin.route";
 import { onboardingProgressRoute } from "@/modules/tenant/routes/onboarding.route";
+import { walletDidRoute } from "./routes/wallet-did.route";
+import { externalIdRoute } from "./routes/external-id.route";
 
 export const identityPlugin = fp(
   async (fastify: FastifyInstance) => {
@@ -34,6 +36,7 @@ export const identityPlugin = fp(
      *   POST   /identity/onboarding/start                  ← NEW
      *   GET    /identity/onboarding/:progressId             ← NEW
      *   POST   /identity/onboarding/:progressId/advance     ← NEW
+     *   POST   /identity/wallet/did                         ← NEW
      */
 
     await fastify.register(
@@ -45,7 +48,9 @@ export const identityPlugin = fp(
         await withZod.register(oauthLinkRoute);
         await withZod.register(delegationRoute);
         await withZod.register(adminRoute);
+        await withZod.register(externalIdRoute);
         await withZod.register(onboardingProgressRoute);
+        await withZod.register(walletDidRoute);
       },
 
       {

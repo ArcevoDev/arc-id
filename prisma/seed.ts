@@ -20,7 +20,7 @@
 //   for development the raw PKCS8 PEM is stored as bytes directly.
 
 import "dotenv/config";
-import { PrismaClient, KeyType } from "@/prisma-client";
+import { PrismaClient, KeyType } from "@prisma-client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { generateKeyPair, exportSPKI, exportPKCS8, exportJWK } from "jose";
@@ -149,6 +149,83 @@ async function main() {
   }
   console.log("✅ Roles: ADMIN, MEMBER, GUEST");
 
+  // ── 3b. Seed Permissions ──────────────────────────────────────────────────
+  const ALL_PERMISSIONS = [
+    { action: "member:add", description: "Add members to tenant" },
+    { action: "member:remove", description: "Remove members from tenant" },
+    { action: "did:manage", description: "Manage tenant DIDs" },
+    { action: "policy:update", description: "Update tenant policy" },
+    { action: "signing-key:manage", description: "Manage tenant signing keys" },
+    { action: "client:create", description: "Create OAuth clients" },
+    { action: "client:read", description: "List OAuth clients" },
+    { action: "client:delete", description: "Delete OAuth clients" },
+    { action: "idp:manage", description: "Manage IdP connections" },
+    {
+      action: "project:manage",
+      description: "Create, update, and delete projects",
+    },
+    { action: "onboarding:manage", description: "Manage onboarding flows" },
+    {
+      action: "webhook:manage",
+      description: "Create, update, and delete webhook endpoints",
+    },
+    {
+      action: "webhook:read:events",
+      description: "Read webhook delivery events",
+    },
+    {
+      action: "webhook:events:retry",
+      description: "Manually retry failed webhook events",
+    },
+    {
+      action: "audit:read:any",
+      description: "Read audit logs across any tenant (SYSTEM only)",
+    },
+    {
+      action: "admin:system",
+      description:
+        "Access system admin dashboard and manage identities (SYSTEM only)",
+    },
+    {
+      action: "credential:issue",
+      description: "Issue verifiable credentials on behalf of a tenant",
+    },
+    {
+      action: "credential:offer",
+      description: "Create credential offers for holders to accept",
+    },
+  ] as const;
+
+  const permissionRecords: { id: string; action: string }[] = [];
+  for (const p of ALL_PERMISSIONS) {
+    const record = await prisma.permission.upsert({
+      where: { action: p.action },
+      update: { description: p.description },
+      create: { action: p.action, description: p.description },
+    });
+    permissionRecords.push(record);
+  }
+  console.log(`✅ ${ALL_PERMISSIONS.length} permissions`);
+
+  // ── 3c. Wire ADMIN role to all permissions ────────────────────────────────
+  const seedAdminRole = await prisma.role.findUniqueOrThrow({
+    where: { tenantId_name: { tenantId: SYSTEM_TENANT_ID, name: "ADMIN" } },
+  });
+
+  for (const perm of permissionRecords) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: seedAdminRole.id,
+          permissionId: perm.id,
+        },
+      },
+      update: {},
+      create: { roleId: seedAdminRole.id, permissionId: perm.id },
+    });
+  }
+  console.log(`✅ ADMIN role → ${permissionRecords.length} permissions`);
+
   // ── 4. Tenant Policy ──────────────────────────────────────────────────────
   await prisma.tenantPolicy.upsert({
     where: { tenantId: SYSTEM_TENANT_ID },
@@ -162,7 +239,26 @@ async function main() {
   });
   console.log("✅ SYSTEM tenant policy");
 
-  // ── 5 + 6. TenantSigningKey + Root DID ───────────────────────────────────
+  // ── 5. Wallet Project ─────────────────────────────────────────────────────
+  const walletProjectSlug = "arcwallet";
+  const existingWalletProject = await prisma.project.findUnique({
+    where: { slug: walletProjectSlug },
+  });
+  if (!existingWalletProject) {
+    await prisma.project.create({
+      data: {
+        tenantId: SYSTEM_TENANT_ID,
+        name: "ArcWallet",
+        slug: walletProjectSlug,
+        category: "wallet",
+      },
+    });
+    console.log("✅ Wallet project (arcwallet, category: wallet)");
+  } else {
+    console.log("ℹ️  Wallet project already exists");
+  }
+
+  // ── 6 + 7. TenantSigningKey + Root DID ────────────────────────────────────
   //
   // CRITICAL FIX: The previous seed created the DID with an empty
   // publicKeyBytes and verificationMethod: []. The signing service resolves
@@ -270,7 +366,7 @@ async function main() {
     console.log(`ℹ️  Root DID: ${systemDid}`);
   }
 
-  // ── 7. Direct OAuth Client ────────────────────────────────────────────────
+  // ── 8. Direct OAuth Client ────────────────────────────────────────────────
   const existingClient = await prisma.client.findUnique({
     where: { clientId: DIRECT_CLIENT_ID },
   });
@@ -305,7 +401,41 @@ async function main() {
     console.log(`ℹ️  Direct client '${DIRECT_CLIENT_ID}' already exists`);
   }
 
-  // ── 8. System Administrator ───────────────────────────────────────────────
+  // ── 9. ArcWallet OAuth Client ─────────────────────────────────────────────
+  const WALLET_CLIENT_ID = "arcwallet-app";
+  const existingWalletClient = await prisma.client.findUnique({
+    where: { clientId: WALLET_CLIENT_ID },
+  });
+  if (!existingWalletClient) {
+    const walletProject = await prisma.project.findUniqueOrThrow({
+      where: { slug: "arcwallet" },
+      select: { id: true },
+    });
+
+    await prisma.client.create({
+      data: {
+        clientId: WALLET_CLIENT_ID,
+        tenantId: SYSTEM_TENANT_ID,
+        projectId: walletProject.id,
+        name: "ArcWallet Mobile Application",
+        public: true,
+        requirePkce: true,
+        grantTypes: ["authorization_code", "refresh_token"],
+        scopes: ["openid", "profile", "email", "offline_access"],
+        redirectUris: {
+          create: [
+            { uri: "https://wallet.arcevocirqle.com.ng/oauth/callback" },
+            { uri: "ng.arcevocirqle.arcwallet://oauth/callback" },
+          ],
+        },
+      },
+    });
+    console.log(`✅ ArcWallet client '${WALLET_CLIENT_ID}'`);
+  } else {
+    console.log(`ℹ️  ArcWallet client '${WALLET_CLIENT_ID}' already exists`);
+  }
+
+  // ── 10. System Administrator ──────────────────────────────────────────────
   const existingAdmin = await prisma.identity.findUnique({
     where: { primaryEmail: ADMIN_EMAIL },
   });

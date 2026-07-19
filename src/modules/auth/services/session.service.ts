@@ -1,6 +1,6 @@
 // src/modules/auth/services/session.service.ts
 import { generateToken } from "@/lib/crypto";
-import { addDays } from "date-fns";
+import { addDays, addMinutes } from "date-fns";
 import type { DbClient } from "@/lib/db-client";
 
 // Auth Assurance Levels — written on every session so guards have a
@@ -20,6 +20,24 @@ export interface CreateSessionInput {
   // Caller sets the level at creation time so it is always persisted atomically
   // with the session row — no second UPDATE needed.
   authLevel?: AuthLevel;
+  /**
+   * Session TTL in minutes — derived from TenantPolicy.sessionTtlMinutes.
+   * Falls back to the schema default (10080 = 7 days) when not provided.
+   */
+  sessionTtlMinutes?: number;
+  /**
+   * Maximum concurrent sessions per user — derived from
+   * TenantPolicy.maxSessionsPerUser. When provided and the identity
+   * already has this many valid sessions, the oldest session(s) are
+   * evicted (set valid=false) before the new one is inserted.
+   *
+   * This is a deliberate evict-oldest choice (not a technical constraint):
+   * blocking a new login because the user is already at their session cap
+   * would be a terrible UX.  The user's current session is always the one
+   * they most recently authenticated on — evicting the oldest inactive
+   * session is the least surprising behaviour.
+   */
+  maxSessionsPerUser?: number;
 }
 
 export class SessionService {
@@ -30,10 +48,52 @@ export class SessionService {
    * authLevel defaults to "aal1" (password login baseline).
    * Pass "aal2" when MFA or passkey has already been verified in the same
    * authentication ceremony (e.g. passkey-authenticate.flow, mfa-verify.flow).
+   *
+   * tenant-scoped TTL and max-session limits come from the caller — the
+   * service has no knowledge of TenantPolicy.  The caller (login.flow.ts)
+   * resolves the policy and passes sessionTtlMinutes/maxSessionsPerUser.
    */
   async create(input: CreateSessionInput) {
     const sessionToken = generateToken(64);
-    const expiresAt = addDays(new Date(), 7);
+    const ttlMinutes = input.sessionTtlMinutes ?? 10080; // schema default
+    const expiresAt = addMinutes(new Date(), ttlMinutes);
+
+    // ── Enforce maxSessionsPerUser (evict oldest) ─────────────────────────
+    // This runs BEFORE the insert so the new session never bumps the count
+    // above cap temporarily.  Evict-oldest means the user's most recent
+    // session (the one they're about to establish) is always the one that
+    // survives.
+    if (input.maxSessionsPerUser && input.maxSessionsPerUser > 0) {
+      const activeCount = await this.db.session.count({
+        where: {
+          identityId: input.identityId,
+          valid: true,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (activeCount >= input.maxSessionsPerUser) {
+        const excess = activeCount - input.maxSessionsPerUser + 1;
+        // Fetch the oldest `excess` sessions by createdAt ASC
+        const oldestSessions = await this.db.session.findMany({
+          where: {
+            identityId: input.identityId,
+            valid: true,
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { createdAt: "asc" },
+          take: excess,
+          select: { id: true },
+        });
+
+        if (oldestSessions.length > 0) {
+          await this.db.session.updateMany({
+            where: { id: { in: oldestSessions.map((s) => s.id) } },
+            data: { valid: false },
+          });
+        }
+      }
+    }
 
     const session = await this.db.session.create({
       data: {

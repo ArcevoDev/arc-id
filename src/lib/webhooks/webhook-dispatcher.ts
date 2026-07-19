@@ -5,7 +5,7 @@
 // WebhookEvent delivery row per endpoint — the worker handles the actual HTTP delivery.
 
 import type { DbClient } from "@/lib/db-client";
-import type { AuditLogAction } from "@/prisma-client";
+import type { AuditLogAction } from "@prisma-client";
 
 interface DispatchInput {
   tenantId: string | null | undefined;

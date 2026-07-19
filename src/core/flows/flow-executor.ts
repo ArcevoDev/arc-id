@@ -5,7 +5,7 @@ import type { FlowContext } from "./flow-context";
 import { FlowError } from "./flow-error";
 import { ApiError } from "@/core/errors/api-error";
 import { logger } from "@/lib/logger";
-import { Prisma } from "@/prisma-client";
+import { Prisma } from "@prisma-client";
 import { config } from "@/core/config";
 
 type InboundCtx = Omit<FlowContext, "requestId" | "db" | "tenantId"> & {

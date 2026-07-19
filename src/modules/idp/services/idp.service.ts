@@ -21,11 +21,15 @@ export interface FederatedProfile {
 /**
  * Validates and fetches OIDC discovery documents securely.
  */
-export async function fetchDiscoveryMetadata(discoveryUrl: string): Promise<Record<string, any>> {
+export async function fetchDiscoveryMetadata(
+  discoveryUrl: string,
+): Promise<Record<string, any>> {
   assertSafeUrl(discoveryUrl);
   const discoveryResp = await fetch(discoveryUrl);
   if (!discoveryResp.ok) {
-    throw ApiError.badRequest(`Failed to fetch discovery metadata: ${discoveryResp.statusText}`);
+    throw ApiError.badRequest(
+      `Failed to fetch discovery metadata: ${discoveryResp.statusText}`,
+    );
   }
   return discoveryResp.json();
 }
@@ -108,20 +112,6 @@ export function generateMinimalSamlMetadata(tenantSlug: string): string {
 
 // ── Admin assertion ───────────────────────────────────────────────────────────
 
-export async function assertTenantAdmin(
-  fastify: FastifyInstance,
-  identityId: string,
-  tenantId: string,
-): Promise<void> {
-  const m = await fastify.db.tenantMembership.findFirst({
-    where: { identityId, tenantId, status: "ACTIVE" },
-    include: { role: { select: { name: true } } },
-  });
-  if (!m || m.role.name !== "ADMIN") {
-    throw ApiError.forbidden("Tenant ADMIN access required to manage IdP connections");
-  }
-}
-
 // ── Federated login ───────────────────────────────────────────────────────────
 
 /**
@@ -149,14 +139,18 @@ export async function federatedLogin(
       include: { identity: true },
     });
 
-    let resolvedIdentity: Awaited<ReturnType<typeof tx.identity.findUniqueOrThrow>>;
+    let resolvedIdentity: Awaited<
+      ReturnType<typeof tx.identity.findUniqueOrThrow>
+    >;
 
     if (existing) {
       resolvedIdentity = existing.identity;
     } else {
       // 2. Try to match by email (link to existing identity)
       let newIdentity = profile.email
-        ? await tx.identity.findFirst({ where: { primaryEmail: profile.email } })
+        ? await tx.identity.findFirst({
+            where: { primaryEmail: profile.email },
+          })
         : null;
 
       if (newIdentity && !newIdentity.emailVerified) {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserStatus } from "@/prisma-client";
+import { UserStatus } from "@prisma-client";
 
 export const CreateTenantSchema = z.object({
   name: z.string().min(2).max(100),
@@ -22,7 +22,7 @@ export const UpdateMemberRoleSchema = z.object({
 });
 
 export const UpdateMemberStatusSchema = z.object({
-  status: z.nativeEnum(UserStatus),
+  status: z.enum(UserStatus),
 });
 
 export const UpdatePolicySchema = z.object({

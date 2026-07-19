@@ -1,4 +1,4 @@
-import type { VerifiableCredential } from "@/prisma-client";
+import type { VerifiableCredential } from "@prisma-client";
 
 export function presentCredential(vc: VerifiableCredential) {
   return {

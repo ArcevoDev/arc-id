@@ -28,8 +28,8 @@ import {
   type CreateConnectionInput,
   type UpdateConnectionInput,
 } from "../validators/idp.schemas";
+import { hasPermission } from "@/lib/security/rbac";
 import {
-  assertTenantAdmin,
   buildSamlInstance,
   federatedLogin,
   generateSamlMetadata,
@@ -54,7 +54,16 @@ export async function idpRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const body = req.body as CreateConnectionInput;
-      await assertTenantAdmin(fastify, req.identity.id, body.tenantId);
+      if (
+        !(await hasPermission(
+          fastify.db,
+          req.identity.id,
+          body.tenantId,
+          "idp:manage",
+        ))
+      ) {
+        throw ApiError.forbidden("Permission required: idp:manage");
+      }
 
       const connection = await fastify.db.idpConnection.create({
         data: {
@@ -137,7 +146,16 @@ export async function idpRoute(fastify: FastifyInstance) {
         where: { id },
       });
       if (!connection) throw ApiError.notFound("IdP connection not found");
-      await assertTenantAdmin(fastify, req.identity.id, connection.tenantId);
+      if (
+        !(await hasPermission(
+          fastify.db,
+          req.identity.id,
+          connection.tenantId,
+          "idp:manage",
+        ))
+      ) {
+        throw ApiError.forbidden("Permission required: idp:manage");
+      }
 
       const { clientSecret: _, ...safe } = connection;
       return reply.send({ success: true, data: safe });
@@ -166,7 +184,16 @@ export async function idpRoute(fastify: FastifyInstance) {
         where: { id },
       });
       if (!existing) throw ApiError.notFound("IdP connection not found");
-      await assertTenantAdmin(fastify, req.identity.id, existing.tenantId);
+      if (
+        !(await hasPermission(
+          fastify.db,
+          req.identity.id,
+          existing.tenantId,
+          "idp:manage",
+        ))
+      ) {
+        throw ApiError.forbidden("Permission required: idp:manage");
+      }
 
       const updated = await fastify.db.idpConnection.update({
         where: { id },
@@ -215,7 +242,16 @@ export async function idpRoute(fastify: FastifyInstance) {
         where: { id },
       });
       if (!existing) throw ApiError.notFound("IdP connection not found");
-      await assertTenantAdmin(fastify, req.identity.id, existing.tenantId);
+      if (
+        !(await hasPermission(
+          fastify.db,
+          req.identity.id,
+          existing.tenantId,
+          "idp:manage",
+        ))
+      ) {
+        throw ApiError.forbidden("Permission required: idp:manage");
+      }
 
       await fastify.db.idpConnection.delete({ where: { id } });
 

@@ -4,6 +4,7 @@ import type { Flow, FlowContext } from "@/core/flows";
 import { PasswordResetConfirmSchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { hashPassword } from "../services/password.service";
+import { enforceSystemPasswordRules } from "@/lib/security/password-rules";
 import { SessionRepository } from "../repositories/session.repository";
 import { notificationService } from "@/lib/notifications/notification.service";
 import { auditService } from "@/modules/audit/services/audit.service";
@@ -23,6 +24,11 @@ export const passwordResetConfirmFlow: Flow<
       input.token,
       "RESET_PASSWORD",
     );
+
+    // TenantPolicy.passwordRules enforcement — see password-rules.ts for
+    // why this is scoped to the SYSTEM tenant's policy.
+    await enforceSystemPasswordRules(ctx.db, input.newPassword);
+
     const passwordHash = await hashPassword(input.newPassword);
 
     const localAccount = await ctx.db.localAccount.update({

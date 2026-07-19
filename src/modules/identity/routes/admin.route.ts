@@ -4,19 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { ApiError } from "@/core/errors";
-import type { AuditLogAction } from "@/prisma-client";
-
-async function requireSystemAdmin(
-  fastify: FastifyInstance,
-  identityId: string,
-) {
-  const m = await fastify.db.tenantMembership.findFirst({
-    where: { identityId, tenantId: "SYSTEM", status: "ACTIVE" },
-    include: { role: { select: { name: true } } },
-  });
-  if (!m || m.role.name !== "ADMIN")
-    throw ApiError.forbidden("System administrator access required");
-}
+import type { AuditLogAction } from "@prisma-client";
 
 async function revokeAllSessions(
   fastify: FastifyInstance,
@@ -57,7 +45,10 @@ export async function adminRoute(fastify: FastifyInstance) {
   fastify.get(
     "/admin",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("admin:system", "SYSTEM"),
+      ],
       schema: {
         tags: ["Identity Vault"],
         summary: "Admin: list identities",
@@ -84,7 +75,6 @@ export async function adminRoute(fastify: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      await requireSystemAdmin(fastify, req.identity.id);
       const { limit, page, status, search } = req.query as any;
       const where: any = {};
       if (status) where.status = status;
@@ -122,7 +112,10 @@ export async function adminRoute(fastify: FastifyInstance) {
   fastify.post(
     "/admin/:id/suspend",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("admin:system", "SYSTEM"),
+      ],
       schema: {
         tags: ["Identity Vault"],
         summary: "Admin: suspend identity",
@@ -133,7 +126,6 @@ export async function adminRoute(fastify: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      await requireSystemAdmin(fastify, req.identity.id);
       const { id } = req.params as any;
       const { reason } = req.body as any;
 
@@ -169,7 +161,10 @@ export async function adminRoute(fastify: FastifyInstance) {
   fastify.patch(
     "/:id/status",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("admin:system", "SYSTEM"),
+      ],
       schema: {
         tags: ["Identity Vault"],
         summary: "Admin: update identity status",
@@ -183,7 +178,6 @@ export async function adminRoute(fastify: FastifyInstance) {
       },
     },
     async (req, reply) => {
-      await requireSystemAdmin(fastify, req.identity.id);
       const { id } = req.params as any;
       const { status, reason } = req.body as any;
 

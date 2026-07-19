@@ -1,5 +1,5 @@
 // src/modules/audit/services/audit.service.ts
-import { AuditLogAction } from "@/prisma-client";
+import { AuditLogAction } from "@prisma-client";
 import { prisma as globalDb } from "@/core/db";
 import { logger } from "@/lib/logger";
 

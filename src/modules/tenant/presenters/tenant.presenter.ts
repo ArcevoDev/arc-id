@@ -1,4 +1,4 @@
-import type { Tenant } from "@/prisma-client";
+import type { Tenant } from "@prisma-client";
 
 export function presentTenant(tenant: Tenant) {
   return {

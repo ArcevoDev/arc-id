@@ -10,8 +10,8 @@
 //   PATCH  /tenants/:tenantId/projects/:projectId  — update name/category
 //   DELETE /tenants/:tenantId/projects/:projectId  — delete a project
 //
-// Authorization: any active tenant member can list/read; only tenant ADMINs
-// can create/update/delete. Same pattern as signing-key.route.ts.
+// Authorization: any active tenant member can list/read; only members with
+// the project:manage permission can create/update/delete.
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -30,7 +30,10 @@ export async function projectRoute(fastify: FastifyInstance) {
   fastify.post(
     "/:tenantId/projects",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("project:manage"),
+      ],
       schema: {
         tags: ["Project Management"],
         summary: "Create a new project (product/section) under this tenant",
@@ -47,8 +50,6 @@ export async function projectRoute(fastify: FastifyInstance) {
       const body = req.body as z.infer<typeof CreateProjectSchema>;
 
       const projectService = new ProjectService(fastify.db);
-      await projectService.assertMembership(tenantId, req.identity.id, "ADMIN");
-
       const project = await projectService.create(tenantId, body);
 
       void auditService
@@ -132,7 +133,10 @@ export async function projectRoute(fastify: FastifyInstance) {
   fastify.patch(
     "/:tenantId/projects/:projectId",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("project:manage"),
+      ],
       schema: {
         tags: ["Project Management"],
         summary: "Update a project's name or category",
@@ -152,8 +156,6 @@ export async function projectRoute(fastify: FastifyInstance) {
       const body = req.body as z.infer<typeof UpdateProjectSchema>;
 
       const projectService = new ProjectService(fastify.db);
-      await projectService.assertMembership(tenantId, req.identity.id, "ADMIN");
-
       const project = await projectService.update(tenantId, projectId, body);
 
       void auditService
@@ -174,7 +176,10 @@ export async function projectRoute(fastify: FastifyInstance) {
   fastify.delete(
     "/:tenantId/projects/:projectId",
     {
-      preHandler: fastify.auth.requireElevated,
+      preHandler: [
+        fastify.auth.requireElevated,
+        fastify.auth.requirePermission("project:manage"),
+      ],
       schema: {
         tags: ["Project Management"],
         summary:
@@ -193,7 +198,6 @@ export async function projectRoute(fastify: FastifyInstance) {
       };
 
       const projectService = new ProjectService(fastify.db);
-      await projectService.assertMembership(tenantId, req.identity.id, "ADMIN");
       await projectService.delete(tenantId, projectId);
 
       void auditService

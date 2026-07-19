@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VcFormat } from "@/prisma-client";
+import { VcFormat } from "@prisma-client";
 
 // ─── Input Schemas ────────────────────────────────────────────────────────────
 
@@ -11,14 +11,14 @@ export const IssueCredentialSchema = z.object({
    * Credential serialisation format.
    * Sourced from DB enum — add new formats via Prisma migration only.
    */
-  format: z.nativeEnum(VcFormat).default(VcFormat.JWT),
+  format: z.enum(VcFormat).default(VcFormat.JWT),
   credentialSubject: z.record(z.string(), z.unknown()),
   expiresAt: z.string().datetime().optional(),
 });
 
 export const VerifyCredentialSchema = z.object({
   credential: z.string(), // Raw JWT or serialised VC
-  format: z.nativeEnum(VcFormat).optional(),
+  format: z.enum(VcFormat).optional(),
 });
 
 export const RevokeCredentialSchema = z.object({

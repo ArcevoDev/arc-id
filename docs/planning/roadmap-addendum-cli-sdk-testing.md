@@ -16,7 +16,7 @@ scripts already exist. **Zero `*.test.ts` files exist anywhere in the repo.**
 This is the kind of gap that survives a casual audit — "we have Vitest set
 up" reads as true from `package.json` alone — but there is currently no
 executable regression coverage at all. `docs/planning/testing-guide.MD` is a
-complete *manual* Postman/Swagger matrix (65 numbered checks across 13
+complete _manual_ Postman/Swagger matrix (65 numbered checks across 13
 blocks) but nothing in it has been converted to code. Treat "add vitest" as
 already done; treat "write the tests" as the actual open item.
 
@@ -38,7 +38,7 @@ runs.
    "automated, see `src/modules/auth/**/*.test.ts`" in the doc rather than
    deleting the manual steps; SAML/social-login blocks that need a real IdP
    stay manual for now.
-3. **Fix Phase 0's five bugs *with* a regression test each**, not just a
+3. **Fix Phase 0's five bugs _with_ a regression test each**, not just a
    patch — the verification-algorithm mismatch, the status-list race, and
    the federated-login account-takeover gap are exactly the kind of bug
    that comes back silently without a test pinning the fix.
@@ -51,7 +51,7 @@ runs.
 The existing roadmap's "What to explicitly defer past v1" section lists
 "OPA/Cedar policy engine, SCIM, Terraform provider, CLI — all real v2+
 platform features, none block ArcWallet/ArcVerify shipping." That's correct
-for *ArcWallet/ArcVerify shipping* specifically, but it's not correct for
+for _ArcWallet/ArcVerify shipping_ specifically, but it's not correct for
 "component packages" more broadly, which is the actual dependency Arcitect
 flagged. Split it:
 

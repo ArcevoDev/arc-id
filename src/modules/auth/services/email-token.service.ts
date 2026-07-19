@@ -1,6 +1,6 @@
 // src/modules/auth/services/email-token.service.ts
 import type { DbClient } from "@/lib/db-client";
-import type { TokenType } from "@/prisma-client";
+import type { TokenType } from "@prisma-client";
 import { generateToken } from "@/lib/crypto";
 import { addHours } from "date-fns";
 import { ApiError } from "@/core/errors/api-error";

@@ -13,8 +13,9 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { ApiError } from "@/core/errors";
-import type { SubscriptionPlan } from "@/prisma-client";
+import type { SubscriptionPlan } from "@prisma-client";
 import { isJtiBlocked } from "@/lib/security/jti-blocklist";
+import { hasPermission } from "@/lib/security/rbac";
 
 const STEP_UP_WINDOW_MS = 15 * 60 * 1000;
 
@@ -41,6 +42,10 @@ declare module "fastify" {
         req: FastifyRequest,
         reply: FastifyReply,
       ) => Promise<void>;
+      requirePermission: (
+        action: string,
+        tenantId?: string,
+      ) => (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
     };
   }
 }
@@ -222,12 +227,40 @@ export const authGuardPlugin = fp(
       }
     };
 
+    const requirePermission =
+      (requiredAction: string, explicitTenantId?: string) =>
+      async (req: FastifyRequest, reply: FastifyReply): Promise<void> => {
+        await requireUser(req, reply);
+
+        const tenantId =
+          explicitTenantId ??
+          (req.params as Record<string, string | undefined>)?.tenantId ??
+          req.identity.tenantId;
+
+        if (!tenantId) {
+          throw ApiError.forbidden("No tenant context for this request");
+        }
+
+        const ok = await hasPermission(
+          fastify.db,
+          req.identity.id,
+          tenantId,
+          requiredAction,
+        );
+        if (!ok) {
+          throw ApiError.forbidden(
+            `Permission '${requiredAction}' is required`,
+          );
+        }
+      };
+
     fastify.decorate("auth", {
       requireUser,
       requireScope,
       requirePlan,
       requireAal2,
       requireElevated,
+      requirePermission,
     });
   },
   { name: "arc-id:auth-guard", dependencies: ["arc-id:jwt", "arc-id:db"] },

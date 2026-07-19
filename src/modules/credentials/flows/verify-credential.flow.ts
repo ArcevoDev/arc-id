@@ -39,12 +39,12 @@ export const verifyCredentialFlow: Flow<
 
       let verifiedPayload: Record<string, unknown>;
 
-if (didRecord) {
-         // Local DID — use stored public key
-         const pem = derToPem(
-           Buffer.from(didRecord.publicKeyBytes),
-           "PUBLIC KEY",
-         );
+      if (didRecord) {
+        // Local DID — use stored public key
+        const pem = derToPem(
+          Buffer.from(didRecord.publicKeyBytes),
+          "PUBLIC KEY",
+        );
         // Read the actual signing algorithm from the JWT header rather than
         // guessing from keyType — keyType (JsonWebKey2020, etc.) describes
         // the W3C key format, not the JWA algorithm used to sign. The
@@ -59,10 +59,10 @@ if (didRecord) {
           };
         }
         const publicKey = await importSPKI(pem, alg);
-         const { payload } = await jwtVerify(input.credential, publicKey, {
-           issuer: issuerDid,
-         });
-         verifiedPayload = payload as Record<string, unknown>;
+        const { payload } = await jwtVerify(input.credential, publicKey, {
+          issuer: issuerDid,
+        });
+        verifiedPayload = payload as Record<string, unknown>;
       } else {
         // External DID — attempt did:web JWKS resolution
         if (!issuerDid.startsWith("did:web:")) {
