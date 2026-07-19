@@ -168,7 +168,7 @@ arc-id/
 │   │   │   ├── app-layout.tsx
 │   │   │   ├── console-layout.tsx
 │   │   │   ├── page-header.tsx
-│   │   │   ├── sidebar.tsx
+│   │   │   ├── Sidebar.tsx
 │   │   │   └── topbar.tsx
 │   │   ├── shared/
 │   │   │   ├── copy-button.tsx
@@ -176,18 +176,18 @@ arc-id/
 │   │   │   ├── empty-state.tsx
 │   │   │   └── status-badge.tsx
 │   │   └── ui/
-│   │       ├── alert.tsx
+│   │       ├── Alert.tsx
 │   │       ├── avatar.tsx
-│   │       ├── badge.tsx
+│   │       ├── Badge.tsx
 │   │       ├── breadcrumb.tsx
-│   │       ├── button.tsx
-│   │       ├── card.tsx
+│   │       ├── Button.tsx
+│   │       ├── Card.tsx
 │   │       ├── checkbox.tsx
 │   │       ├── command.tsx
 │   │       ├── dialog.tsx
 │   │       ├── dropdown-menu.tsx
 │   │       ├── input-group.tsx
-│   │       ├── input.tsx
+│   │       ├── Input.tsx
 │   │       ├── label.tsx
 │   │       ├── pagination.tsx
 │   │       ├── popover.tsx
@@ -198,7 +198,7 @@ arc-id/
 │   │       ├── sheet.tsx
 │   │       ├── skeleton.tsx
 │   │       ├── switch.tsx
-│   │       ├── table.tsx
+│   │       ├── Table.tsx
 │   │       ├── tabs.tsx
 │   │       ├── textarea.tsx
 │   │       └── tooltip.tsx
@@ -581,6 +581,7 @@ arc-id/
 ├── sanity.test.ts
 ├── tailwind.config.ts
 ├── tmp-test.test.ts
+├── tsc-output.txt
 ├── tsconfig.api.json
 ├── tsconfig.json
 └── vitest.config.ts
@@ -888,6 +889,8 @@ next-env.d.ts
 .husky\_/
 /prisma/migrations/
 /prisma/migrations/*.sql
+
+*.txt
 ```
 
 
@@ -12374,7 +12377,7 @@ export function PageHeader({
 
 
 ==================================================
-FILE: src\components\layout\sidebar.tsx
+FILE: src\components\layout\Sidebar.tsx
 ==================================================
 ```tsx
 // src/components/layout/sidebar.tsx
@@ -12837,7 +12840,7 @@ export function StatusBadge({ status }: { status: string }) {
 
 
 ==================================================
-FILE: src\components\ui\alert.tsx
+FILE: src\components\ui\Alert.tsx
 ==================================================
 ```tsx
 import * as React from "react";
@@ -13039,7 +13042,7 @@ export {
 
 
 ==================================================
-FILE: src\components\ui\badge.tsx
+FILE: src\components\ui\Badge.tsx
 ==================================================
 ```tsx
 import * as React from "react";
@@ -13221,7 +13224,7 @@ export {
 
 
 ==================================================
-FILE: src\components\ui\button.tsx
+FILE: src\components\ui\Button.tsx
 ==================================================
 ```tsx
 import * as React from "react";
@@ -13295,7 +13298,7 @@ export { Button, buttonVariants };
 
 
 ==================================================
-FILE: src\components\ui\card.tsx
+FILE: src\components\ui\Card.tsx
 ==================================================
 ```tsx
 import * as React from "react";
@@ -14260,7 +14263,7 @@ export {
 
 
 ==================================================
-FILE: src\components\ui\input.tsx
+FILE: src\components\ui\Input.tsx
 ==================================================
 ```tsx
 import * as React from "react";
@@ -15102,7 +15105,7 @@ export { Switch };
 
 
 ==================================================
-FILE: src\components\ui\table.tsx
+FILE: src\components\ui\Table.tsx
 ==================================================
 ```tsx
 "use client";
@@ -42255,6 +42258,14 @@ FILE: tmp-test.test.ts
 ```ts
 import { test, expect } from "vitest";
 test("works", () => expect(1).toBe(1));
+```
+
+
+==================================================
+FILE: tsc-output.txt
+==================================================
+```txt
+
 ```
 
 

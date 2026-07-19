@@ -1,15 +1,43 @@
-# ArcID Engine
+# ArcID
 
-> Sovereign Decentralized Identity (DID) & Access Management Engine powering the ArcevoCirqle ecosystem.
+> Sovereign, multi-tenant identity and access management engine for the ArcevoCirqle ecosystem.
 
----
+ArcID is the identity backbone one person's verified attributes — a national ID, a professional license, an academic transcript — can be issued once, held by them, and reused across sectors, instead of every institution re-verifying the same facts from scratch. It's the foundation layer that ArcevoCirqle's per-sector products (starting with the academic space) build on.
 
-## Architectural Modules
+## The problem this solves
 
-ArcID is split into decoupled domain components handling the complete authentication and verification loop:
+Identity verification today is siloed per institution. A student re-proves who they are to their school, their bank, their employer, their government portal — each one running its own verification from zero, each one holding a copy of the same sensitive documents. ArcID exists so that verification happens once, by an authoritative issuer, and the resulting proof — a cryptographically signed Verifiable Credential — can be held by the individual and presented anywhere it's trusted, without re-exposing the underlying documents each time.
 
-- **Auth & Identity:** Passkeys (WebAuthn), session lifetimes, and multi-factor authentication (MFA).
-- **OAuth/OIDC:** RFC-compliant token exchanges, authorization flows, JWKS endpoints, and discovery layouts.
-- **Credentials:** Decentralized Identifier (DID) resolution, signing services, and Selective Disclosure JWT (SD-JWT) issuance.
-- **Tenant Engine:** Multi-tenant isolation boundaries, membership layers, and cryptographic signing keys per tenant.
--
+## What actually exists today
+
+ArcID is a Fastify + PostgreSQL (Prisma) backend. Current state, verified against source:
+
+- **Authentication** — email/password, WebAuthn passkeys, TOTP MFA, session management with per-tenant policy (session TTL, max concurrent sessions, required MFA).
+- **OAuth2 / OIDC** — full authorization code + PKCE flow, JWKS, token introspection, refresh rotation with reuse detection.
+- **Verifiable Credentials** — SD-JWT issuance and revocation, `did:web` and `did:key` resolution, tenant-owned signing keys (KMS-encrypted at rest).
+- **Multi-tenancy** — tenant/project structure, membership with per-plan member caps, tenant-scoped policy enforcement.
+- **RBAC** — fine-grained, database-backed permissions (18 seeded actions), replacing all hardcoded role checks.
+- **External identifiers** — self-reported linking of secondary identifiers (phone, NIN, BVN, etc.) to an identity, hashed at rest.
+- **Credential offers** — a tenant can create a pending offer for a subject, who accepts it (proving DID ownership) to receive the credential.
+- **Webhooks, billing, audit logging** — webhook delivery with HMAC signing and retry, provider-driven (Stripe/Paystack) subscription billing, full audit trail.
+
+## What's next
+
+- **Presentation endpoint** — letting a holder present a credential to a verifier (design already scoped in `docs/planning/presentation-envelope-design.md`, not yet built).
+- **ArcWallet** — a companion React Native app (separate repo) where individuals hold their credentials and keys; ArcID never custodies wallet private keys.
+- **ArcVerify** — the verifier-facing counterpart for institutions checking a presented credential.
+- **Public SDK and CLI** — once the API surface above is stable, `packages/sdk` and `packages/cli` will be extracted for external integrators.
+
+Live, granular status — what's done, what's in progress, what's explicitly deferred — is tracked in `docs/planning/arcid-v1-roadmap.md`, kept current as the actual source of truth for project state.
+
+## Architecture, briefly
+
+Business logic lives in **Flows** (`src/modules/<domain>/flows/`), never in route handlers — routes stay thin: auth guard → validate → run flow → reply. Each domain module (`auth`, `oauth`, `credentials`, `tenant`, `webhooks`, `billing`, `identity`, `idp`, `audit`) owns its own flows, routes, services, and validators. See `CLAUDE.md` for the full architectural contract this codebase follows.
+
+## Status
+
+Pre-release. Versioning follows `0.0.x` → `0.1.0` (tenant policy + RBAC + external identifiers — **done**) → `0.2.0` (ArcWallet-facing credential surface — in progress) → `0.3.0` (test coverage bar) → `1.0.0` (first production deployment). Breaking changes should be expected at this stage.
+
+## Getting started
+
+See `CLAUDE.md` for the full engineering handbook (setup, conventions, testing) and `AGENTS.md` for the condensed always-loaded rules used by AI coding agents working in this repo.
