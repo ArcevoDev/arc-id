@@ -1,6 +1,6 @@
 // src/modules/billing/services/subscription.service.ts
 import type { DbClient } from "@/lib/db-client";
-import type { SubscriptionPlan } from "@/prisma-client";
+import type { SubscriptionPlan } from "@prisma-client";
 
 export class SubscriptionService {
   constructor(private db: DbClient) {}
@@ -9,14 +9,6 @@ export class SubscriptionService {
     return this.db.subscription.findUnique({
       where: { tenantId },
       include: { billingIntegrations: true },
-    });
-  }
-
-  async upgrade(tenantId: string, plan: SubscriptionPlan) {
-    return this.db.subscription.upsert({
-      where: { tenantId },
-      update: { plan, status: "ACTIVE" },
-      create: { tenantId, plan, status: "ACTIVE" },
     });
   }
 

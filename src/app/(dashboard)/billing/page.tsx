@@ -1,21 +1,13 @@
 // src/app/(dashboard)/billing/page.tsx
 "use client";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
 import { billingSdk } from "@/sdk/billing.sdk";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Icons } from "@/lib/ui/icon-registry";
 import { Button } from "@/components/ui/button";
-import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -31,11 +23,11 @@ const PLANS = [
     name: "Free",
     price: "₦0 / mo",
     features: [
-      "5 OAuth clients",
       "1 tenant",
       "Basic audit logs",
       "Email auth",
       "TOTP MFA",
+      "Passkeys",
     ],
   },
   {
@@ -48,7 +40,6 @@ const PLANS = [
       "Full audit history",
       "did:web issuance",
       "VC issuance",
-      "Passkeys",
     ],
   },
   {
@@ -69,11 +60,8 @@ const PLANS = [
 export default function BillingPage() {
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [upgrading, setUpgrading] = useState(false);
+  const [portalOpen, setPortalOpen] = useState(false);
   const [targetPlan, setTargetPlan] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     billingSdk
@@ -82,24 +70,6 @@ export default function BillingPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
-
-  const handleUpgrade = async () => {
-    if (!targetPlan) return;
-    setError(null);
-    setUpgrading(true);
-    try {
-      await billingSdk.upgrade(targetPlan);
-      const updated = await billingSdk.getSubscription();
-      setSubscription(updated);
-      setSuccess(true);
-      setUpgradeOpen(false);
-      setTimeout(() => setSuccess(false), 4000);
-    } catch (err: any) {
-      setError(err.message ?? "Upgrade failed");
-    } finally {
-      setUpgrading(false);
-    }
-  };
 
   const currentPlan = subscription?.plan ?? "FREE";
   const status = subscription?.status ?? "ACTIVE";
@@ -110,13 +80,6 @@ export default function BillingPage() {
         title="Billing"
         description="Manage your plan and subscription."
       />
-
-      {success && (
-        <Alert className="text-sm flex items-start gap-2 border-emerald-500/30 bg-emerald-500/5">
-          <Icons.success className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
-          <span className="text-emerald-400">Plan upgraded successfully.</span>
-        </Alert>
-      )}
 
       {/* Current plan */}
       <Card className="bg-card border-border">
@@ -188,8 +151,7 @@ export default function BillingPage() {
                     className="w-full"
                     onClick={() => {
                       setTargetPlan(plan.id);
-                      setError(null);
-                      setUpgradeOpen(true);
+                      setPortalOpen(true);
                     }}
                   >
                     Upgrade to {plan.name}
@@ -206,48 +168,23 @@ export default function BillingPage() {
         })}
       </div>
 
-      <Dialog
-        open={upgradeOpen}
-        onOpenChange={(v) => !upgrading && setUpgradeOpen(v)}
-      >
+      <Dialog open={portalOpen} onOpenChange={setPortalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upgrade to {targetPlan}?</DialogTitle>
+            <DialogTitle>Upgrade to {targetPlan}</DialogTitle>
           </DialogHeader>
 
-          {error && (
-            <Alert
-              variant="destructive"
-              className="text-sm flex items-start gap-2"
-            >
-              <Icons.alertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </Alert>
-          )}
-
           <p className="text-sm text-muted-foreground">
-            Your plan will be updated immediately. Billing integrations
-            (Paystack, Stripe) are handled separately via the subscription
-            portal.
+            Plan changes are managed through your payment provider. You'll be
+            redirected to complete the upgrade via the billing portal.
           </p>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setUpgradeOpen(false)}
-              disabled={upgrading}
-            >
+            <Button variant="outline" onClick={() => setPortalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpgrade} disabled={upgrading}>
-              {upgrading ? (
-                <>
-                  <Icons.refresh className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  Upgrading…
-                </>
-              ) : (
-                `Upgrade to ${targetPlan}`
-              )}
+            <Button onClick={() => setPortalOpen(false)}>
+              Go to billing portal
             </Button>
           </DialogFooter>
         </DialogContent>

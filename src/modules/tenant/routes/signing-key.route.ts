@@ -14,7 +14,10 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
   fastify.post(
     "/:tenantId/signing-keys",
     {
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("signing-key:manage"),
+      ],
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
         summary:
@@ -37,9 +40,6 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
-
-      const tenantService = new TenantService(fastify.db);
-      await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       const algorithm = "ES256";
       const { publicKey, privateKey } = await generateKeyPair(algorithm);
@@ -135,7 +135,10 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
   fastify.delete(
     "/:tenantId/signing-keys/:kid",
     {
-      preHandler: fastify.auth.requireElevated,
+      preHandler: [
+        fastify.auth.requireElevated,
+        fastify.auth.requirePermission("signing-key:manage"),
+      ],
       schema: {
         tags: ["Tenant Cryptographic Key Authority"],
         summary:
@@ -155,9 +158,6 @@ export async function signingKeyRoute(fastify: FastifyInstance) {
         tenantId: string;
         kid: string;
       };
-
-      const tenantService = new TenantService(fastify.db);
-      await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       const updateResult = await fastify.db.tenantSigningKey.updateMany({
         where: { tenantId, kid, status: "ACTIVE" },

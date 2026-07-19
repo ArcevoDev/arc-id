@@ -1,4 +1,4 @@
-import type { AuditLog } from "@/prisma-client";
+import type { AuditLog } from "@prisma-client";
 
 export function presentAuditLog(log: AuditLog) {
   return {

@@ -58,7 +58,6 @@ export const ROUTES = {
   },
   billing: {
     subscription: "/subscription",
-    upgrade: "/subscription/upgrade",
   },
   oauth: {
     authorize: "/oauth/authorize",

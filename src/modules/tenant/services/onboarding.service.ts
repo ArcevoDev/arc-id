@@ -19,7 +19,7 @@ import type {
   UpdateOnboardingFlowInput,
   AdvanceProgressInput,
 } from "../validators/onboarding.schemas";
-import { Prisma } from "@/prisma-client";
+import { Prisma } from "@prisma-client";
 
 export class OnboardingService {
   constructor(private readonly db: DbClient) {}

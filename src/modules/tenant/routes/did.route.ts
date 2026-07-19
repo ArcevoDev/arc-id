@@ -20,7 +20,10 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
   fastify.post(
     "/:tenantId/did",
     {
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("did:manage"),
+      ],
       schema: {
         tags: ["Tenant Management Architecture"],
         summary:
@@ -46,9 +49,6 @@ export async function tenantDidRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
       const { domain } = req.body as { domain: string };
-
-      const tenantService = new TenantService(fastify.db);
-      await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       const existing = await fastify.db.decentralizedIdentifier.findUnique({
         where: { tenantId },

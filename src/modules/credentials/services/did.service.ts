@@ -19,20 +19,14 @@ export class DidService {
     return record;
   }
 
-  buildDidDocument(did: string, publicKeyHex: string, keyType: string) {
-    return {
-      "@context": ["https://www.w3.org/ns/did/v1"],
-      id: did,
-      verificationMethod: [
-        {
-          id: `${did}#key-1`,
-          type: keyType,
-          controller: did,
-          publicKeyMultibase: publicKeyHex,
-        },
-      ],
-      authentication: [`${did}#key-1`],
-      assertionMethod: [`${did}#key-1`],
-    };
-  }
+  // NOTE: buildDidDocument() was removed here — it was dead code (no
+  // callers) that paired type: keyType with publicKeyMultibase
+  // regardless of what keyType actually was, which is spec-incorrect for
+  // JsonWebKey2020 (needs publicKeyJwk, not publicKeyMultibase). DID
+  // document construction now lives next to whatever creates the
+  // underlying key material, so the type/property pairing can't drift
+  // from the actual key format:
+  //   - tenant did:web  → provision-tenant-did.flow.ts (JsonWebKey2020 + publicKeyJwk)
+  //   - wallet did:key  → register-wallet-did.flow.ts (Ed25519VerificationKey2020/
+  //                       JsonWebKey2020, both matched correctly to their key type)
 }

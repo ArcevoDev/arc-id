@@ -9,7 +9,7 @@
 // session cleanup) is unchanged.
 
 import { prisma } from "@/core/db";
-import { Prisma } from "@/prisma-client";
+import { Prisma } from "@prisma-client";
 import { logger } from "@/lib/logger";
 import { subDays } from "date-fns";
 

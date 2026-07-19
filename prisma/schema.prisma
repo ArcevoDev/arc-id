@@ -80,6 +80,13 @@ enum VcFormat {
   DataIntegrity
 }
 
+enum CredentialOfferStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
 enum AuditLogAction {
   USER_LOGIN_SUCCESS
   USER_LOGIN_FAILED
@@ -103,6 +110,8 @@ enum AuditLogAction {
   PASSWORD_RESET_COMPLETED
   EMAIL_VERIFIED
   EMAIL_VERIFICATION_SENT
+  EXTERNAL_IDENTIFIER_LINKED
+  EXTERNAL_IDENTIFIER_UNLINKED
   TENANT_CREATED
   TENANT_UPDATED
   SUBSCRIPTION_UPGRADED
@@ -238,6 +247,27 @@ model VerifiableCredential {
   @@index([holderId])
   @@index([issuerDid])
   @@index([subjectDid])
+}
+
+model CredentialOffer {
+  id                 String                @id @default(cuid())
+  token              String                @unique
+  issuerDid          String
+  subjectDid         String
+  holderId           String?
+  format             VcFormat              @default(JWT)
+  credentialSubject  Json
+  schemaId           String?
+  credentialExpiresAt DateTime?
+  expiresAt          DateTime
+  status             CredentialOfferStatus @default(PENDING)
+  consumed           Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@index([token])
+  @@index([expiresAt])
+  @@index([status])
 }
 
 model CredentialSchema {

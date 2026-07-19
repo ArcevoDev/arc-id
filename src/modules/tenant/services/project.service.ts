@@ -18,21 +18,14 @@ export class ProjectService {
   constructor(private readonly db: DbClient) {}
 
   /** Re-uses the same membership check pattern as TenantService.assertMembership. */
-  async assertMembership(
-    tenantId: string,
-    identityId: string,
-    requiredRole?: "ADMIN",
-  ): Promise<void> {
+  async assertMembership(tenantId: string, identityId: string): Promise<void> {
     const membership = await this.db.tenantMembership.findFirst({
       where: { identityId, tenantId, status: "ACTIVE" },
-      include: { role: { select: { name: true } } },
+      select: { id: true },
     });
 
     if (!membership) {
       throw ApiError.forbidden("You are not a member of this tenant");
-    }
-    if (requiredRole && membership.role.name !== requiredRole) {
-      throw ApiError.forbidden(`This action requires the ${requiredRole} role`);
     }
   }
 

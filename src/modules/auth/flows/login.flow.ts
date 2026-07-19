@@ -11,7 +11,6 @@ import { auditService } from "@/modules/audit/services/audit.service";
 import { presentIdentity } from "../presenters/identity.presenter";
 import { notificationService } from "@/lib/notifications/notification.service";
 import { config } from "@/core/config";
-import { prisma } from "@/core/db";
 import {
   checkLockout,
   recordFailure,
@@ -23,6 +22,14 @@ type Output = {
   identity: ReturnType<typeof presentIdentity>;
   sessionId: string;
   requiresMfa: boolean;
+  /**
+   * True when requireMfa is enforced by TenantPolicy but the identity has
+   * zero enrolled MFA methods and no passkey — there is no factor to
+   * verify, so the UI should show an enrollment prompt.
+   * If this is false, the identity has at least one enrolled factor and
+   * the UI should prompt the user to verify it.
+   */
+  mfaEnrollmentRequired: boolean;
   mfaTypes: string[];
   accessToken?: string;
   refreshToken?: string;
@@ -114,58 +121,76 @@ export const loginFlow: Flow<Input, Output> = {
     // Fire-and-forget — don't delay the login response for Redis.
     void clearAttempts(input.email).catch(() => {});
 
-    // ── Step 5: Session  token issuance (Optimized) ───────────────────────────
+    // ── Step 5: TenantPolicy resolution ──────────────────────────────────────
+    // Look up the tenant's policy for this identity's tenant.  When there's
+    // no policy row, fall back to schema defaults (same as TenantPolicy model).
+    const policy = ctx.tenantId
+      ? await ctx.db.tenantPolicy.findUnique({
+          where: { tenantId: ctx.tenantId },
+          select: {
+            requireMfa: true,
+            sessionTtlMinutes: true,
+            maxSessionsPerUser: true,
+          },
+        })
+      : null;
+
+    const policyRequireMfa = policy?.requireMfa ?? false;
+    const sessionTtlMinutes = policy?.sessionTtlMinutes ?? 10080;
+    const maxSessionsPerUser = policy?.maxSessionsPerUser ?? 10;
+
+    // ── Step 6: Session + token issuance ──────────────────────────────────────
+    // Uses ctx.db throughout — the transaction client FlowExecutor already
+    // opened.  No separate (prisma as any).$transaction(...) wrapper, no
+    // direct prisma import.  Session creation and token issuance share the
+    // same rollback boundary.  See token-refresh.flow.ts for the same pattern.
     const targetClientId = config.oauth.directClientId;
     const activeMfas = identity.mfas.filter((m) => m.enabled);
-    const requiresMfa = activeMfas.length > 0;
+    const hasPasskey = (identity as any).passkeys?.length > 0;
+    const requiresMfa = activeMfas.length > 0 || policyRequireMfa;
+    // mfaEnrollmentRequired is true when policy enforces MFA but the identity
+    // has zero enrolled factors (no TOTP/SMS/email MFA and no passkey).
+    // The UI should show an enrollment prompt, not a verification prompt.
+    const mfaEnrollmentRequired =
+      policyRequireMfa && activeMfas.length === 0 && !hasPasskey;
 
-    // A. Perform the isolated DB state mutations inside a light transaction block.
-    // This resolves the pg connection sharing deprecation warning by keeping
-    // complex nested dependencies (like token services) out of the transaction pool.
-    const session = await (prisma as any).$transaction(
-      async (tx: any) => {
-        const sessionService = new SessionService(tx);
+    const sessionService = new SessionService(ctx.db);
 
-        const { session: newSession } = await sessionService.create({
-          identityId: identity.id,
-          localAccountId: validLocalAccount.id,
-          ip: ctx.ip,
-          userAgent: ctx.userAgent,
-          authLevel: "aal1",
-        });
+    const { session: newSession } = await sessionService.create({
+      identityId: identity.id,
+      localAccountId: validLocalAccount.id,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      authLevel: "aal1",
+      sessionTtlMinutes,
+      maxSessionsPerUser,
+    });
 
-        if (requiresMfa) {
-          // MFA required — session starts as invalid until MFA is completed.
-          return await tx.session.update({
-            where: { id: newSession.id },
-            data: { valid: false },
-          });
-        }
+    let session = newSession;
+    if (requiresMfa) {
+      // MFA required — session starts as invalid until MFA is completed.
+      session = await ctx.db.session.update({
+        where: { id: newSession.id },
+        data: { valid: false },
+      });
+    }
 
-        return newSession;
-      },
-      { timeout: 5000 },
-    );
-
-    // B. Issue OpenID Connect tokens outside the database transaction boundary.
+    // Issue OpenID Connect tokens using the same ctx.db.
     let tokens = null;
     if (!requiresMfa && targetClientId) {
       const tokenService = new TokenService();
-      tokens = await tokenService.issue(
-        { ...ctx, db: prisma },
-        {
-          identityId: identity.id,
-          clientId: targetClientId,
-          sessionId: session.id,
-          scopes: DEFAULT_SCOPES,
-          audience: [targetClientId],
-          tenantId: ctx.tenantId,
-          authLevel: "aal1",
-        },
-      );
+      tokens = await tokenService.issue(ctx, {
+        identityId: identity.id,
+        clientId: targetClientId,
+        sessionId: session.id,
+        scopes: DEFAULT_SCOPES,
+        audience: [targetClientId],
+        tenantId: ctx.tenantId,
+        authLevel: "aal1",
+      });
     }
 
-    // ── Step 6: Response ──────────────────────────────────────────────────────
+    // ── Step 7: Response ──────────────────────────────────────────────────────
     if (requiresMfa) {
       void auditService
         .log({ action: "SESSION_CREATED", identityId: identity.id, ip: ctx.ip })
@@ -175,6 +200,7 @@ export const loginFlow: Flow<Input, Output> = {
         identity: presentIdentity(identity),
         sessionId: session.id,
         requiresMfa: true,
+        mfaEnrollmentRequired,
         mfaTypes: activeMfas.map((m) => m.type),
       };
     }
@@ -198,6 +224,7 @@ export const loginFlow: Flow<Input, Output> = {
       identity: presentIdentity(identity),
       sessionId: session.id,
       requiresMfa: false,
+      mfaEnrollmentRequired: false,
       mfaTypes: [],
       accessToken: tokens?.accessToken,
       refreshToken: tokens?.refreshToken,

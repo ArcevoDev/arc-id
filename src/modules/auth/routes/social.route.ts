@@ -156,7 +156,7 @@ async function handleCallback(
       if (newIdentity && !newIdentity.emailVerified) {
         throw ApiError.conflict(
           "An account with this email already exists but hasn't been verified yet. " +
-"Please verify your email or sign in with your password first, then link this provider from your account settings.",
+            "Please verify your email or sign in with your password first, then link this provider from your account settings.",
         );
       }
 

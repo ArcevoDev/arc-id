@@ -20,16 +20,22 @@ export async function jwksRoute(fastify: FastifyInstance) {
       });
 
       const jwks = await Promise.all(
-        keys.map(async (key) => {
-          try {
-            const pem = `-----BEGIN PUBLIC KEY-----\n${Buffer.from(key.publicKey).toString("base64")}\n-----END PUBLIC KEY-----`;
-            const cryptoKey = await importSPKI(pem, key.algorithm);
-            const jwk = await exportJWK(cryptoKey);
-            return { ...jwk, kid: key.kid, alg: key.algorithm, use: "sig" };
-          } catch {
-            return null;
-          }
-        }),
+        keys.map(
+          async (key: {
+            publicKey: Buffer | Uint8Array;
+            algorithm: string;
+            kid: string;
+          }) => {
+            try {
+              const pem = `-----BEGIN PUBLIC KEY-----\n${Buffer.from(key.publicKey).toString("base64")}\n-----END PUBLIC KEY-----`;
+              const cryptoKey = await importSPKI(pem, key.algorithm);
+              const jwk = await exportJWK(cryptoKey);
+              return { ...jwk, kid: key.kid, alg: key.algorithm, use: "sig" };
+            } catch {
+              return null;
+            }
+          },
+        ),
       );
 
       return reply.send({ keys: jwks.filter(Boolean) });

@@ -10,11 +10,11 @@
 //   - Signature includes a timestamp so receivers can reject replayed requests.
 //   - stopWebhookWorker() sets a flag; the current batch finishes, then polling stops.
 import { prisma } from "@/core/db";
-import { Prisma } from "@/prisma-client";
+import { Prisma } from "@prisma-client";
 import { createHmac, randomUUID } from "crypto";
 import { logger } from "@/lib/logger";
 import { config } from "@/core/config";
-import { assertSafeUrl } from "@/lib/url-safety";
+import { fetchWithSsrfGuard } from "@/lib/url-safety";
 
 // ── Config ─────────────────────────────────────────────────────────────────────
 const BATCH = 20;
@@ -115,8 +115,6 @@ async function releaseLease(
 async function deliver(
   event: Awaited<ReturnType<typeof prisma.webhookEvent.findMany>>[number],
 ) {
-  assertSafeUrl(event.targetUrl);
-
   const timestamp = Date.now();
 
   const body = JSON.stringify({
@@ -131,7 +129,11 @@ async function deliver(
   // fall back to the old global secret for those only.
   const secret = event.secret ?? config.webhooks.signingSecret;
 
-  const res = await fetch(event.targetUrl, {
+  // fetchWithSsrfGuard re-validates the target on every redirect hop, not
+  // just the original targetUrl — a safe host that later redirects to a
+  // private IP would otherwise be followed straight through by fetch()'s
+  // default redirect behaviour.
+  const res = await fetchWithSsrfGuard(event.targetUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

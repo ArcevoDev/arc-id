@@ -48,6 +48,23 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # Unit + integration tests (vitest).
+      # Requires a real DATABASE_URL for integration tests.
+      # If you only have unit tests (no DB), remove the env block below and
+      # the DATABASE_URL secret — unit tests run without any DB connection.
+      - name: Test
+        run: pnpm test
+        env:
+          NODE_ENV: test
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          JWT_SECRET: ci-test-secret-must-be-at-least-32-chars
+          COOKIE_SECRET: ci-test-cookie-secret-32-chars-min
+          WEBHOOK_SIGNING_SECRET: ci-test-webhook-secret
+          RESEND_API_KEY: re_ci_placeholder
+          ARCID_DIRECT_CLIENT_ID: arcid-direct
+          # Disable Redis in CI — tests fall back to in-memory store
+          # (UPSTASH_REDIS_REST_URL intentionally absent)
+
       - name: Build API
         run: pnpm build:api
 

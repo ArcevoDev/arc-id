@@ -33,9 +33,19 @@ export async function logoutRoute(fastify: FastifyInstance) {
         sessionId: string;
       };
 
+      // Sourced from the verified JWT (req.user, populated by
+      // req.jwtVerify() in the auth guard), never from client input —
+      // this is what lets logout actually blocklist the access token
+      // that was used to authenticate this very request.
+      const jwtPayload = req.user as { jti?: string; exp?: number } | undefined;
+
       await flowExecutor.run(
         logoutFlow,
-        { sessionId },
+        {
+          sessionId,
+          accessJti: jwtPayload?.jti,
+          accessTokenExp: jwtPayload?.exp,
+        },
         {
           identityId: req.identity.id,
           tenantId: req.identity.tenantId,

@@ -49,3 +49,5 @@ next-env.d.ts
 .husky\_/
 /prisma/migrations/
 /prisma/migrations/*.sql
+
+*.txt

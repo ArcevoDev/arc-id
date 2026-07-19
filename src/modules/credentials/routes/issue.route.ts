@@ -10,7 +10,10 @@ export async function issueRoute(fastify: FastifyInstance) {
     {
       // PRO: Verifiable Credential issuance is an enterprise-grade capability.
       // FREE tenants receive a 402 with upgrade guidance.
-      preHandler: fastify.auth.requirePlan("PRO"),
+      preHandler: [
+        fastify.auth.requirePlan("PRO"),
+        fastify.auth.requirePermission("credential:issue"),
+      ],
       schema: {
         tags: ["Verifiable Credentials Engine"],
         summary: "Issue signed digital cryptographic credentials (PRO)",

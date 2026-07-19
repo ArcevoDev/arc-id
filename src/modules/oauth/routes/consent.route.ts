@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { commonErrorSchema } from "@/core/errors/error-schemas";
-import type { PrismaClient } from "@/prisma-client";
+import type { PrismaClient } from "@prisma-client";
 
 export async function consentRoute(fastify: FastifyInstance) {
   // Cast fastify.db to ensure explicit type mapping inside the route module scope

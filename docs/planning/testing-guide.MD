@@ -1,5 +1,10 @@
 # ArcID API Testing Guide
 
+> **Status: Hybrid (automated unit tests + manual route verification)**
+> Automated coverage via Vitest (see each block's annotation). Manual
+> blocks remain for end-to-end verification and routes that depend on
+> external IdPs or real browser+WebAuthn.
+
 # Swagger UI + Postman — Complete Route Verification
 
 ## Setup
@@ -51,6 +56,15 @@ After step 6, check mail preview for `VERIFY_EMAIL` token. Copy it.
 
 ## BLOCK 3 — Login & session
 
+_**Status: Automated** — `src/modules/auth/flows/login.flow.test.ts` covers
+#11's logic (successful login with tokens, MFA-without-tokens path, banned/
+suspended/deleted rejections, bad-password flow, TenantPolicy requireMfa →
+mfaEnrollmentRequired, transaction rollback on token-issuance failure). #12's
+rate-limit is route-level (not flow-level) and remains manual.
+`src/modules/auth/services/session.service.test.ts` covers session create/
+elevate/promoteToAal2/validate, sessionTtlMinutes from TenantPolicy, and
+maxSessionsPerUser eviction independently._
+
 | #   | Method | Path          | Body                  | Expected                                 |
 | --- | ------ | ------------- | --------------------- | ---------------------------------------- |
 | 11  | POST   | `/auth/login` | `{ email, password }` | `200` with `accessToken`, `refreshToken` |
@@ -67,6 +81,14 @@ Save `accessToken` as `$TOKEN`. Click **Authorize** in Swagger and paste it.
 ---
 
 ## BLOCK 4 — Token lifecycle (OAuth)
+
+_**Status: Partially automated** — `src/modules/oauth/services/token.service.test.ts`
+covers #19's token-issuance logic (access/refresh/id token creation, familyId/
+parentJti threading, authLevel claims, client/subscription lookups).
+`src/modules/oauth/flows/token-refresh.flow.test.ts` covers #21–#22's
+rotation and reuse-detection (valid refresh, expired, revoked→kill-chain, CAS race).
+The authorize-code exchange (#19), introspect (#20, #24), revoke (#23), and
+userinfo (#25) route-level flows remain manual for now._
 
 First register an OAuth client:
 
@@ -164,6 +186,15 @@ Step 47 verifies the membership gate fix: non-members cannot enumerate tenant da
 
 ## BLOCK 10 — Credentials (VC)
 
+_**Status: Partially automated** — `src/modules/credentials/flows/verify-credential.flow.test.ts`
+covers #54's verification path (ES256 signing, correct algorithm-from-header
+reading, tampered-signature rejection, missing-alg rejection).
+`src/modules/credentials/services/status-list.service.test.ts` covers the
+CAS-based index allocation (#51's internal allocation) and revocation update.
+`src/modules/tenant/flows/provision-tenant-did.flow.test.ts` covers DID provisioning
+and sign-verify round-trip. The full route-level issue/revoke flow (#53, #55, #56)
+remains manual._
+
 Requires an ACTIVE tenant signing key. Create one first:
 
 | #   | Method | Path                                     | Body                                                    | Expected                          |
@@ -222,6 +253,12 @@ WHERE "identityId" = '<your-id>'
 
 ## Social login & IdP federation — implemented, not 501
 
+_**Status: Partially automated** — `src/modules/idp/services/idp.service.test.ts`
+covers the `federatedLogin` Phase 0 email-verification gate, new-identity
+provisioning, and existing-identity linking. The full social/provider callback
+routes (Google/GitHub/Apple/Microsoft) still require external IdP credentials
+and remain manual._
+
 These are fully implemented and registered. They are NOT expected to return 501.
 Behavior depends on environment configuration:
 
@@ -257,6 +294,10 @@ note them as "requires external IdP — not covered by this run."
 ---
 
 ## Regression checks after each deployment
+
+_**Status: Automated** — the logic underpinning R3 (login → tokens) is covered
+by login.flow.test.ts and token.service.test.ts. R1 (health), R2 (register),
+R4 (sessions), and R5 (openid-config) remain route-level manual checks._
 
 Run these 5 checks first — if any fail, something fundamental broke:
 

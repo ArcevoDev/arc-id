@@ -23,9 +23,10 @@ that roadmap claims to save.
 
 **Overstated — Credentials/SSI at "60% complete."** Real and good: W3C VC
 issuance, SD-JWT with correct per-algorithm Web Crypto mapping, bitstring
-status-list revocation, `did:web`. Nonexistent: `did:key`, `did:jwk`,
-OIDC4VCI, OIDC4VP, BBS+. The protocol-interop layer is at 0%, not 60% — but
-per the scope decision above, v1 doesn't need that layer to ship.
+status-list revocation, `did:web`, `did:key` (identity-owned wallet DIDs).
+Nonexistent: `did:jwk`, OIDC4VCI, OIDC4VP, BBS+. The protocol-interop layer
+is at 0%, not 60% — but per the scope decision above, v1 doesn't need that
+layer to ship.
 
 **Understated / missed entirely — two real signing/verification bugs.**
 `verify-credential.flow.ts` hardcodes `importSPKI(pem, "ES256")` for
@@ -65,17 +66,16 @@ works, found by reading the actual signing/verification paths end to end.
    select the correct `importSPKI`/verification algorithm instead of
    hardcoding ES256. Until this lands, any credential signed with a
    non-ES256 key fails to verify through your own endpoint.~~
-   **✅ Done — reads `alg` from JWT header via `decodeProtectedHeader`.
+   \*\*✅ Done — reads `alg` from JWT header via `decodeProtectedHeader`.
 
-2. **Identity-owned DID signing key gap.** ~~`signing.service.ts`'s
-   `loadSigningKey` needs an `identityId` branch, or — more consistent with
-   the current design — `TenantSigningKey` needs to support keys scoped to
-   an `Identity` as well as a `Tenant`. Decide now whether v1 actually needs
-   individually-owned DIDs (separate from tenant-issued ones) or whether
-   that's a v2 feature; if it's v2, explicitly disable/validate against
-   issuing identity-scoped DIDs for now so the failure is a clear 4xx
-   instead of an opaque 500 at credential-issuance time.~~
-   **✅ Done — identity-scoped DIDs rejected with ApiError.badRequest at issuance time (v2 feature).**
+2. **Identity-owned DID signing key — permanently non-custodial.** ~~`signing.service.ts`'s
+   `loadSigningKey` needs an `identityId` branch — or rather, the original
+   framing treated this as a gap to be fixed later. But ArcID must never
+   hold a private key capable of signing on behalf of an individual DID.
+   Identity-owned DIDs are now registered via `register-wallet-did.flow.ts`
+   (`POST /identity/wallet/did`), which stores only the public key submitted
+   by ArcWallet. `loadSigningKey`'s guard is permanent-by-design — ArcID
+   signs for tenant-issued DIDs only.~~
 
 3. **Status-list index allocation race.** ~~`allocateIndex`'s read
    (`issuedCount`) and write (`increment`) are two separate statements —
@@ -108,6 +108,16 @@ works, found by reading the actual signing/verification paths end to end.
    `20260617125316_add_username_set_audit_action` for future readability.
    Do not edit the SQL inside it or touch already-applied migrations.~~
    **✅ Done — folder renamed to `20260617125316_add_username_set_audit_action` (SQL untouched, already-applied migrations not modified).**
+
+7. **Multibase encoding bug in tenant DID provisioning.** ~~`did.route.ts`
+   wrote `publicKeyMultibase` as a bare base64 string with a "z" prefix
+   slapped on, which is not valid multibase ("z" specifically denotes
+   base58-btc per the multibase spec). This would cause any downstream
+   consumer (wallet, verifier) that reads the DID document correctly to
+   reject the key encoding.~~
+   **✅ Fixed — `src/lib/multibase.ts` implements spec-correct base58btc
+   encoding. `did.route.ts` now uses `multibaseEncode()`. The same utility
+   powers did:key construction in `register-wallet-did.flow.ts`.**
 
 None of this blocks anything else below — do it first because it's cheap,
 contained, and some of it (the email-linking bug) is a real security hole
@@ -172,12 +182,16 @@ achievable now, designed to not paint you into a corner later.
   offer payload close enough to the real `credential_offer` shape (issuer,
   credential_configuration_ids equivalent, grant hint) that migrating to
   real OIDC4VCI later is a routing change, not a rewrite.
-- **Wallet binding for `Wallet` model.** This table exists, is referenced
+- **Wallet binding for `Wallet` model.** ~~This table exists, is referenced
   in billing webhook comments, and is otherwise completely unused. Build
   the actual link: when ArcWallet first authenticates a user, create a
   `Wallet` row tying `provider`/`providerWalletId` to the `Identity`, so
   ArcVerify (or any other consumer) can later ask "does this identity have
-  a linked wallet, and which DID(s) does it control."
+  a linked wallet, and which DID(s) does it control."~~
+  **✅ Done — `register-wallet-did.flow.ts` creates both the
+  `DecentralizedIdentifier` (identity-owned did:key) and the `Wallet` row
+  in the same transaction. `POST /identity/wallet/did` exposes it.**
+
 - **Presentation, not full OIDC4VP.** ArcVerify needs to ask ArcWallet
   "show me credential X" and get a presentable, verifiable response. You
   already have `verifyCredentialFlow`, which does real signature + status
@@ -234,11 +248,18 @@ paths specifically, since those are the ones every other product depends on.
 - BBS+ / selective-disclosure-beyond-SD-JWT — SD-JWT VC is already
   implemented correctly and is the more practically wallet-compatible
   format right now; revisit BBS+ if a specific consumer needs it.
-- `did:key` / `did:jwk` — add when a real consumer needs a DID method
-  ArcID doesn't control resolution for; `did:web` covers your own-issued
-  DIDs fine for a first-party wallet.
+- `did:jwk` — add if a consumer needs JWK-encoded DIDs specifically;
+  `did:key` is already implemented and sufficient for wallet-originated
+  identity-owned DIDs. See `src/lib/multibase.ts` and
+  `src/modules/identity/flows/register-wallet-did.flow.ts` for the
+  multicodec/multibase building blocks.
 - Full OIDC4VCI/OIDC4VP spec compliance — revisit once ArcWallet is live
   and you have a concrete second wallet (or external consumer) that
   actually needs standards compliance rather than your own offer-shaped API.
+  The presentation envelope design in `docs/planning/presentation-envelope-design.md`
+  defines the lightweight v1 approach. Build when needed.
+- `tenantId` on `TenantSigningKey` identity-scoped branching — permanently
+  abandoned per the non-custodial architecture decision. See
+  `signing.service.ts`'s `loadSigningKey` guard.
 - OPA/Cedar policy engine, SCIM, Terraform provider, CLI — all real v2+
   platform features, none block ArcWallet/ArcVerify shipping.

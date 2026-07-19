@@ -30,6 +30,22 @@ export const passkeyRegisterFlow: Flow<
       );
     }
 
+    // ── TenantPolicy.allowPasskeys enforcement ───────────────────────────────
+    // Only blocks NEW passkey registration — existing passkeys can still be
+    // used for authentication.  The schema default is true, so null means
+    // no restriction.
+    if (ctx.tenantId) {
+      const policy = await ctx.db.tenantPolicy.findUnique({
+        where: { tenantId: ctx.tenantId },
+        select: { allowPasskeys: true },
+      });
+      if (policy && policy.allowPasskeys === false) {
+        throw ApiError.forbidden(
+          "Passkey registration is disabled for this tenant",
+        );
+      }
+    }
+
     // Retrieve and atomically delete the server-stored challenge.
     // Returns null if: not found, expired, wrong ceremony, or wrong user.
     const stored = await consumeChallenge(ctx.identityId, "registration");

@@ -7,11 +7,16 @@
 //
 // The requirePlan("PRO") guard runs first. SYSTEM ADMINs always have ENTERPRISE
 // plan in their JWT (seeded that way), so they pass automatically.
+//
+// Business logic (SYSTEM-admin check + query) lives in
+// query-audit-logs.flow.ts — see that file for a note on the ad-hoc role
+// check it still contains pending real RBAC.
 import type { FastifyInstance } from "fastify";
-import { AuditQuerySchema } from "../validators/audit.schemas";
-import { AuditRepository } from "../repositories/audit.repository";
-import { presentAuditLog } from "../presenters/audit.presenter";
 import { z } from "zod";
+import { flowExecutor } from "@/core/flows";
+import { AuditQuerySchema } from "../validators/audit.schemas";
+import { presentAuditLog } from "../presenters/audit.presenter";
+import { queryAuditLogsFlow } from "../flows/query-audit-logs.flow";
 
 export async function auditRoute(fastify: FastifyInstance) {
   fastify.get(
@@ -40,29 +45,18 @@ export async function auditRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const query = AuditQuerySchema.parse(req.query);
 
-      // SYSTEM ADMINs can filter by any identity or tenant.
-      // PRO/ENTERPRISE tenant admins see their own tenant's logs only.
-      const systemMembership = await fastify.db.tenantMembership.findFirst({
-        where: {
-          identityId: req.identity.id,
-          tenantId: "SYSTEM",
-          status: "ACTIVE",
+      const result = await flowExecutor.run(
+        queryAuditLogsFlow,
+        {
+          query,
+          requesterIdentityId: req.identity.id,
+          requesterTenantId: req.identity.tenantId ?? null,
         },
-        include: { role: { select: { name: true } } },
-      });
-      const isSystemAdmin = systemMembership?.role.name === "ADMIN";
-
-      const auditRepo = new AuditRepository(fastify.db);
-      const result = await auditRepo.query({
-        identityId: isSystemAdmin ? query.identityId : req.identity.id,
-        tenantId: isSystemAdmin
-          ? query.tenantId
-          : (req.identity.tenantId ?? undefined),
-        from: query.from ? new Date(query.from) : undefined,
-        to: query.to ? new Date(query.to) : undefined,
-        page: query.page,
-        limit: query.limit,
-      });
+        {
+          tenantId: req.identity.tenantId ?? null,
+          identityId: req.identity.id,
+        },
+      );
 
       return reply.send({
         success: true,

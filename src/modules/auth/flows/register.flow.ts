@@ -5,6 +5,7 @@ import { config } from "@/core/config";
 import { RegisterSchema, IdentityDtoSchema } from "../validators/auth.schemas";
 import { IdentityRepository } from "../repositories/identity.repository";
 import { hashPassword } from "../services/password.service";
+import { enforceSystemPasswordRules } from "@/lib/security/password-rules";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
 import { ApiError } from "@/core/errors";
@@ -26,6 +27,31 @@ export const registerFlow: Flow<Input, Output> = {
 
     if (await identityRepo.existsByEmail(input.email)) {
       throw ApiError.conflict("An account with this email already exists");
+    }
+
+    // TenantPolicy.passwordRules enforcement — see password-rules.ts for
+    // why this is scoped to the SYSTEM tenant's policy.
+    await enforceSystemPasswordRules(ctx.db, input.password);
+
+    // ── TenantPolicy.allowedEmailDomains enforcement ──────────────────────────
+    // New registrations are always scoped to the SYSTEM tenant, so we check
+    // the SYSTEM tenant's policy.  Empty array / null means no restriction.
+    const regPolicy = await ctx.db.tenantPolicy.findUnique({
+      where: { tenantId: SYSTEM_TENANT_ID },
+      select: { allowedEmailDomains: true },
+    });
+
+    const allowedDomains = regPolicy?.allowedEmailDomains ?? [];
+    if (allowedDomains.length > 0) {
+      const atIndex = input.email.indexOf("@");
+      const domain = atIndex >= 0 ? input.email.slice(atIndex + 1) : "";
+      if (!domain || !allowedDomains.includes(domain)) {
+        throw new ApiError(
+          "Registration from this email domain is not allowed",
+          400,
+          "EMAIL_DOMAIN_NOT_ALLOWED",
+        );
+      }
     }
 
     const passwordHash = await hashPassword(input.password);

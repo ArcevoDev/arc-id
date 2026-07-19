@@ -38,7 +38,10 @@ export async function onboardingFlowRoute(fastify: FastifyInstance) {
   fastify.post(
     "/:tenantId/projects/:projectId/onboarding-flows",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("onboarding:manage"),
+      ],
       schema: {
         tags: ["Onboarding Flows"],
         summary: "Create an onboarding flow for a project",
@@ -56,7 +59,6 @@ export async function onboardingFlowRoute(fastify: FastifyInstance) {
       const body = req.body as z.infer<typeof CreateOnboardingFlowSchema>;
 
       const projectService = new ProjectService(fastify.db);
-      await projectService.assertMembership(tenantId, req.identity.id, "ADMIN");
       // Confirm the project actually belongs to this tenant before attaching a flow.
       await projectService.getById(tenantId, projectId);
 
@@ -143,7 +145,10 @@ export async function onboardingFlowRoute(fastify: FastifyInstance) {
   fastify.patch(
     "/:tenantId/projects/:projectId/onboarding-flows/:flowId",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("onboarding:manage"),
+      ],
       schema: {
         tags: ["Onboarding Flows"],
         summary: "Update an onboarding flow",
@@ -162,7 +167,6 @@ export async function onboardingFlowRoute(fastify: FastifyInstance) {
       const body = req.body as z.infer<typeof UpdateOnboardingFlowSchema>;
 
       const projectService = new ProjectService(fastify.db);
-      await projectService.assertMembership(tenantId, req.identity.id, "ADMIN");
       await projectService.getById(tenantId, projectId);
 
       const onboardingService = new OnboardingService(fastify.db);
@@ -174,7 +178,10 @@ export async function onboardingFlowRoute(fastify: FastifyInstance) {
   fastify.delete(
     "/:tenantId/projects/:projectId/onboarding-flows/:flowId",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("onboarding:manage"),
+      ],
       schema: {
         tags: ["Onboarding Flows"],
         summary:
@@ -192,7 +199,6 @@ export async function onboardingFlowRoute(fastify: FastifyInstance) {
       };
 
       const projectService = new ProjectService(fastify.db);
-      await projectService.assertMembership(tenantId, req.identity.id, "ADMIN");
       await projectService.getById(tenantId, projectId);
 
       const onboardingService = new OnboardingService(fastify.db);

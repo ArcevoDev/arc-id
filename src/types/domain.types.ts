@@ -3,7 +3,7 @@ import {
   SubscriptionPlan,
   AuditLogAction,
   VcFormat,
-} from "@/prisma-client";
+} from "@prisma-client";
 
 export interface IdentityProfile {
   id: string;

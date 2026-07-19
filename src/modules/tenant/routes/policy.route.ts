@@ -39,7 +39,10 @@ export async function policyRoute(fastify: FastifyInstance) {
   fastify.patch(
     "/:tenantId/policy",
     {
-      preHandler: fastify.auth.requireUser,
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("policy:update"),
+      ],
       schema: {
         tags: ["Tenant Management Architecture"],
         summary:
@@ -61,9 +64,6 @@ export async function policyRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { tenantId } = req.params as { tenantId: string };
       const body = req.body as Record<string, any>;
-
-      const tenantService = new TenantService(fastify.db);
-      await tenantService.assertMembership(tenantId, req.identity.id, "ADMIN");
 
       // Upsert — create if none exists, update if one does
       const policy = await fastify.db.tenantPolicy.upsert({

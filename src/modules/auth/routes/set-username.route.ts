@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { setUsernameFlow } from "../flows/set-username.flow";
 import { SetUsernameSchema } from "../validators/auth.schemas";
-import { FlowExecutor } from "@/core/flows";
+import { flowExecutor } from "@/core/flows";
 
 export async function setUsernameRoute(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -16,15 +16,13 @@ export async function setUsernameRoute(fastify: FastifyInstance) {
         tags: ["auth"],
         summary: "Set or update the authenticated user's username",
       },
-      onRequest: [fastify.authenticate],
+      preHandler: fastify.auth.requireUser,
     },
     async (request, reply) => {
-      const result = await FlowExecutor.execute(setUsernameFlow, request.body, {
-        db: fastify.db,
+      const result = await flowExecutor.run(setUsernameFlow, request.body, {
         identityId: request.identity.id,
+        tenantId: request.identity.tenantId,
         ip: request.ip,
-        tenantId: request.identity.tenantId ?? null,
-        requestId: request.id,
       });
       return reply.code(200).send(result);
     },

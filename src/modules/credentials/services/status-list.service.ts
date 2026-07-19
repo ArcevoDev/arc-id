@@ -1,5 +1,5 @@
 import type { DbClient } from "@/lib/db-client";
-import type { StatusPurpose } from "@/prisma-client";
+import type { StatusPurpose } from "@prisma-client";
 import { ApiError } from "@/core/errors/api-error";
 import { deflateSync, inflateSync } from "zlib";
 import { randomUUID } from "crypto";

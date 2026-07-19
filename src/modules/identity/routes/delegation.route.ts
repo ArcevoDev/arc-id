@@ -1,85 +1,61 @@
 // src/modules/identity/routes/delegation.route.ts
-// AccessDelegation — allows a user to grant scoped access to another identity.
+//
+// Delegation endpoints — planned feature, not yet implemented.
+// Registered here so identity.plugin.ts can import it without a missing-
+// module TS error. Returns 501 consistently with other planned-feature
+// stubs in the codebase (social OAuth, IDP federation).
+//
+// When implementing: delegations allow an identity to grant a limited
+// set of OAuth scopes to another identity (or service) without sharing
+// credentials — similar to Google's delegated access model.
+// The planned schema: a Delegation model with grantor/grantee identityId,
+// scopes[], expiresAt, and revoked.
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ApiError } from "@/core/errors";
-import { AuditLogAction } from "@/prisma-client";
 
 export async function delegationRoute(fastify: FastifyInstance) {
-  // GET /identity/delegations — list delegations you've granted
+  // GET /identity/delegations — list delegations granted by this identity
   fastify.get(
     "/delegations",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["Identity Vault"],
-        summary: "List access delegations you have granted",
+        tags: ["Identity"],
+        summary:
+          "List delegations granted by this identity [not yet implemented]",
         security: [{ bearerAuth: [] }],
         response: {
-          200: z.object({ success: z.boolean(), data: z.array(z.any()) }),
+          501: z.object({ error: z.string(), message: z.string() }),
         },
       },
     },
-    async (req, reply) => {
-      const delegations = await fastify.db.accessDelegation.findMany({
-        where: { grantorId: req.identity.id },
-        include: { grantee: { select: { primaryEmail: true, name: true } } },
+    async (_req, reply) => {
+      return reply.status(501).send({
+        error: "NOT_IMPLEMENTED",
+        message: "Delegation grants are not yet available.",
       });
-      return reply.send({ success: true, data: delegations });
     },
   );
 
-  // POST /identity/delegations — grant access to another identity
+  // POST /identity/delegations — create a new delegation grant
   fastify.post(
     "/delegations",
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["Identity Vault"],
-        summary: "Grant another identity scoped access to your resources",
+        tags: ["Identity"],
+        summary: "Create a delegation grant [not yet implemented]",
         security: [{ bearerAuth: [] }],
-        body: z.object({
-          delegateIdentityId: z.string().min(1),
-          scopes: z.array(z.string()).min(1),
-          expiresAt: z.string().datetime().optional(),
-        }),
-        response: { 201: z.object({ success: z.boolean(), data: z.any() }) },
+        response: {
+          501: z.object({ error: z.string(), message: z.string() }),
+        },
       },
     },
-    async (req, reply) => {
-      const body = req.body as any;
-
-      const delegate = await fastify.db.identity.findUnique({
-        where: { id: body.delegateIdentityId },
-        select: { id: true },
+    async (_req, reply) => {
+      return reply.status(501).send({
+        error: "NOT_IMPLEMENTED",
+        message: "Delegation grants are not yet available.",
       });
-      if (!delegate) throw ApiError.notFound("Delegate identity not found");
-
-      const delegation = await fastify.db.accessDelegation.create({
-        data: {
-          grantorId: req.identity.id,
-          granteeId: body.delegateIdentityId,
-          scopes: body.scopes,
-          expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
-        },
-      });
-
-      // Explicit type assertion using the imported AuditLogAction enum
-      void fastify.db.auditLog
-        .create({
-          data: {
-            actionId: "DELEGATION_GRANTED" as AuditLogAction,
-            identityId: req.identity.id,
-            ip: req.ip ?? "0.0.0.0",
-            metadata: {
-              delegateId: body.delegateIdentityId,
-              scopes: body.scopes,
-            },
-          },
-        })
-        .catch(() => {});
-
-      return reply.status(201).send({ success: true, data: delegation });
     },
   );
 
@@ -89,23 +65,20 @@ export async function delegationRoute(fastify: FastifyInstance) {
     {
       preHandler: fastify.auth.requireUser,
       schema: {
-        tags: ["Identity Vault"],
-        summary: "Revoke a previously granted delegation",
+        tags: ["Identity"],
+        summary: "Revoke a delegation grant [not yet implemented]",
         security: [{ bearerAuth: [] }],
-        params: z.object({ id: z.string().min(1) }),
-        response: { 200: z.object({ success: z.boolean() }) },
+        params: z.object({ id: z.string() }),
+        response: {
+          501: z.object({ error: z.string(), message: z.string() }),
+        },
       },
     },
-    async (req, reply) => {
-      const { id } = req.params as { id: string };
-
-      const result = await fastify.db.accessDelegation.updateMany({
-        where: { id, grantorId: req.identity.id },
-        data: { expiresAt: new Date() },
+    async (_req, reply) => {
+      return reply.status(501).send({
+        error: "NOT_IMPLEMENTED",
+        message: "Delegation grants are not yet available.",
       });
-
-      if (result.count === 0) throw ApiError.notFound("Delegation not found");
-      return reply.send({ success: true });
     },
   );
 }

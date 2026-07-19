@@ -10,7 +10,7 @@
 // that run outside the HTTP server), instantiate a new PrismaClient directly
 // in that script rather than importing from here.
 
-import { PrismaClient } from "@/prisma-client";
+import { PrismaClient } from "@prisma-client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { config } from "@/core/config";

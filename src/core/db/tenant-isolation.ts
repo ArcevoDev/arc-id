@@ -1,5 +1,5 @@
 // src/core/db/tenant-isolation.ts
-import { Prisma, PrismaClient } from "@/prisma-client";
+import { Prisma, PrismaClient } from "@prisma-client";
 import { ApiError } from "@/core/errors";
 
 const REQUIRED_TENANT_MODELS = new Set([
