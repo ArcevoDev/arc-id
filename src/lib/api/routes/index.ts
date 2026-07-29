@@ -72,6 +72,7 @@ export const ROUTES = {
     client: (id: string) => `/oauth/clients/${id}`,
   },
   credentials: {
+    list: "/credentials",
     issue: "/credentials/issue",
     verify: "/credentials/verify",
     revoke: "/credentials/revoke",

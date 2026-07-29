@@ -12,12 +12,15 @@ export async function errorHandler(
   request: FastifyRequest,
   reply: FastifyReply,
 ) {
+  const requestId = request.id;
+
   // 1. Structural Domain API Failures
   if (error instanceof ApiError) {
     return reply.status(error.statusCode).send({
       success: false,
       error: error.code,
       message: error.message,
+      requestId,
     });
   }
 
@@ -31,6 +34,7 @@ export async function errorHandler(
         path: e.path.join("."),
         message: e.message,
       })),
+      requestId,
     });
   }
 
@@ -44,11 +48,12 @@ export async function errorHandler(
       success: false,
       error: "BAD_REQUEST",
       message: error.message,
+      requestId,
     });
   }
 
   // 4. Default Crash-safety Boundary
-  request.log.error({ err: error }, "[UNHANDLED RUNTIME FAILURE]");
+  request.log.error({ err: error, requestId }, "[UNHANDLED RUNTIME FAILURE]");
   return reply.status(500).send({
     success: false,
     error: "INTERNAL_SERVER_ERROR",
@@ -56,5 +61,6 @@ export async function errorHandler(
       process.env.NODE_ENV === "production"
         ? "An unexpected error occurred"
         : error.message,
+    requestId,
   });
 }

@@ -19,6 +19,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import cookie from "@fastify/cookie";
+import rateLimit from "@fastify/rate-limit";
+import metrics from "fastify-metrics";
 import underPressure from "@fastify/under-pressure";
 
 import {
@@ -123,6 +125,11 @@ export async function buildServer() {
     secret: config.security.cookieSecret,
     parseOptions: {},
   });
+
+  // ── Prometheus metrics ──────────────────────────────────────────────────────
+  // Exposes GET /metrics in Prometheus exposition format. Auto-collects request
+  // duration histograms, error rates, and request counts per route + method.
+  await server.register(metrics, { endpoint: "/metrics" });
 
   // ── Infrastructure ─────────────────────────────────────────────────────────
   await server.register(dbPlugin);

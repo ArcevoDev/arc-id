@@ -87,6 +87,12 @@ enum CredentialOfferStatus {
   REVOKED
 }
 
+enum VerifySessionStatus {
+  PENDING
+  CONSUMED
+  EXPIRED
+}
+
 enum AuditLogAction {
   USER_LOGIN_SUCCESS
   USER_LOGIN_FAILED
@@ -642,6 +648,7 @@ model AccessToken {
   token      String   @unique
   clientId   String
   identityId String
+  sessionId  String?  // Allows per-session access token revocation
   scopes     Json
   audience   Json?
   issuedAt   DateTime @default(now())
@@ -654,6 +661,7 @@ model AccessToken {
 
   @@index([token, revoked])
   @@index([identityId, clientId])
+  @@index([sessionId])
   @@index([expiresAt])
 }
 
@@ -760,6 +768,20 @@ model Session {
   @@index([identityId])
   @@index([expiresAt])
   @@index([valid])
+}
+
+model VerifySession {
+  id            String              @id @default(cuid())
+  challenge     String
+  credentialRef String?
+  identityId    String?
+  status        VerifySessionStatus @default(PENDING)
+  expiresAt     DateTime
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([expiresAt])
+  @@index([status])
 }
 
 model OAuthAccount {

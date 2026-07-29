@@ -50,4 +50,8 @@ next-env.d.ts
 /prisma/migrations/
 /prisma/migrations/*.sql
 
-*.txt
+# design standards
+ArcevoCirqle_Design_Standards_Manual_v1.0..txt
+
+# agent state
+.agent/
