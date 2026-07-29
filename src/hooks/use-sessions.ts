@@ -1,51 +1,21 @@
-// src/hooks/use-sessions.ts
-// Pages → hooks → sdk. Wraps authSdk.listSessions + revokeSession.
-// Follows the same pattern as use-audit.ts and use-oauth-tokens.ts.
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { authSdk, SdkError } from "@/sdk";
 
-export interface Session {
-  id: string;
-  userAgent: string | null;
-  ip: string | null;
-  valid: boolean;
-  authLevel: string | null;
-  createdAt: string;
-  expiresAt: string;
-}
+import { useCallback } from "react";
+import { useAuthStore } from "@/store/auth.store";
+import { auth } from "@/sdk";
 
 export function useSessions() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const accessToken = useAuthStore((s) => s.accessToken);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await authSdk.listSessions();
-      setSessions(Array.isArray(data) ? data : ((data as any)?.data ?? []));
-    } catch (err) {
-      setError(
-        err instanceof SdkError ? err.message : "Failed to load sessions",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const list = useCallback(async () => {
+    if (!accessToken) return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
+    return auth.listSessions();
+  }, [accessToken]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const revoke = useCallback(async (sessionId: string) => {
+    if (!accessToken) return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
+    return auth.revokeSession(sessionId);
+  }, [accessToken]);
 
-  const revoke = useCallback(
-    async (id: string) => {
-      await authSdk.revokeSession(id);
-      await load();
-    },
-    [load],
-  );
-
-  return { sessions, loading, error, refresh: load, revoke };
+  return { list, revoke };
 }

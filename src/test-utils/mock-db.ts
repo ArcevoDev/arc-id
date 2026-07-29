@@ -10,7 +10,8 @@ function modelProxy(name: string): Record<string, any> {
   return new Proxy<Record<string, any>>(
     {},
     {
-      get(target, key: string) {
+      get(target, key: string | symbol) {
+        if (typeof key === "symbol") return undefined;
         if (!target[key]) target[key] = vi.fn().mockName(`${name}.${key}`);
         return target[key];
       },
@@ -36,16 +37,21 @@ export function createMockDb() {
     bitstringStatusList: modelProxy("bitstringStatusList"),
     statusListEntry: modelProxy("statusListEntry"),
     verifiableCredential: modelProxy("verifiableCredential"),
+    credentialOffer: modelProxy("credentialOffer"),
+    authorizationCode: modelProxy("authorizationCode"),
     revokedJti: modelProxy("revokedJti"),
     emailToken: modelProxy("emailToken"),
     passkey: modelProxy("passkey"),
     mfa: modelProxy("mfa"),
     mfaRecoveryCode: modelProxy("mfaRecoveryCode"),
+    oAuthConsent: modelProxy("oAuthConsent"),
+    clientRedirectUri: modelProxy("clientRedirectUri"),
     tenantPolicy: modelProxy("tenantPolicy"),
     webhookEndpoint: modelProxy("webhookEndpoint"),
     webhookEvent: modelProxy("webhookEvent"),
     externalBillingIntegration: modelProxy("externalBillingIntegration"),
     externalIdentifier: modelProxy("externalIdentifier"),
+    wallet: modelProxy("wallet"),
     auditLog: modelProxy("auditLog"),
     $transaction: vi.fn(async (fn: (tx: any) => any) => fn(mock)),
     $disconnect: vi.fn(),

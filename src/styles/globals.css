@@ -4,7 +4,7 @@
  * --font-sans was set to var(--font-sans) — a self-reference resolving to
  * nothing. Now maps to --font-inter which is set by next/font on <html>.
  * --font-mono maps to --font-mono from JetBrains Mono next/font variable.
- * --font-heading maps to Inter too (heavier weight applied via font-bold class).
+ * --font-heading now maps to Montserrat (loaded by next/font via --font-heading).
  */
 
 @import "tailwindcss";
@@ -16,7 +16,7 @@
   /* ── Typography ──────────────────────────────────────────────────────────── */
   --font-sans: var(--font-inter); /* Inter — loaded by next/font */
   --font-mono: var(--font-mono); /* JetBrains Mono — loaded by next/font */
-  --font-heading: var(--font-inter); /* Same as sans — weight via class */
+  --font-heading: var(--font-heading); /* Montserrat — loaded by next/font */
 
   /* ── Core semantic colour tokens ─────────────────────────────────────────── */
   --color-background: var(--background);

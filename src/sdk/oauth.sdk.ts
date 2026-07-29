@@ -1,27 +1,82 @@
-// src/sdk/oauth.sdk.ts
-import { sdk } from "./client";
+import type { SdkClient } from "./client";
 
-export const oauthSdk = {
-  listClients: () => sdk.get<any[]>("/api/v1/oauth/clients"),
-  createClient: (data: any) => sdk.post<any>("/api/v1/oauth/clients", data),
-  updateClient: (id: string, data: any) =>
-    sdk.patch<any>(`/api/v1/oauth/clients/${id}`, data),
-  deleteClient: (id: string) => sdk.delete<void>(`/api/v1/oauth/clients/${id}`),
-  listConsents: () => sdk.get<any[]>("/api/v1/oauth/consents"),
-  revokeConsent: (id: string) =>
-    sdk.delete<void>(`/api/v1/oauth/consents/${id}`),
+export function createOAuthSdk(client: SdkClient) {
+  return {
+    /**
+     * GET /oauth/clients — list OAuth clients for your active tenant.
+     */
+    listClients: () => client.get<any[]>("/oauth/clients"),
 
-  // RFC 7009 — revoke by raw token value. Used for confidential-client /
-  // direct-token-handling flows. NOT used by the Active Tokens UI table,
-  // since the UI never has (and shouldn't display) a raw token value.
-  revokeToken: (token: string) =>
-    sdk.post<void>("/api/v1/oauth/revoke", { token }),
+    /**
+     * POST /oauth/clients — register a new OAuth client.
+     * Requires PRO plan + client:create permission.
+     */
+    createClient: (data: {
+      name: string;
+      redirectUris: string[];
+      grantTypes?: ("authorization_code" | "refresh_token" | "client_credentials")[];
+      scopes?: string[];
+      public?: boolean;
+      requirePkce?: boolean;
+      tenantId?: string;
+      projectId?: string;
+    }) => client.post("/oauth/clients", data),
 
-  // Active Tokens page — list the caller's active access tokens.
-  // Each row's `id` is what <ActiveTokenRow onRevoke> passes to revokeTokenById.
-  listTokens: () => sdk.get<any[]>("/api/v1/oauth/tokens"),
+    /**
+     * DELETE /oauth/clients/:clientId — delete an OAuth client.
+     * Requires PRO plan + client:delete permission.
+     */
+    deleteClient: (clientId: string) =>
+      client.delete(`/oauth/clients/${clientId}`),
 
-  // Revoke one of the caller's own active access tokens by id.
-  revokeTokenById: (id: string) =>
-    sdk.delete<void>(`/api/v1/oauth/tokens/${id}`),
-};
+    /**
+     * GET /oauth/tokens — list the caller's active access tokens.
+     */
+    listTokens: () => client.get<any[]>("/oauth/tokens"),
+
+    /**
+     * DELETE /oauth/tokens/:id — revoke one of the caller's active tokens by DB row id.
+     */
+    revokeToken: (tokenId: string) =>
+      client.delete(`/oauth/tokens/${tokenId}`),
+
+    /**
+     * POST /oauth/consent — grant OAuth consent scopes.
+     */
+    grantConsent: (data: { clientId: string; scopes: string[] }) =>
+      client.post("/oauth/consent", data),
+
+    /**
+     * DELETE /oauth/consent/:clientId — revoke consent for a client.
+     */
+    revokeConsent: (clientId: string) =>
+      client.delete(`/oauth/consent/${clientId}`),
+
+    /**
+     * GET /oauth/consents — list granted consents.
+     */
+    listConsents: () => client.get<any[]>("/oauth/consents"),
+
+    /**
+     * POST /oauth/introspect — RFC 7662 token introspection.
+     */
+    introspectToken: (token: string) =>
+      client.post<any>("/oauth/introspect", { token }),
+
+    /**
+     * POST /oauth/revoke — RFC 7009 token revocation.
+     */
+    revokeTokenRFC7009: (token: string, tokenTypeHint?: string) =>
+      client.post("/oauth/revoke", { token, token_type_hint: tokenTypeHint }),
+
+    /**
+     * GET /oauth/userinfo — OIDC UserInfo endpoint.
+     */
+    userinfo: () => client.get<any>("/oauth/userinfo"),
+
+    /**
+     * GET /oauth/jwks — RFC 7517 JWKS (global signing keys).
+     */
+    jwks: () => client.get<any>("/oauth/jwks"),
+  };
+}

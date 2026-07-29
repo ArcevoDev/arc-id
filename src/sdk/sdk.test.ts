@@ -273,13 +273,6 @@ describe("tenant.sdk", () => {
     expect(calls[0]).toEqual(["GET", "/tenants/acme", undefined]);
   });
 
-  it("list intentionally omitted — no backend route exists", async () => {
-    const { createTenantSdk } = await import("./tenant.sdk");
-    const { client } = mockClient();
-    const sdk = createTenantSdk(client);
-    expect("list" in sdk).toBe(false);
-  });
-
   it("create: POST /tenants", async () => {
     const { createTenantSdk } = await import("./tenant.sdk");
     const { calls, client } = mockClient();
@@ -382,5 +375,306 @@ describe("oauth.sdk", () => {
     const sdk = createOAuthSdk(client);
     await sdk.revokeToken("tok-1");
     expect(calls[0]).toEqual(["DELETE", "/oauth/tokens/tok-1", undefined]);
+  });
+});
+
+// ── tenant.sdk.ts — additions ───────────────────────────────────────────────
+
+describe("tenant.sdk — added methods", () => {
+  it("list: GET /tenants", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.list();
+    expect(calls[0]).toEqual(["GET", "/tenants", undefined]);
+  });
+
+  it("listMembers: GET /tenants/:tenantId/members", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.listMembers("tnt-1");
+    expect(calls[0]).toEqual(["GET", "/tenants/tnt-1/members", undefined]);
+  });
+
+  it("addMember: POST /tenants/:tenantId/members", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.addMember("tnt-1", { identityId: "id-1", roleId: "role-1" });
+    expect(calls[0]).toEqual(["POST", "/tenants/tnt-1/members", { identityId: "id-1", roleId: "role-1" }]);
+  });
+
+  it("removeMember: DELETE /tenants/:tenantId/members/:identityId", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.removeMember("tnt-1", "id-1");
+    expect(calls[0]).toEqual(["DELETE", "/tenants/tnt-1/members/id-1", undefined]);
+  });
+
+  it("getPolicy: GET /tenants/:tenantId/policy", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.getPolicy("tnt-1");
+    expect(calls[0]).toEqual(["GET", "/tenants/tnt-1/policy", undefined]);
+  });
+
+  it("updatePolicy: PATCH /tenants/:tenantId/policy", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.updatePolicy("tnt-1", { requireMfa: true });
+    expect(calls[0]).toEqual(["PATCH", "/tenants/tnt-1/policy", { requireMfa: true }]);
+  });
+
+  it("acceptInvite: POST /tenants/invites/accept", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.acceptInvite({ token: "inv-tok" });
+    expect(calls[0]).toEqual(["POST", "/tenants/invites/accept", { token: "inv-tok" }]);
+  });
+
+  it("getDid: GET /tenants/:tenantId/did", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.getDid("tnt-1");
+    expect(calls[0]).toEqual(["GET", "/tenants/tnt-1/did", undefined]);
+  });
+
+  it("provisionDid: POST /tenants/:tenantId/did", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.provisionDid("tnt-1", { domain: "example.com" });
+    expect(calls[0]).toEqual(["POST", "/tenants/tnt-1/did", { domain: "example.com" }]);
+  });
+
+  it("listSigningKeys: GET /tenants/:tenantId/signing-keys", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.listSigningKeys("tnt-1");
+    expect(calls[0]).toEqual(["GET", "/tenants/tnt-1/signing-keys", undefined]);
+  });
+
+  it("revokeSigningKey: DELETE /tenants/:tenantId/signing-keys/:kid", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.revokeSigningKey("tnt-1", "kid-1");
+    expect(calls[0]).toEqual(["DELETE", "/tenants/tnt-1/signing-keys/kid-1", undefined]);
+  });
+
+  it("listProjects: GET /tenants/:tenantId/projects", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.listProjects("tnt-1");
+    expect(calls[0]).toEqual(["GET", "/tenants/tnt-1/projects", undefined]);
+  });
+
+  it("createProject: POST /tenants/:tenantId/projects", async () => {
+    const { createTenantSdk } = await import("./tenant.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createTenantSdk(client);
+    await sdk.createProject("tnt-1", { name: "My Project" });
+    expect(calls[0]).toEqual(["POST", "/tenants/tnt-1/projects", { name: "My Project" }]);
+  });
+});
+
+// ── auth.sdk.ts — added methods ─────────────────────────────────────────────
+
+describe("auth.sdk — added methods", () => {
+  it("mfaRecovery: POST /auth/mfa/recovery with code + sessionId", async () => {
+    const { createAuthSdk } = await import("./auth.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createAuthSdk(client);
+    await sdk.mfaRecovery("rec-code", "sid-1");
+    expect(calls[0]).toEqual(["POST", "/auth/mfa/recovery", { code: "rec-code", sessionId: "sid-1" }]);
+  });
+
+  it("changePassword: POST /auth/password/change", async () => {
+    const { createAuthSdk } = await import("./auth.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createAuthSdk(client);
+    await sdk.changePassword("oldPass1", "newPass2");
+    expect(calls[0]).toEqual(["POST", "/auth/password/change", { currentPassword: "oldPass1", newPassword: "newPass2" }]);
+  });
+
+  it("requestMagicLink: POST /auth/magic-link/request", async () => {
+    const { createAuthSdk } = await import("./auth.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createAuthSdk(client);
+    await sdk.requestMagicLink("a@b.com");
+    expect(calls[0]).toEqual(["POST", "/auth/magic-link/request", { email: "a@b.com" }]);
+  });
+
+  it("authenticateMagicLink: POST /auth/magic-link with token", async () => {
+    const { createAuthSdk } = await import("./auth.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createAuthSdk(client);
+    await sdk.authenticateMagicLink("ml-tok");
+    expect(calls[0]).toEqual(["POST", "/auth/magic-link", { token: "ml-tok" }]);
+  });
+
+  it("setUsername: PATCH /auth/username", async () => {
+    const { createAuthSdk } = await import("./auth.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createAuthSdk(client);
+    await sdk.setUsername("Alice");
+    expect(calls[0]).toEqual(["PATCH", "/auth/username", { name: "Alice" }]);
+  });
+});
+
+// ── identity.sdk.ts — added methods ─────────────────────────────────────────
+
+describe("identity.sdk — added methods", () => {
+  it("updateProfile: PATCH /identity/profile", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.updateProfile({ name: "Alice", displayName: "Alice" });
+    expect(calls[0]).toEqual(["PATCH", "/identity/profile", { name: "Alice", displayName: "Alice" }]);
+  });
+
+  it("deleteAccount: DELETE /identity/profile", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.deleteAccount();
+    expect(calls[0]).toEqual(["DELETE", "/identity/profile", undefined]);
+  });
+
+  it("listDevices: GET /identity/devices", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.listDevices();
+    expect(calls[0]).toEqual(["GET", "/identity/devices", undefined]);
+  });
+
+  it("deleteDevice: DELETE /identity/devices/:id", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.deleteDevice("dev-1");
+    expect(calls[0]).toEqual(["DELETE", "/identity/devices/dev-1", undefined]);
+  });
+
+  it("listLinkedAccounts: GET /identity/linked-accounts", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.listLinkedAccounts();
+    expect(calls[0]).toEqual(["GET", "/identity/linked-accounts", undefined]);
+  });
+
+  it("unlinkLinkedAccount: DELETE /identity/linked-accounts/:id", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.unlinkLinkedAccount("link-1");
+    expect(calls[0]).toEqual(["DELETE", "/identity/linked-accounts/link-1", undefined]);
+  });
+
+  it("listExternalIds: GET /identity/external-ids", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.listExternalIds();
+    expect(calls[0]).toEqual(["GET", "/identity/external-ids", undefined]);
+  });
+
+  it("linkExternalId: POST /identity/external-ids", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.linkExternalId({ provider: "github", externalId: "gh-123" });
+    expect(calls[0]).toEqual(["POST", "/identity/external-ids", { provider: "github", externalId: "gh-123" }]);
+  });
+
+  it("unlinkExternalId: DELETE /identity/external-ids/:id", async () => {
+    const { createIdentitySdk } = await import("./identity.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdentitySdk(client);
+    await sdk.unlinkExternalId("ext-1");
+    expect(calls[0]).toEqual(["DELETE", "/identity/external-ids/ext-1", undefined]);
+  });
+});
+
+// ── webhooks.sdk.ts — added methods ─────────────────────────────────────────
+
+describe("webhooks.sdk — added methods", () => {
+  it("listEvents: GET /webhooks/events", async () => {
+    const { createWebhookSdk } = await import("./webhooks.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createWebhookSdk(client);
+    await sdk.listEvents();
+    expect(calls[0]).toEqual(["GET", "/webhooks/events", undefined]);
+  });
+
+  it("listEvents: includes query params", async () => {
+    const { createWebhookSdk } = await import("./webhooks.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createWebhookSdk(client);
+    await sdk.listEvents({ status: "failed", limit: 10 });
+    expect(calls[0]?.[1]).toContain("status=failed");
+    expect(calls[0]?.[1]).toContain("limit=10");
+  });
+
+  it("retryEvent: POST /webhooks/events/:id/retry", async () => {
+    const { createWebhookSdk } = await import("./webhooks.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createWebhookSdk(client);
+    await sdk.retryEvent("evt-1");
+    expect(calls[0]).toEqual(["POST", "/webhooks/events/evt-1/retry", undefined]);
+  });
+});
+
+// ── idp.sdk.ts ──────────────────────────────────────────────────────────────
+
+describe("idp.sdk", () => {
+  it("listConnections: GET /idp/connections", async () => {
+    const { createIdpSdk } = await import("./idp.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdpSdk(client);
+    await sdk.listConnections();
+    expect(calls[0]).toEqual(["GET", "/idp/connections", undefined]);
+  });
+
+  it("getConnection: GET /idp/connections/:id", async () => {
+    const { createIdpSdk } = await import("./idp.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdpSdk(client);
+    await sdk.getConnection("conn-1");
+    expect(calls[0]).toEqual(["GET", "/idp/connections/conn-1", undefined]);
+  });
+
+  it("createConnection: POST /idp/connections", async () => {
+    const { createIdpSdk } = await import("./idp.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdpSdk(client);
+    await sdk.createConnection({ protocol: "OIDC", providerName: "Google" });
+    expect(calls[0]).toEqual(["POST", "/idp/connections", { protocol: "OIDC", providerName: "Google" }]);
+  });
+
+  it("updateConnection: PATCH /idp/connections/:id", async () => {
+    const { createIdpSdk } = await import("./idp.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdpSdk(client);
+    await sdk.updateConnection("conn-1", { enabled: false });
+    expect(calls[0]).toEqual(["PATCH", "/idp/connections/conn-1", { enabled: false }]);
+  });
+
+  it("deleteConnection: DELETE /idp/connections/:id", async () => {
+    const { createIdpSdk } = await import("./idp.sdk");
+    const { calls, client } = mockClient();
+    const sdk = createIdpSdk(client);
+    await sdk.deleteConnection("conn-1");
+    expect(calls[0]).toEqual(["DELETE", "/idp/connections/conn-1", undefined]);
   });
 });

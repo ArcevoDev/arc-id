@@ -1,84 +1,112 @@
-// src/sdk/client.ts
-// Base HTTP client. Never import this in pages or components.
-// Pages → hooks → stores → sdk.
+/**
+ * ArcID SDK HTTP Client
+ *
+ * Pure TypeScript fetch wrapper with token refresh support.
+ * No React/Next.js dependencies — can be extracted as a standalone package.
+ */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
-export class SdkError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public code?: string,
-    public data?: unknown,
-  ) {
-    super(message);
-    this.name = "SdkError";
-  }
+export interface ApiError {
+  statusCode: number;
+  error: string;
+  message: string;
 }
 
-export type RequestOptions = Omit<RequestInit, "body"> & {
-  body?: unknown;
-};
+export type ApiResponse<T> = { data: T; error: null } | { data: null; error: ApiError };
 
-async function request<T>(
-  path: string,
-  options: RequestOptions = {},
-  getToken?: () => string | null,
-): Promise<T> {
-  const headers = new Headers({ "Content-Type": "application/json" });
+type TokenGetter = () => string | null;
+type TokenRefresher = () => Promise<string | null>;
+type OnAuthCleared = () => void;
 
-  const token =
-    getToken?.() ??
-    (typeof window !== "undefined"
-      ? localStorage.getItem("arcid:access_token")
-      : null);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-
-  const tenantId =
-    typeof window !== "undefined"
-      ? localStorage.getItem("arcid:tenant_id")
-      : null;
-  if (tenantId) headers.set("X-ArcID-Tenant-Id", tenantId);
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    body: options.body != null ? JSON.stringify(options.body) : undefined,
-  });
-
-  if (res.status === 204) return {} as T;
-
-  const json = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new SdkError(
-      res.status,
-      json.message ?? "Request failed",
-      json.error,
-      json,
-    );
-  }
-
-  return (json.data ?? json) as T;
+export interface SdkClientOptions {
+  baseUrl: string;
+  getAccessToken: TokenGetter;
+  refreshToken?: TokenRefresher;
+  onAuthCleared?: OnAuthCleared;
 }
 
-// Token key constants — single source of truth across the entire app
-export const TOKEN_KEYS = {
-  access: "arcid:access_token",
-  refresh: "arcid:refresh_token",
-  user: "arcid:user",
-  tenant: "arcid:tenant_id",
-  session: "arcid:session_id", // ← NEW: stores the sessionId for logout
-  mfaState: "arcid:mfa_session",
-} as const;
+export function createSdkClient(options: SdkClientOptions) {
+  const { baseUrl, getAccessToken, refreshToken, onAuthCleared } = options;
 
-export const sdk = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PATCH", body }),
-  put: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PUT", body }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
-};
+  async function request<T>(
+    method: string,
+    path: string,
+    body?: unknown
+  ): Promise<ApiResponse<T>> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    const token = getAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const url = `${baseUrl}${path}`;
+
+    try {
+      let res = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      // Attempt token refresh on 401
+      if (res.status === 401 && refreshToken) {
+        const newToken = await refreshToken();
+        if (newToken) {
+          headers["Authorization"] = `Bearer ${newToken}`;
+          res = await fetch(url, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+          });
+        } else {
+          onAuthCleared?.();
+          return {
+            data: null,
+            error: { statusCode: 401, error: "Unauthorized", message: "Session expired" },
+          };
+        }
+      }
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        return {
+          data: null,
+          error: {
+            statusCode: res.status,
+            error: errBody.error ?? "Unknown",
+            message: errBody.message ?? `Request failed with status ${res.status}`,
+          },
+        };
+      }
+
+      // Handle 204 No Content
+      if (res.status === 204) {
+        return { data: undefined as T, error: null };
+      }
+
+      const json = await res.json();
+      return { data: json as T, error: null };
+    } catch (err) {
+      return {
+        data: null,
+        error: {
+          statusCode: 0,
+          error: "NetworkError",
+          message: err instanceof Error ? err.message : "Unknown network error",
+        },
+      };
+    }
+  }
+
+  return {
+    get: <T>(path: string) => request<T>("GET", path),
+    post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
+    put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
+    patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
+    delete: <T>(path: string) => request<T>("DELETE", path),
+  };
+}
+
+export type SdkClient = ReturnType<typeof createSdkClient>;

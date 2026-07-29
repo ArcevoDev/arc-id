@@ -80,5 +80,27 @@ export function createAuthSdk(client: SdkClient) {
         ...credential,
       }),
 
+    /** POST /auth/mfa/recovery — use a recovery code to bypass MFA */
+    mfaRecovery: (code: string, sessionId: string) =>
+      client.post<{ accessToken: string; refreshToken: string; user: any }>("/auth/mfa/recovery", {
+        code,
+        sessionId,
+      }),
+
+    /** POST /auth/password/change — change password (requires elevated session) */
+    changePassword: (currentPassword: string, newPassword: string) =>
+      client.post("/auth/password/change", { currentPassword, newPassword }),
+
+    /** POST /auth/magic-link/request — request a magic link email */
+    requestMagicLink: (email: string) =>
+      client.post("/auth/magic-link/request", { email }),
+
+    /** POST /auth/magic-link — authenticate with a magic link token */
+    authenticateMagicLink: (token: string) =>
+      client.post<{ accessToken: string; refreshToken: string; user: any }>("/auth/magic-link", { token }),
+
+    /** PATCH /auth/username — set or update display name */
+    setUsername: (name: string) =>
+      client.patch("/auth/username", { name }),
   };
 }
