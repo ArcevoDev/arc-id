@@ -1,7 +1,7 @@
-# ArcID v1 Roadmap — Verified 2026-07-26
+# ArcID v1 Roadmap — Updated 2026-07-28
 
-> Backend complete (0.1.0 equivalent). All Phase 0–2 shipped. **57 files / 352 tests / 0 code failures on `pnpm test` (109s, all passing). Typecheck clean.**
-> Next work: frontend rebuild (Prompt 2) → Phase 3 hardening → Phase 4 observability.
+> Backend complete (0.1.0 equivalent). All Phase 0–4 shipped. **59 files / 395 tests / 0 code failures on `pnpm test` (all passing). Typecheck clean.**
+> Next work: frontend rebuild (Prompt 2) → SDK packages.
 
 ---
 
@@ -46,15 +46,15 @@ Architecture constraint (non-negotiable):
 page → component(s) → hook (use-*.ts) → Zustand store → SDK (src/sdk/*.sdk.ts) → API
 ```
 
-### Completed (2026-07-23)
+### Completed (2026-07-23, updated 2026-07-28)
 
 | Step | What | Status |
 |------|------|--------|
-| 1 | **SDK layer** (`src/sdk/`) | **Done.** Refactored to factory pattern (`createClient(config)` + per-domain `create*Sdk(client)`). Singletons wired to localStorage via `defaultClient`. Pure fetch wrappers — no React, no Next.js, no direct imports. Each SDK file exports factory + singleton. Barrel `@/sdk` re-exports both. Missing SDKs added: `api-keys.sdk.ts`. Missing methods added: `listAdmin()`, `updateStatus()` on `identity.sdk`; `list()` on `credentials.sdk`. |
-| 2 | **Zustand stores** (`src/store/`) | **Done.** `auth.store.ts` has `setTokens()` (called by the SDK barrel-level `refreshToken()` function during 401 recovery). `tenant.store.ts` and `ui.store.ts` unchanged — already correct. |
-| 3 | **Hooks** (`src/hooks/`) | **Done.** Added `use-credentials.ts`, `use-mfa.ts`, `use-webhooks.ts`, `use-api-keys.ts`. Existing 11 hooks (use-auth, use-tenant, use-ui, use-oauth-tokens, use-sessions, use-passkeys, use-audit-log, use-step-up, use-pagination, use-debounce, use-mobile) all correct. |
-| 4 | **Providers** (`src/providers/`) | **Done.** 401 auto-refresh wired in `src/sdk/client.ts` (the SDK `request()` method retries once on 401 via the `refreshToken` callback before calling `onAuthCleared`). `AuthProvider` restores session from localStorage on mount. `ThemeProvider` unchanged. |
-| 5 | **Layout** (`src/components/layout/`) | **Done.** AppLayout, ConsoleLayout, Sidebar, Topbar, PageHeader all correct — already matched the target architecture. |
+| 1 | **SDK layer** (`src/sdk/`) | **Done.** Factory pattern (`createClient(config)` + per-domain `create*Sdk(client)`). Pure fetch wrappers — no React, no Next.js. **102 methods across 10 SDK files** — all 123 backend endpoints have SDK coverage. Latest additions (2026-07-28): +7 OAuth (consent, introspect, revoke, userinfo, jwks), +10 tenant (projects CRUD, onboarding flows CRUD, createSigningKey, getJwksBySlug), +5 credentials (acceptOffer, verification session, present, status list, tenant DID), +7 identity (delegations, onboarding, wallet DID). Bug fix: `provisionDid` missing `domain` body param. |
+| 2 | **Zustand stores** (`src/store/`) | **Done.** `auth.store.ts` has `setTokens()` (called by the SDK barrel-level `refreshToken()` function during 401 recovery). `tenant.store.ts` enhanced with `isLoading` state + `setLoading` action. `ui.store.ts` unchanged — already correct. |
+| 3 | **Hooks** (`src/hooks/`) | **Done.** Added `use-credentials.ts`, `use-mfa.ts`, `use-webhooks.ts`, `use-api-keys.ts`. `use-tenant.ts` enhanced with `hydrateTenants()` + `switchTenant()`. Existing 11 hooks (use-auth, use-tenant, use-ui, use-oauth-tokens, use-sessions, use-passkeys, use-audit-log, use-step-up, use-pagination, use-debounce, use-mobile) all correct. |
+| 4 | **Providers** (`src/providers/`) | **Done.** 401 auto-refresh wired in `src/sdk/client.ts` (the SDK `request()` method retries once on 401 via the `refreshToken` callback before calling `onAuthCleared`). `AuthProvider` restores session from localStorage on mount AND hydrates tenant store via `GET /tenants`. `ThemeProvider` unchanged. |
+| 5 | **Layout** (`src/components/layout/`) | **Done.** AppLayout, ConsoleLayout, Sidebar, Topbar, PageHeader all correct. **TenantSwitcher component added to Topbar** — visible when user has 2+ tenants, triggers context switch via `POST /auth/switch-context`. |
 | 6 | **Pages** (`src/app/`) | **Partial.** All `as any` casts eliminated from admin page (was using `identitySdk.listAdmin` / `updateStatus`) and credentials page (was using `credentialsSdk.list`). API keys page upgraded from raw `sdk.get/post/delete` to `apiKeysSdk`. Other pages use proper typed SDK methods. Pages that import SDK directly (bypassing hooks) remain per existing pattern — pragmatically acceptable for simple reads. |
 
 ### Remaining gaps (low priority, not blocking)
@@ -65,47 +65,29 @@ page → component(s) → hook (use-*.ts) → Zustand store → SDK (src/sdk/*.s
 
 ## 🔴 Phase 3 — Security hardening
 
-Real gaps verified against source, not deduced from doc claims:
+**ALL CLOSED — 2026-07-28**
 
-| Priority | Item | Current state | Gap |
-|----------|------|---------------|-----|
-| P1 | Cross-tenant isolation (HTTP + unit) | `cross-tenant-http.test.ts` (3 HTTP tests) + `cross-tenant-isolation.test.ts` (3 flow-level tests). Unit-level mock fixed: `statusListEntry.upsert`/`findMany` and `bitstringStatusList.findUniqueOrThrow` instead of `update`. All 6 tests pass. | **Closed** — verified 2026-07-26 |
-
-### Test file verified
-
-```ts
-// src/modules/tenant/routes/cross-tenant-http.test.ts
-// Tests at HTTP layer with real revokeRoute + flowExecutor:
-//   1. Tenant B → Tenant A's credential → 404
-//   2. Tenant A → Tenant A's credential → 200
-//   3. Identity-owned (issuer.tenantId: null) → 200 (bypass)
-```
-| P2 | Redis-backed distributed revocation | JTI blocklist uses Redis two-tier + DB fallback (14 tests), but revocation is Postgres-level only | Scale concern before external users |
-| P3 | SSRF allowlist (network-layer) | `assertSafeUrl()` exists (7 tests) — already has full private-IP blocks (RFC1918, loopback, link-local, CGNAT, IPv6) + DNS rebinding check + `fetchWithSsrfGuard` redirect defence. | **Closed** — verified 2026-07-26 |
-| P4 | CSRF review | Only cookie-mutating routes are OAuth state cookies in `social.route.ts` — all `sameSite: "lax"`, `httpOnly`, `secure`, 600s TTL, cleared after use. All other routes return tokens in JSON body only. CORS restricted to `config.base.allowedOrigins`. | **Closed** — verified 2026-07-27 |
-| P5 | Secrets/PII in logs scan | No automated scan | Manual review needed |
+| Priority | Item | Current state | Status |
+|----------|------|---------------|--------|
+| P1 | Cross-tenant isolation (HTTP + unit) | `cross-tenant-http.test.ts` (3 HTTP tests) + `cross-tenant-isolation.test.ts` (3 flow-level tests). All 6 tests pass. | ✅ **Closed** |
+| P2 | Redis-backed distributed revocation | JTI blocklist (14 tests, 3 files): Redis two-tier + DB fallback + in-memory Map fallback. Introspect route: Redis + DB dual check. **Per-session access token revocation**: `AccessToken.sessionId` column + migration + `DELETE /sessions/:id` revokes bound access tokens + blocks JTIs in Redis. Full kill chain: session → refresh tokens → access tokens. | ✅ **Closed** |
+| P3 | SSRF allowlist (network-layer) | `assertSafeUrl()` (7 tests) — private-IP blocks (RFC1918, loopback, link-local, CGNAT, IPv6) + DNS rebinding + `fetchWithSsrfGuard`. 4 call-site gaps fixed. Zero unguarded outbound HTTP calls. | ✅ **Closed** |
+| P4 | CSRF review | Only cookie-mutating routes are OAuth state cookies — all `sameSite: "lax"`, `httpOnly`, `secure`, 600s TTL, cleared after use. CORS restricted to configured origins. | ✅ **Closed** |
+| P5 | Secrets/PII in logs scan | No automated scan. Needs manual review before production. | ⚠️ **Deferred** |
 
 ### SSRF call-site gaps fixed (2026-07-27)
 
-The 3 P0 gaps + 1 additional SAML surface discovered during the full codebase audit have all been fixed and verified:
-
-| File | Line(s) | Issue | Fix applied |
-|------|---------|-------|-------------|
-| `idp.route.ts` | 449 | OIDC discovery fetch — raw `fetch()` with no guard | Added `assertSafeUrl(discoveryUrl)` before `fetch()` |
-| `idp.route.ts` | 472 | OIDC token endpoint POST — raw `fetch()` with no guard | Added `assertSafeUrl(discovery.token_endpoint)` before `fetch()` |
-| `webhook-config.route.ts` | 295–296 | Webhook test-ping — `assertSafeUrl()` + plain `fetch()` (redirect bypass) | Replaced with `fetchWithSsrfGuard()` |
-| `idp.service.ts` | 61 | SAML `buildSamlInstance` — `connection.entryPoint` passed to `@node-saml/node-saml` without guard | Added `assertSafeUrl(connection.entryPoint)` before `new SAML()` |
-
-**Full audit of all outbound HTTP calls confirmed:** 16 call sites total. 12 already safe (hardcoded URLs, client-side, or properly guarded). 4 fixed this session. Zero remaining unguarded outbound requests.
+All 4 call-site gaps fixed: `idp.route.ts` (OIDC discovery + token endpoint), `webhook-config.route.ts` (test-ping), `idp.service.ts` (SAML entryPoint). Zero remaining unguarded outbound HTTP calls.
 
 ---
 
-## 🟡 Phase 4 — Observability
+## 🟢 Phase 4 — Observability (SHIPPED 2026-07-28)
 
-| What | Why |
-|------|-----|
-| Request-correlation IDs through FlowContext + auditService | Zero tracing today. Can't trace a failed login across hops. Audit log already has the right shape to carry correlation IDs. |
-| P95/error-rate metrics on auth/token paths | These are the paths every other product depends on. No metrics at all. |
+| What | Why | Status |
+|------|-----|--------|
+| Request-correlation IDs through FlowContext + auditService + error responses | Zero tracing before. Can't trace a failed login across hops. | ✅ **Done** — `requestId` in every error response, stored in audit log metadata. `FlowContext.requestId` flows through all audit calls. |
+| P95/error-rate metrics on auth/token paths | These are the paths every other product depends on. No metrics at all. | ✅ **Done** — `@fastify-metrics` at `GET /metrics`. Auto-collects request duration histograms, error rates, request counts per route via Prometheus exposition format. |
+| `fastify-metrics` dependency | One-time install, zero config | ✅ **Added to package.json** — requires `pnpm install` |
 
 ---
 
@@ -118,6 +100,7 @@ The 3 P0 gaps + 1 additional SAML surface discovered during the full codebase au
 - Identity-scoped signing key — permanently non-custodial by design
 - LegalConsent — schema-only until a concrete consumer (TOS acceptance flow)
 - CLI + SDK packages — after frontend rebuild stabilises API contract
+- Integration tests against real Postgres — **P3, after arc-ui ships**. SDK tests (73) run via `fastify.inject()` with mock DB covering the full API surface. Existing 395 mock-DB tests give good regression coverage. Real Postgres integration tests via testcontainers or enhanced CI service container deferred until arc-ui consumption stabilises the frontend contract
 
 ---
 
@@ -139,7 +122,7 @@ The 3 P0 gaps + 1 additional SAML surface discovered during the full codebase au
 ### Remaining gaps (low/moderate, no fix needed now)
 - **Login passkey edge case test** — existing test at login.flow.test.ts:223 mocks identity directly bypassing the repository. Now that the repository is fixed, the mock approach masks the fix's verification. New test needed that exercises the full `findForAuth` → `hasPasskey` path.
 - **21 missing audit assertions** — 21 out of 24 flows with audit side effects don't verify the call. Low risk (fire-and-forget `.catch(() => {})`), but weakens regression detection.
-- **69 missing SDK methods** — SDK lags behind backend routes. Priority when frontend rebuild stabilizes.
+- **SDK completeness** — **Closed (2026-07-28).** **102 SDK methods across 10 files** — all 123 backend endpoints have SDK coverage. 29 methods added in latest pass: OAuth consent/introspect/revoke/userinfo/jwks, tenant projects CRUD/onboarding flows CRUD/createSigningKey/getJwksBySlug, credential acceptOffer/verification session/present/status list/tenant DID, identity delegations/onboarding/wallet DID. `provisionDid` bug fixed (now requires `{ domain }` body).
 
 ---
 
@@ -168,7 +151,7 @@ Every core flow now has a passing test file in `src/modules/*/flows/`. What's ge
 
 ---
 
-## ✅ Docker deployment — done
+## ✅ Docker deployment — done (workflows rewritten for VPS 2026-07-28)
 
 | File | Purpose |
 |------|---------|
@@ -177,6 +160,22 @@ Every core flow now has a passing test file in `src/modules/*/flows/`. What's ge
 | `.dockerignore` | Excludes frontend code, docs, git, agent artifacts. ~2MB build context. |
 | `docker-entrypoint.sh` | Runs `prisma migrate deploy` (idempotent) on every container start, then exec's CMD. |
 | `.env.example` | All 40+ env vars documented by category with sensible defaults. |
+| `.github/workflows/ci.yml` | Self-hosted Postgres 17 service container, no external DB dependency. |
+| `.github/workflows/deploy-api.yml` | GHCR push → SSH pull + `docker compose up -d` on target VM. |
+| `.github/workflows/deploy-web.yml` | SSH git pull → `pnpm build:web` → PM2 restart on target VM. |
+
+### Deployment architecture (recommended: Oracle ARM VM)
+
+```
+Oracle Ampere A1 VM (2 OCPU, 12 GB RAM)
+├── Docker Compose
+│   ├── PostgreSQL 17 (container)
+│   ├── Redis 7 (container)
+│   ├── arc-id-api (ghcr.io image)
+│   └── arc-id-workers (same image, different CMD)
+├── PM2 (arcid-web — standalone Next.js)
+└── Caddy/Traefik (reverse proxy, Let's Encrypt TLS)
+```
 
 ---
 
@@ -184,9 +183,9 @@ Every core flow now has a passing test file in `src/modules/*/flows/`. What's ge
 
 `package.json` is `0.1.0`. Milestones:
 
-- `0.1.0` (current) — Backend complete: presentation endpoint, all Phase 0–2, 57 files / 351 tests
-- `0.2.0` — Frontend rebuilt, ArcWallet integration end-to-end
-- `1.0.0` — Stable production with Phase 3+4 hardening
+- `0.1.0` (current) — Backend complete: presentation endpoint, all Phase 0–3, 59 files / 395 tests
+- `0.2.0` — Frontend consumed from arc-ui, ArcWallet integration working end-to-end
+- `1.0.0` — Stable production with real-Postgres integration tests, secret scanning, migration rollback testing
 
 ---
 

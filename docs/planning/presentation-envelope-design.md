@@ -1,6 +1,9 @@
 # Presentation Envelope Design — ArcVerify Integration
 
-> Design-only. Not yet built.
+> **✅ Built — shipped in 0.1.0.** `jws-proof.ts` (6 unit tests),
+> `verify-session.route.ts` (5 tests), `verify-present.route.ts` (9 tests).
+> This document is kept as a reference for the design rationale; the actual
+> implementation may differ in detail from what's described below.
 
 ## Problem
 
@@ -95,19 +98,12 @@ matching a `PresentationDefinition`. None of ArcVerify needs that complexity
 nonce envelope is sufficient for v1 and can be embedded inside a real
 `VerifiablePresentation` later without changing the verification path.
 
-## Implementation notes (for when this is built)
+## Implementation notes (built — verify against actual code)
 
-- Create a `VerifySession` Prisma model: `id, challenge, credentialRef,
-identityId?, status, expiresAt`.
-- The `/verify/session` route is unauthenticated (any relying party can
-  start a session). Rate-limited per IP.
-- The `/verify/present` route is also unauthenticated but does require
-  a valid JWS with a resolved `kid` — which will point at a
-  `DecentralizedIdentifier` row. For tenant-issued credentials the kid
-  maps to a `did:web` and the proof verification uses the same JWKS path
-  as existing credential verification.
-- The `proof` verification in `/verify/present` is the new code:
-  `ctx.db.decentralizedIdentifier.findUnique({ where: { id: kidDid } })`,
-  `jose.jwtVerify(proof, publicKey)`, nonce match check.
-- Then fall through to `verifyCredentialFlow` for the existing credential
-  verification path. The envelope response merges both results.
+**All of the following are implemented, not planned:**
+- `VerifySession` model + `VerifySessionStatus` enum — schema + migration done
+- `POST /verify/session` — unauthenticated, rate-limited (30/min/IP), 32-byte challenge, 5-min TTL
+- `POST /verify/present` — unauthenticated, rate-limited, JWS proof verification via `jws-proof.ts`
+- Proof helper: `verifyDetachedJws(proof, expectedNonce, expectedCredentialHash, didKey, db)` in `src/lib/security/jws-proof.ts`
+- Anti-replay: CONSUMED/EXPIRED sessions return 410, used-once enforced
+- See `src/modules/credentials/routes/verify-session.route.ts`, `verify-present.route.ts`, `src/lib/security/jws-proof.ts`

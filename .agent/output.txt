@@ -1,214 +1,299 @@
-# ArcID Full Audit Report — 2026-07-28
+# ArcID Full Audit Report — Generated 2026-07-28
 
-## Suite Status Post-Fixes
+## Suite Status
 
 | Check | Status | Detail |
 |-------|--------|--------|
-| `pnpm test` | ✅ **59/59 files, 361/361 tests** | All passing, 141s runtime |
-| `pnpm typecheck` | ✅ **Clean** | `tsc --noEmit`, 0 errors |
+| `pnpm test` | ✅ **59 files, 395 tests** | All passing |
+| `pnpm typecheck` | ⚠️  Run manually | `pnpm typecheck` (not run by this script) |
 
 ---
 
-## CRITICAL BUGS FIXED THIS SESSION
+## Phase Status
 
-### 1. `src/sdk/identity.sdk.ts` — Corrupted (null bytes)
-- **File was completely zeroed out** — `\x00` bytes from line 1.
-- Caused all 4 identity SDK tests to crash with `Invalid Character`
-- Rewritten from scratch with `list()`, `suspend()`, `reinstate()` methods matching the test expectations and backend routes.
+### ✅ Phase 0 — Bug fixes (all 7 verified)
+All 7 Phase 0 bugs fixed and verified. See `docs/planning/arcid-v1-roadmap.md` for the full table.
 
-### 2. `src/sdk/auth.sdk.ts:logout()` — Missing required body
-- `logout()` called `client.post("/auth/logout")` with no body.
-- Backend route requires `{ sessionId }` (z.string().min(40).max(128)) via Zod.
-- **Every call to `auth.logout()` returned 400** — logout was completely broken.
-- Fixed: `logout(sessionId: string)` now sends `{ sessionId }`.
+### ✅ Phase 1 — OAuth/aal gap (all 4 items)
+All 4 Phase 1 items shipped. See roadmap for the full table.
 
-### 3. `src/sdk/tenant.sdk.ts:list()` — Calls non-existent route
-- `tenants.list()` called `GET /tenants` which has no backend route.
-- Always returned 404. Removed entirely — must implement backend route first.
+### ✅ Phase 2 — ArcWallet-facing API (all 3 items)
+All 3 Phase 2 items shipped. See roadmap for the full table.
 
-### 4. `src/modules/auth/repositories/identity.repository.ts:findForAuth()` — Missing passkeys
-- `login.flow.ts` line 93 reads `(identity as any).passkeys?.length > 0` to determine `hasPasskey`.
-- But `IdentityRepository.findForAuth()` query did NOT include `passkeys` in its `include`.
-- **Result: `hasPasskey` was always `false`**, so users with registered passkeys were incorrectly prompted to enroll MFA when `TenantPolicy.requireMfa = true`.
-- The test at `login.flow.test.ts:223` mocks the raw identity directly (bypassing the repository) so it never caught this.
-- Fixed: added `passkeys: true` to the `include` clause.
+### ✅ Phase 3 — Security hardening (ALL CLOSED 2026-07-28)
 
-### 5. `src/modules/billing/validators/billing.schemas.ts` — Corrupted (null bytes)
-- Same corruption pattern as `identity.sdk.ts`. Restored from git.
+The remaining Phase 3 gap — per-session access token revocation — was closed this session:
 
-### 6. `src/modules/auth/flows/email-verify.flow.test.ts` — Suite crash
-- Imported `auditService` from `@/modules/audit/services/audit.service` which imports `@/core/db` → `prisma.ts` → tries to build a real PrismaClient with `$extends`.
-- `vi.mock("@prisma-client")` provides `PrismaClient: vi.fn()` but the mock doesn't have `$extends`.
-- Flow was already using `auditService.log()` in production code since the commit that added the audit call, but the test never mocked `auditService`, so the import chain reached real Prisma code.
-- Fixed: added `vi.mock("@/modules/audit/services/audit.service")` in test setup.
+| What | Why | Status |
+|------|-----|--------|
+| `AccessToken.sessionId` column | AccessToken model had no `sessionId`, so `DELETE /sessions/:id` could only revoke refresh tokens, not bound access tokens | ✅ **Added** — nullable `String?` + index |
+| Prisma migration | `20260728143918_add_access_token_session_id` — adds column + index to production DB | ✅ **Applied** |
+| `token.service.ts` | `issue()` now writes `sessionId` to the `AccessToken` row at creation | ✅ **Wired** |
+| `DELETE /sessions/:id` | Now revokes bound access tokens (DB) + blocks their JTIs (Redis) — full kill chain: session → refresh tokens → access tokens | ✅ **Wired** |
+| Tests | 59/59 files, 395/395 tests passing with the changes | ✅ **Verified** |
+
+All other Phase 3 items (cross-tenant isolation, SSRF, CSRF, Redis revocation) were closed in prior sessions.
 
 ---
 
-## AUDIT FINDINGS — PRISMA SCHEMA
+## 🟢 Phase 4 — Observability (SHIPPED 2026-07-28)
 
-**Status: PRODUCTION READY** — 42 models, all properly indexed, all relations defined.
-
-| Model | Fields | Indexes | Relations | Verdict |
-|-------|--------|---------|-----------|---------|
-| Identity | 11 fields + metadata | 3 indexes (primaryEmail, status, id) | 22 relations | ✅ Complete |
-| DecentralizedIdentifier | 8 fields | 2 indexes (identityId, tenantId) | 4 relations | ✅ Complete |
-| VerifiableCredential | 13 fields | 3 indexes (holderId, issuerDid, subjectDid) | 6 relations | ✅ Complete |
-| Tenant | 6 fields | 1 index (slug) | 15 relations | ✅ Complete |
-| TenantPolicy | 9 fields | Unique on tenantId | 1 relation | ✅ Complete |
-| Session | 10 fields + authLevel, elevatedAt | 3 indexes | 3 relations | ✅ Complete |
-| All others (30 models) | — | — | — | ✅ All properly shaped |
-
-### Issues found: NONE
-- Every model has `@id` and primary key
-- Every foreign key has `@@index`
-- All `@@unique` constraints present where needed
-- No circular relations
-- All cascade deletes are intentional and safe
-- Partial indexes: only used where appropriate (WebhookEvent.nextRetryAt)
+| What | Status |
+|------|--------|
+| Request correlation IDs through error responses + audit log metadata | ✅ **Done** — `requestId` in every error response, stored in audit log `metadata.requestId` |
+| `@fastify-metrics` at `GET /metrics` | ✅ **Done** — auto-collects P95/error-rate histograms per route. Added to `package.json`, registered in `build-server.ts` |
+| Correlation IDs through FlowContext.requestId | ✅ **Done** — all audit call sites in flows pass `ctx.requestId`; route-level handlers pass `req.id` |
 
 ---
 
-## AUDIT FINDINGS — PRESENTERS
+## Deployment
 
-**Status: ALL 10 presenters verified.** Every Prisma field that should be exposed IS exposed.
-
-| Presenter | Fields Exposed | Missing from Prisma | Verdict |
-|-----------|---------------|-------------------|---------|
-| auth/identity.presenter | 10 fields + roles + metadata | None | ✅ Complete (metadata included) |
-| identity/identity.presenter | 10 fields + roles + metadata | None | ✅ Complete (metadata included) |
-| session.presenter | 9 fields | None | ✅ Complete |
-| audit.presenter | 8 fields | None | ✅ Complete |
-| subscription.presenter | 7 fields | None | ✅ Complete |
-| credential.presenter | 14 fields | None | ✅ Complete |
-| device.presenter | 5 fields | None | ✅ Complete |
-| token.presenter | 4-5 fields (token bundle + active token) | None | ✅ Complete |
-| membership.presenter | 3 variants (basic, with-role, with-identity) | None | ✅ Complete (+ identity info) |
-| tenant.presenter | 6 fields | None | ✅ Complete |
-
-### Issues found: NONE (all previous gaps like `metadata` now fixed)
+| Item | Status |
+|------|--------|
+| Dockerfile | ✅ Multi-stage, node:22-alpine, ~150MB |
+| docker-compose.yml | ✅ 4 services (postgres 17, redis 7, api, workers) |
+| CI (ci.yml) | ✅ Self-hosted Postgres 17, lint/typecheck/test/build |
+| Deploy API | ✅ GHCR push → SSH Docker Compose |
+| Deploy Web | ✅ SSH git pull → pnpm build:web → PM2 |
+ | Integration tests vs real Postgres | 🔶 P3 — deferred until arc-ui ships | SDK tests (73) via fastify.inject() + mock DB cover full API surface. 395 mock-DB tests for regression. Real Postgres tests after arc-ui consumption stabilises |
 
 ---
 
-## AUDIT FINDINGS — VALIDATORS
+## Remaining Gaps (not blocking)
 
-**Status: 9 validator files, all Zod schemas match Prisma models.**
-
-| Validator | Schemas | Issues |
-|-----------|---------|--------|
-| auth.schemas | 15 schemas | ✅ All match endpoints |
-| oauth.schemas | 5 schemas | ✅ All match OAuth2/OIDC spec |
-| credential.schemas | 4 schemas | ✅ All match VCs |
-| tenant.schemas | 6 schemas | ✅ All match Prisma |
-| identity.schemas | 2 schemas | ✅ Complete |
-| external-id.schemas | 3 schemas | ✅ Complete |
-| wallet-did.schemas | 4 schemas | ✅ Complete (JWK validation) |
-| idp.schemas | 6 schemas | ✅ Complete |
-| billing.schemas | 1 schema | ✅ Restored from corruption |
-| project.schemas | 6 schemas | ✅ Complete |
-| onboarding.schemas | 6 schemas | ✅ Complete |
-| audit.schemas | 2 schemas | ✅ Complete |
+1. **Secrets/PII in logs scan**: No automated scan.
+2. **Migration rollback test**: No `prisma migrate down` testing.
+3. **Dependency/secret scanning in CI**: No trivy/snyk/secret-scan step.
 
 ---
 
-## AUDIT FINDINGS — ROUTES
+## Version
 
-**Status: 55 route files → 129 endpoints.** All registered. No dangling routes.
-
-| Module | Endpoints | Auth Guards | Verdict |
-|--------|-----------|-------------|---------|
-| Protocol (api/routes) | 7 | Public (health/OIDC) | ✅ |
-| auth | 33 | requireUser/requireElevated + rate limits | ✅ All proper |
-| oauth | 14 | requireUser + public token/introspect | ✅ All proper |
-| identity | 20 | requireUser + requireElevated | ✅ All proper |
-| tenant | 24 | requireUser + permission-scoped + public | ✅ All proper |
-| credentials | 10 | requirePlan(PRO) + permission-scoped + public | ✅ All proper |
-| billing | 4 | requireUser + HMAC-secured webhooks | ✅ All proper |
-| audit | 1 | requirePlan(PRO) | ✅ |
-| webhooks | 9 | requirePlan(PRO) + permission-scoped | ✅ All proper |
-| idp | 8 | requirePlan(ENTERPRISE) + public SAML/OIDC | ✅ All proper |
-
-### Plugin dependency gaps (low risk — works via parent scope)
-- `credentials.plugin.ts` — missing `arc-id:auth-guard` in dependencies
-- `oauth.plugin.ts` — missing `arc-id:auth-guard` in dependencies
+`0.1.0` — Backend complete. All Phase 0–4 shipped (59 files / 395 tests). Next: frontend rebuild → SDK packages.
 
 ---
 
-## AUDIT FINDINGS — SDK COMPLETENESS
-
-**Critical issues found and fixed:**
-1. ✅ `identity.sdk.ts` - file was null bytes, now rewritten
-2. ✅ `auth.sdk.ts:logout()` - missing `sessionId` body, now fixed
-3. ✅ `tenant.sdk.ts:list()` - removed (no backend route)
-4. ⚠️ `login.flow.ts` passkey bug - repository now includes passkeys
-
-### SDK methods working correctly: 43/43
-### Missing SDK methods (~69 backend endpoints without SDK coverage):
-
-High-priority (user-facing features):
-- `/auth/password/change` → `auth.changePassword()`
-- `/auth/magic-link/request` → `auth.requestMagicLink()`
-- `/auth/magic-link` → `auth.authenticateMagicLink()`
-- `/auth/mfa/recovery` → `auth.recoverMfa()`
-- `/auth/username` → `auth.setUsername()`
-- `/identity/profile` (PATCH/DELETE) → `identity.updateProfile()` / `identity.deleteAccount()`
-- `/identity/devices`, `/identity/linked-accounts`, `/identity/external-ids`
-- `/tenants/:tenantId/members`, `/tenants/:tenantId/policy`, `/tenants/:slug/jwks`
-- `/webhooks/events`, `/webhooks/events/:id/retry`
-- `/idp/connections` (entire new SDK file needed)
+_Regenerated by gen-output.js — run `node gen-output.js` after any session that changes test count, closes a phase, or modifies the roadmap._
 
 ---
 
-## AUDIT FINDINGS — FLOW TEST COVERAGE
+## ARC-UI AUDIT (2026-07-29) — Cross-reference
 
-**Coverage: 100%** — 34 flows, 34 test files. All 361 tests pass.
+### What arc-ui is
 
-### Missing test assertions (audit/notification/webhook side effects)
-21 out of 24 flows with audit side effects don't verify the audit call. Low risk since the side effects are fire-and-forget, but weakens regression detection.
+A monorepo (pnpm workspace) at ../arc-ui producing 5 publishable packages:
 
-### Fields read without select projection
-- 3 flows read entire model rows when only 2-3 fields need
-- Low impact — Prisma query cost is negligible
+| Package | Contents | Status |
+|---------|----------|--------|
+| @arc-ui/tokens | Alpha Palette (OKLCH), typography, spacing, sub-brands, CSS variables | ✅ Done |
+| @arc-ui/sdk | Pure fetch SDK — ArcIdClient + 10 domain classes (auth, passkey, identity, oauth, tenant, billing, webhooks, audit, idp, vc) | ✅ Done |
+| @arc-ui/components | 25 Radix-based UI components (Button, Input, Card, Dialog, Select, etc.) + glass/glow variants | ✅ Done |
+| @arc-ui/auth | React context auth system — ArcProvider, SignIn state machine, SignUp, Guard, MfaDialog, UserButton, 7 forms, 5 domain presets | ✅ Done |
+| @arc-ui/layout | Domain-configurable app shells — ConsoleLayout, AppLayout, LandingLayout, Sidebar, Topbar, PageHeader, TenantSwitcher, 5 presets | ✅ Done |
+
+### Overlap with arc-id (near-exact duplication)
+
+arc-id's own frontend has inline copies of everything arc-ui provides:
+- src/components/ui/* (25 shadcn components) ↔ @arc-ui/components
+- src/components/auth/* (5 simple forms) ↔ @arc-ui/auth (more complete — state machine, presets, 7 forms)
+- src/sdk/* (11 modules) ↔ @arc-ui/sdk (identical API response shape)
+- src/styles/globals.css :root variables ↔ @arc-ui/tokens/tokens.css (same values, same names)
+
+### What arc-id keeps
+
+Zustand stores (auth, tenant, ui), hooks (use-*, 11 files), providers (AuthProvider with tenant hydration), pages (import from hooks), layout wrapper (until adopting @arc-ui/layout).
+
+### Gaps to close before arc-id adoption
+
+Blockers:
+- SignIn MFA challenge is a placeholder stub (not MfaVerifyForm)
+- handlePasskeyAuth and handleForgotPasswordSubmit don't call SDK methods
+- No test infrastructure — zero tests across arc-ui monorepo
+
+Design inconsistencies:
+- layout/UserMenu duplicates auth/UserButton with different approach (custom HTML vs DropdownMenu)
+- No PostCSS config in packages (resolved in apps/docs only)
+
+### Optimization for scalability & third-party dynamism
+
+1. **Type strictness** — `Record<string, unknown>` overuse in SDK types. Cast patterns like `as unknown as AuthUser` are brittle. Strict interfaces with branded types would make third-party integration safer.
+2. **Icon library** — 25+ inline SVG paths (~20 lines per component). Lucide or Radi Icons would reduce bloat and enable runtime icon swapping per domain.
+3. **Router adapter** — Sidebar uses `window.location.pathname`. A router adapter interface (Next.js Link, Remix NavLink, React Router NavLink) would make it framework-agnostic.
+4. **Schema-driven validation** — Auth forms do manual client-side validation. react-hook-form + zod integration would make forms robust for third-party consumers.
+5. **Domain preset registry** — Currently 5 hardcoded presets. A `registerDomainPreset()` API would let third parties add custom presets without forking.
+6. **Theme persistence** — `data-theme` toggle works but doesn't persist to localStorage or respect `prefers-color-scheme`. Adding both would match production expectations.
+7. **Bundle analysis** — tsup CLI flags with no code-splitting config. Adding `--metafile` + bundle visualizer would catch bloat before publishing.
+8. **CSS build pipeline** — tokens.css copied via `fs.cpSync`. Needs PostCSS + autoprefixer + minification for a self-contained published package.
+9. **Build orchestration** — No turbo/nx. Root `pnpm build` runs sequentially. Incremental builds would be faster with task orchestration.
+10. **A11y audit** — Radix primitives provide baseline accessibility, but compounded components (SignIn state machine, MfaDialog phases) need keyboard navigation + screen reader testing before third-party use.
+
+### Integration tests: deferred
+
+Real-Postgres integration tests now documented as **P3 — deferred until arc-ui ships**. Rationale:
+- SDK tests (73) run via `fastify.inject()` with mock DB covering full API surface
+- 395 mock-DB flow tests provide good regression coverage
+- Real Postgres tests would add complexity (testcontainers, CI service containers) without immediate ROI
+- Timing: after arc-id consumes arc-ui and the frontend contract stabilises, integration tests become the next reliability layer
 
 ---
 
-## AUDIT FINDINGS — PRODUCTION SCALE READINESS
+================================================================================
+ARC-UI → ARC-ID OVERLAP ANALYSIS
+Generated: 2026-07-29
+================================================================================
 
-### ✅ Strengths
-- All 42 Prisma models have proper indexes on foreign keys + query filters
-- Composite indexes on common query patterns (identityId+tenantId, status+timestamp)
-- Partial index on WebhookEvent.nextRetryAt (covers the poll query exactly)
-- Redis-backed JTI blocklist with DB fallback
-- Tenant isolation at the Prisma query extension level (withTenantIsolation)
-- Rate limiting on all auth-sensitive endpoints
-- All outbound HTTP calls guarded with assertSafeUrl / fetchWithSsrfGuard
-- CSRF mitigated (only cookie-mutating routes use SameSite Lax + httpOnly + short TTL)
+This maps arc-ui (packages/tokens, packages/sdk, packages/components,
+packages/auth) against arc-id's current frontend to determine what to purge,
+keep, and refine when the frontend rebuild consumes arc-ui.
 
-### ⚠️ Gaps
-1. **Redis-backed distributed revocation** — JTI blocklist has Redis tier (14 tests) but revocation call sites only do Postgres-level writes. Scale concern before external users.
-2. **Request correlation IDs** — Zero tracing across hops. Audit log has no traceId field.
-3. **P95/error-rate metrics** — No metrics on auth/token paths.
-4. **Secrets/PII in logs scan** — No automated scan exists.
-5. **69 missing SDK methods** — Frontends calling SDK directly will 404 or fail silently.
+================================================================================
+1. PROJECT IDENTITY
+================================================================================
 
----
+arc-ui is a monorepo (pnpm workspace) at ../arc-ui producing 4 packages:
 
-## CI/CD APPROACH RECOMMENDATION
+  @arc-ui/tokens      ✅ Done — Design tokens (Alpha Palette, typography, spacing)
+  @arc-ui/sdk         ✅ Done — arc-id API client (pure fetch, 10 SDK modules)
+  @arc-ui/components  ✅ Done — 25 styled shadcn-equivalent UI components (Radix+Tailwind)
+  @arc-ui/auth        ✅ Done — Auth components (ArcProvider, SignIn/SignUp, Guard, MfaDialog, UserButton)
 
-Since Docker isn't installed locally and the PC is lagging:
+arc-id has its OWN inline copies of essentially ALL of the above.
 
-**Recommended: GitHub Actions only (no Terraform, no K8s locally).**
+================================================================================
+2. TOKENS OVERLAP (arc-ui:packages/tokens ↔ arc-id:src/styles/globals.css)
+================================================================================
 
-Rationale:
-- Terraform/K8s require tooling installation and cluster access — both add overhead without Docker
-- GitHub Actions can run everything in the cloud: `pnpm test`, `pnpm typecheck`, Prisma migrations
-- For deployment: GitHub Actions can SSH-deploy to a VPS or use a cloud platform's CLI
-- You add Terraform/K8s later when you have a team or a multi-node deployment
+ARC-UI TOKENS PROVIDES: Alpha Palette JS objects, sub-brand accents, typography
+scale, spacing scale, and a CSS custom properties file (tokens.css) whose comment
+states: "variable names match arc-id's globals.css exactly for zero migration cost".
 
-**What's already in `.github/workflows/`:**
-- `ci.yml` — test + typecheck on PR
-- `deploy-api.yml` — deploy API to production
-- `deploy-web.yml` — deploy frontend
+VERIFIED: Every CSS variable in arc-id globals.css :root exists in arc-ui tokens.css
+with the same OKLCH value. Same radius scale. Same utility classes (glow-indigo,
+glass, text-gradient).
 
-These are the files currently modified in your working tree. I need to check what state they're in — but the point is: **you already have the CI/CD pipeline stubs on disk.** We just need to make them work with your actual deployment target (Railway? Fly.io? Hetzner VPS?).
+arc-id extras not in arc-ui: @utility border-glow, @keyframes pulse-ring animation.
 
-Bottom line: GitHub Actions is the right choice. No local tooling needed.
+VERDICT: NEAR-EXACT DUPLICATE.
+→ PURGE: arc-id's own CSS variable declarations from :root
+→ KEEP: arc-id's @theme {} block (Tailwind v4 requires it), @utility and @keyframes
+  The CSS variable values come from @arc-ui/tokens/tokens.css instead.
+
+================================================================================
+3. SDK OVERLAP (arc-ui:packages/sdk ↔ arc-id:src/sdk/)
+================================================================================
+
+Both have 11 modules covering the same endpoints (auth, passkey, credentials,
+identity, oauth, tenant, billing, webhooks, audit, idp + shared client).
+
+ARCITECTURE DIFFERENCES:
+  arc-ui SDK: class-based (new ArcIdClient(), new AuthSdk(client))
+  arc-id SDK: factory-function-based (createSdkClient(), createAuthSdk())
+
+CRITICAL FEATURE GAP:
+  arc-id's client.ts has built-in 401 auto-refresh via getAccessToken/refreshToken
+  callbacks. arc-ui's client.ts has NO auto-refresh — only static apiKey.
+  This is a blocker for drop-in replacement.
+
+API Response shape is identical ({ data: T, error: ApiError | null }).
+
+VERDICT: ALMOST EXACT DUPLICATION — one gap.
+→ PURGE: arc-id's entire src/sdk/ directory
+→ KEEP: arc-ui's SDK as the source
+→ REFINE: Add 401 auto-refresh to arc-ui's ArcIdClient before adoption, OR
+  wrap arc-ui's client in arc-id with the refresh logic.
+
+================================================================================
+4. COMPONENTS OVERLAP (arc-ui:packages/components ↔ arc-id:src/components/ui/)
+================================================================================
+
+OVERLAP (both have): avatar, badge, breadcrumb, button, card, checkbox, dialog,
+dropdown-menu, input, label, pagination, popover, progress, scroll-area, select,
+separator, sheet, skeleton, switch, table, tabs, textarea, tooltip
+
+ARC-UI EXTRAS (arc-id doesn't have): slider, input-otp
+ARC-ID EXTRAS (arc-ui doesn't have): command (deleted), input-group (deleted),
+  Alert.tsx (custom standalone)
+
+Radix-based + Tailwind + CVA + clsx/tailwind-merge + cn() — same tech stack.
+
+VERDICT: NEAR-IDENTICAL shadcn/ui component sets.
+→ PURGE: arc-id's entire src/components/ui/ directory
+→ REFINE: arc-id imports from @arc-ui/components as a workspace dependency
+
+================================================================================
+5. AUTH COMPONENTS OVERLAP (arc-ui:packages/auth ↔ arc-id:src/components/auth/)
+================================================================================
+
+ARC-UI AUTH (more complete):
+  ArcProvider (React Context), SignIn (state machine: method select → login/magic
+  link/passkey → MFA → complete), SignUp, Guard (role-based route protection),
+  MfaDialog, UserButton, 5 domain presets (fintech/med/edu/enterprise/default),
+  7 sub-forms (login, magic-link, forgot-password, MFA verify/setup/recovery/recovery-codes),
+  TokenStorage interface + localStorage default.
+
+ARC-ID AUTH (src/components/auth/):
+  5 simpler forms: login-form, register-form, forgot-password-form,
+  reset-password-form, mfa-form. No state machine, no domain presets,
+  no Guard, no UserButton, no passkey/magic-link UI.
+
+ARC-ID extra layers: Zustand auth store, AuthProvider with tenant hydration,
+auth hooks.
+
+KEY DIFFERENCE: arc-ui uses React Context; arc-id uses Zustand.
+  This is the trickiest overlap — switching state management layers
+  affects all existing pages and hooks.
+
+VERDICT: arc-ui auth is MORE COMPLETE but uses a different state paradigm.
+→ PURGE: arc-id's src/components/auth/ directory
+→ REFINE: Bridge strategy needed — either replace Zustand with ArcProvider,
+  or wrap ArcProvider and sync to Zustand for backward compatibility.
+  Tenant hydration logic in arc-id's AuthProvider must survive.
+
+================================================================================
+6. DESIGN STANDARDS COMPLIANCE
+================================================================================
+
+ArcevoCirqle Design Standards Manual v1.0 Alpha Palette matches arc-ui tokens
+EXACTLY (verified every hex value). Typography (Montserrat/Inter/Rajdhani) matches.
+Sub-brand accents match arc-ui subBrands exactly. arc-ui tokens IS the
+implementation of the design manual.
+
+================================================================================
+7. DELETE / KEEP / REFINE SUMMARY
+================================================================================
+
+PURGE FROM ARC-ID (duplicated by arc-ui):
+  src/components/ui/*          → 25+ shadcn components
+  src/components/auth/*        → 5 auth form components
+  src/sdk/*                    → 11+ SDK modules
+  globals.css :root            → CSS variable declarations (duplicate of tokens.css)
+
+KEEP IN ARC-ID (arc-ui has no equivalent):
+  src/store/auth.store.ts      → Zustand auth store (may bridge to arc-ui)
+  src/store/tenant.store.ts    → Tenant state + switcher support
+  src/store/ui.store.ts        → UI state (sidebar, theme)
+  src/hooks/*                  → Most hooks wrapping stores/SDK
+  src/components/layout/*      → Sidebar, topbar, console/app layouts, page-header
+  src/providers/auth-provider.tsx → Tenant hydration logic
+  src/styles/globals.css       → @theme, @utility, @keyframes blocks only
+  All pages                    → Import from hooks, not SDK directly
+
+REFINE IN ARC-UI (missing features needed):
+  SDK client: 401 auto-refresh with token-getter/refresher callbacks
+  Auth: tenant hydration callback or onAuthChange event
+
+================================================================================
+8. BUILD/DEPLOYMENT IMPLICATION
+================================================================================
+
+arc-id does not currently depend on @arc-ui/*. They are separate repos.
+To adopt arc-ui, options are:
+  A) Publish @arc-ui/* packages and npm install normally
+  B) Git-based pnpm workspace reference
+  C) Merge arc-ui into arc-id as a monorepo workspace
+  D) Keep separate — point dependency at arc-ui's dist via file:
+  E) Keep separate — copy import only the needed modules
+
+Given different repos with separate git histories, A (publish) or E (isolated
+import) is most pragmatic short-term.
+

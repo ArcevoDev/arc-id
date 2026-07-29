@@ -19,13 +19,14 @@ ArcID is a Fastify + PostgreSQL (Prisma) backend. Current state, verified agains
 - **RBAC** — fine-grained, database-backed permissions (18 seeded actions), replacing all hardcoded role checks.
 - **External identifiers** — self-reported linking of secondary identifiers (phone, NIN, BVN, etc.) to an identity, hashed at rest.
 - **Credential offers** — a tenant can create a pending offer for a subject, who accepts it (proving DID ownership) to receive the credential.
+- **Presentation endpoint** — a holder can present a credential to a verifier via a two-step protocol: `/verify/session` creates a challenge, `/verify/present` accepts a JWS-signed proof + credential. Anti-replay enforced (single-use sessions, 5-min TTL). 6 JWS-proof + 14 route-level tests.
 - **Webhooks, billing, audit logging** — webhook delivery with HMAC signing and retry, provider-driven (Stripe/Paystack) subscription billing, full audit trail.
 
 ## What's next
 
-- **Presentation endpoint** — letting a holder present a credential to a verifier (design already scoped in `docs/planning/presentation-envelope-design.md`, not yet built).
 - **ArcWallet** — a companion React Native app (separate repo) where individuals hold their credentials and keys; ArcID never custodies wallet private keys.
 - **ArcVerify** — the verifier-facing counterpart for institutions checking a presented credential.
+- **Frontend rebuild** — `src/app/`, `src/components/`, `src/hooks/`, `src/store/` are being replaced from scratch to ship a proper admin dashboard alongside ArcWallet.
 - **Public SDK and CLI** — once the API surface above is stable, `packages/sdk` and `packages/cli` will be extracted for external integrators.
 
 Live, granular status — what's done, what's in progress, what's explicitly deferred — is tracked in `docs/planning/arcid-v1-roadmap.md`, kept current as the actual source of truth for project state.

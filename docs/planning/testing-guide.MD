@@ -192,8 +192,11 @@ reading, tampered-signature rejection, missing-alg rejection).
 `src/modules/credentials/services/status-list.service.test.ts` covers the
 CAS-based index allocation (#51's internal allocation) and revocation update.
 `src/modules/tenant/flows/provision-tenant-did.flow.test.ts` covers DID provisioning
-and sign-verify round-trip. The full route-level issue/revoke flow (#53, #55, #56)
-remains manual._
+and sign-verify round-trip.
+`src/modules/credentials/routes/verify-session.route.test.ts` and
+`src/modules/credentials/routes/verify-present.route.test.ts` cover the
+presentation endpoint (#new — fully automated, 14 tests).
+The full route-level issue/revoke flow (#53, #55, #56) remains manual._
 
 Requires an ACTIVE tenant signing key. Create one first:
 
