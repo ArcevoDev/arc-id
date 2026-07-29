@@ -1,118 +1,69 @@
-// src/components/layout/sidebar.tsx
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUiStore } from "@/store/ui.store";
-import { useTenant } from "@/hooks/use-tenant";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { navConfig } from "@/config/nav";
 import { Icons } from "@/lib/ui/icon-registry";
-import { navigationGroups } from "@/lib/ui/navigation";
-import { ArcMetadata } from "@/lib/ui/metadata";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const collapsed = useUiStore((s) => s.sidebarCollapsed);
-  const toggle = useUiStore((s) => s.toggleSidebar);
-  const { activeTenant } = useTenant();
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) return null;
 
   return (
-    <aside
-      className={cn(
-        "fixed top-0 left-0 h-full z-40 flex flex-col border-r border-border bg-sidebar transition-all duration-200",
-        collapsed ? "w-16" : "w-64",
-      )}
-    >
-      {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-border shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
-            <Icons.lock className="w-4 h-4 text-primary" />
-          </div>
-          {!collapsed && (
-            <span className="font-bold text-sm text-foreground tracking-wide truncate">
-              {ArcMetadata.shortName}
-            </span>
-          )}
-        </div>
+    <aside className="fixed left-0 top-0 z-30 flex h-screen w-[260px] flex-col border-r bg-sidebar">
+      {/* Brand */}
+      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-5">
+        <Icons.shield className="h-6 w-6 text-primary" />
+        <span className="font-semibold text-sidebar-foreground">ArcID</span>
       </div>
 
-      {/* Active tenant */}
-      {!collapsed && activeTenant && (
-        <div className="px-3 py-2 border-b border-border">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mb-1">
-            Workspace
-          </p>
-          <p className="text-xs text-foreground font-medium truncate">
-            {activeTenant.name}
-          </p>
-          <span className="text-[10px] text-muted-foreground">
-            {activeTenant.plan}
-          </span>
-        </div>
-      )}
-
-      {/* Nav — driven by navigation.ts */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-        {navigationGroups.map((group, gi) => (
-          <div key={gi} className="space-y-0.5">
-            {!collapsed && group.title && (
-              <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-                {group.title}
+      {/* Nav */}
+      <ScrollArea className="flex-1 px-3 py-4">
+        <nav className="space-y-6">
+          {navConfig.map((section) => (
+            <div key={section.title}>
+              <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-widest text-sidebar-foreground/50">
+                {section.title}
               </p>
-            )}
-            {group.items.map(({ label, href, icon, badge }) => {
-              const Icon = Icons[icon];
-              const active =
-                pathname === href ||
-                (href !== "/dashboard" && pathname.startsWith(href));
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary font-medium border border-primary/20"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                    collapsed && "justify-center px-2",
-                  )}
-                  title={collapsed ? label : undefined}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {!collapsed && (
-                    <>
-                      <span className="truncate flex-1">{label}</span>
-                      {badge && (
-                        <span className="ml-auto text-[10px] font-medium bg-primary/20 text-primary rounded px-1.5 py-0.5">
-                          {badge}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
+              <ul className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = Icons[item.icon];
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
-      {/* Collapse toggle */}
-      <div className="p-3 border-t border-border">
-        <button
-          onClick={toggle}
-          className={cn(
-            "flex items-center gap-2 w-full rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
-            collapsed && "justify-center px-2",
-          )}
-        >
-          <Icons.chevronLeft
-            className={cn(
-              "w-4 h-4 transition-transform",
-              collapsed && "rotate-180",
-            )}
-          />
-          {!collapsed && "Collapse"}
-        </button>
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </ScrollArea>
+
+      {/* Footer */}
+      <div className="border-t border-sidebar-border p-4">
+        <p className="text-xs text-sidebar-foreground/40 text-center">
+          ArcID v0.1.0
+        </p>
       </div>
     </aside>
   );

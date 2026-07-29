@@ -1,8 +1,12 @@
-// src/components/layout/topbar.tsx
 "use client";
-import { useRouter } from "next/navigation";
+
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthStore } from "@/store/auth.store";
+import { useUI } from "@/hooks/use-ui";
+import { Icons } from "@/lib/ui/icon-registry";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { TenantSwitcher } from "@/components/layout/tenant-switcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,11 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Icons } from "@/lib/ui/icon-registry";
+import Link from "next/link";
 
 export function Topbar() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
+  const { toggleSidebar } = useUI();
 
   const initials = user?.name
     ? user.name
@@ -23,48 +27,50 @@ export function Topbar() {
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : (user?.primaryEmail?.[0]?.toUpperCase() ?? "?");
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/login");
-  };
+    : "?";
 
   return (
-    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-30">
-      <div />
+    <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden">
+          <Icons.menu className="h-5 w-5" />
+        </Button>
+        <TenantSwitcher />
+      </div>
+
       <div className="flex items-center gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-lg hover:bg-accent px-2 py-1.5 transition-colors outline-none">
-              <Avatar className="w-7 h-7">
-                <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="text-xs bg-primary/10 text-primary">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-left hidden sm:block">
-                <p className="text-xs font-medium text-foreground leading-none">
-                  {user?.name ?? "User"}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[140px]">
-                  {user?.primaryEmail ?? ""}
-                </p>
-              </div>
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
-              <Icons.user className="w-4 h-4 mr-2" /> Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
-              <Icons.settings className="w-4 h-4 mr-2" /> Settings
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium text-foreground">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/settings/profile" className="cursor-pointer">
+                <Icons.settings className="h-4 w-4 mr-2" />
+                Settings
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={handleLogout}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive cursor-pointer"
+              onClick={() => {
+                useAuthStore.getState().clearAuth();
+                localStorage.removeItem("arcid-auth");
+              }}
             >
-              <Icons.logout className="w-4 h-4 mr-2" /> Sign out
+              <Icons.logout className="h-4 w-4 mr-2" />
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

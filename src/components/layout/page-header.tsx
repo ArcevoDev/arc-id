@@ -1,32 +1,24 @@
-// src/components/layout/page-header.tsx
-import { cn } from "@/lib/utils";
+"use client";
 
 interface PageHeaderProps {
   title: string;
   description?: string;
-  action?: React.ReactNode;
-  className?: string;
+  actions?: React.ReactNode;
 }
 
-export function PageHeader({
-  title,
-  description,
-  action,
-  className,
-}: PageHeaderProps) {
+/**
+ * Consistent page header used across all dashboard pages.
+ */
+export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
-    <div
-      className={cn("flex items-start justify-between gap-4 mb-8", className)}
-    >
+    <div className="flex items-center justify-between mb-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">
-          {title}
-        </h1>
+        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         {description && (
           <p className="text-sm text-muted-foreground mt-1">{description}</p>
         )}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
   );
 }
