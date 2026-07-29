@@ -25,6 +25,7 @@ export const AuditLogDtoSchema = z.object({
   identityId: z.string().nullable(),
   tenantId: z.string().nullable(),
   ip: z.string().nullable(),
+  userAgent: z.string().nullable(),
   metadata: z.any().nullable(),
   createdAt: z.coerce.string(),
 });

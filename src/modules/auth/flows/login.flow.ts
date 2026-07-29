@@ -65,6 +65,7 @@ export const loginFlow: Flow<Input, Output> = {
         .log({
           action: "USER_LOGIN_FAILED",
           ip: ctx.ip,
+          requestId: ctx.requestId,
           metadata: { reason: "lockout" },
         })
         .catch(() => {});
@@ -80,7 +81,7 @@ export const loginFlow: Flow<Input, Output> = {
       // Don't record a failure for non-existent emails — that would let
       // attackers use the lockout to enumerate valid accounts via DoS.
       void auditService
-        .log({ action: "USER_LOGIN_FAILED", ip: ctx.ip })
+        .log({ action: "USER_LOGIN_FAILED", ip: ctx.ip, requestId: ctx.requestId })
         .catch(() => {});
       throw ApiError.unauthorized("Invalid email or password");
     }
@@ -111,6 +112,7 @@ export const loginFlow: Flow<Input, Output> = {
           action: "USER_LOGIN_FAILED",
           identityId: identity.id,
           ip: ctx.ip,
+          requestId: ctx.requestId,
         })
         .catch(() => {});
 
@@ -193,7 +195,7 @@ export const loginFlow: Flow<Input, Output> = {
     // ── Step 7: Response ──────────────────────────────────────────────────────
     if (requiresMfa) {
       void auditService
-        .log({ action: "SESSION_CREATED", identityId: identity.id, ip: ctx.ip })
+        .log({ action: "SESSION_CREATED", identityId: identity.id, ip: ctx.ip, requestId: ctx.requestId })
         .catch(() => {});
 
       return {
@@ -210,6 +212,7 @@ export const loginFlow: Flow<Input, Output> = {
         action: "USER_LOGIN_SUCCESS",
         identityId: identity.id,
         ip: ctx.ip ?? "0.0.0.0",
+        requestId: ctx.requestId,
       })
       .catch(() => {});
 

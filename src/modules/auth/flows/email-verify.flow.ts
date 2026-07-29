@@ -4,6 +4,7 @@ import type { FlowContext, Flow } from "@/core/flows";
 import { EmailVerifySchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
+import { auditService } from "@/modules/audit/services/audit.service";
 
 export const emailVerifyFlow: Flow<
   z.infer<typeof EmailVerifySchema>,
@@ -30,6 +31,16 @@ export const emailVerifyFlow: Flow<
         name: identity.name ?? undefined,
       });
     }
+
+    await auditService.log(
+      {
+        action: "EMAIL_VERIFIED",
+        identityId: tokenRecord.identityId,
+        ip: ctx.ip,
+        requestId: ctx.requestId,
+      },
+      ctx.db,
+    );
 
     return {};
   },

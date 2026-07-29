@@ -20,6 +20,15 @@ export const revokeCredentialFlow: Flow<
     const statusListService = new StatusListService(ctx.db);
 
     const vc = await credRepo.findByIdOrThrow(input.credentialId);
+
+    // Verify the credential belongs to the caller's tenant.
+    // The credential's issuer DID carries the tenantId; identity-owned
+    // DIDs (tenantId: null) bypass this check since only the owning
+    // identity controls them.
+    if (vc.issuer?.tenantId && vc.issuer.tenantId !== ctx.tenantId) {
+      throw ApiError.notFound("Credential not found");
+    }
+
     if (!vc.statusListId || vc.statusListIndex === null) {
       throw ApiError.badRequest("Credential does not have a status list entry");
     }

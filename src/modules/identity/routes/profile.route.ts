@@ -5,6 +5,7 @@ import { Prisma } from "@prisma-client";
 import { presentIdentity } from "../presenters/identity.presenter";
 import { UpdateProfileSchema } from "../validators/identity.schemas";
 import { auditService } from "@/modules/audit/services/audit.service";
+import { blockJti } from "@/lib/security/jti-blocklist";
 
 export async function profileRoute(fastify: FastifyInstance) {
   // GET /profile
@@ -124,7 +125,13 @@ export async function profileRoute(fastify: FastifyInstance) {
         select: { primaryEmail: true, name: true },
       });
 
-      // Revoke all live sessions and tokens before deletion
+      // Revoke all live sessions and tokens — must blocklist JTIs in
+      // revokedJti table + Redis so the auth guard rejects them immediately.
+      const liveTokens = await fastify.db.accessToken.findMany({
+        where: { identityId, revoked: false, jti: { not: null } },
+        select: { jti: true, expiresAt: true },
+      });
+
       await fastify.db.$transaction([
         fastify.db.session.updateMany({
           where: { identityId, valid: true },
@@ -138,7 +145,19 @@ export async function profileRoute(fastify: FastifyInstance) {
           where: { identityId, revoked: false },
           data: { revoked: true },
         }),
+        ...liveTokens.map((t) =>
+          fastify.db.revokedJti.create({
+            data: { jti: t.jti!, expiresAt: t.expiresAt },
+          }),
+        ),
       ]);
+
+      // Redis blocklist — non-blocking
+      for (const t of liveTokens) {
+        const remainingTtlMs = t.expiresAt.getTime() - Date.now();
+        const remainingTtlSec = Math.max(Math.ceil(remainingTtlMs / 1000), 1);
+        void blockJti(t.jti!, remainingTtlSec).catch(() => {});
+      }
 
       await fastify.db.identity.delete({ where: { id: identityId } });
 

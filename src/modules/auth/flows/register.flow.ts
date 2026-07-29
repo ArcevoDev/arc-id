@@ -104,9 +104,20 @@ export const registerFlow: Flow<Input, Output> = {
 
     await auditService.log(
       {
+        action: "EMAIL_VERIFICATION_SENT",
+        identityId: identity.id,
+        ip: ctx.ip,
+        requestId: ctx.requestId,
+      },
+      ctx.db,
+    );
+
+    await auditService.log(
+      {
         action: "USER_REGISTERED",
         identityId: identity.id,
         ip: ctx.ip,
+        requestId: ctx.requestId,
       },
       ctx.db,
     );

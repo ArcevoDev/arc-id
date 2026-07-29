@@ -4,6 +4,7 @@ import type { FlowContext } from "@/core/flows/flow-context";
 import { VerifyCredentialSchema } from "../validators/credential.schemas";
 import { DidService } from "../services/did.service";
 import { StatusListService } from "../services/status-list.service";
+import { assertSafeUrl } from "@/lib/url-safety";
 import {
   jwtVerify,
   importSPKI,
@@ -73,6 +74,7 @@ export const verifyCredentialFlow: Flow<
         }
         const domain = issuerDid.replace("did:web:", "");
         const jwksUrl = new URL(`https://${domain}/.well-known/jwks.json`);
+        await assertSafeUrl(jwksUrl.toString());
         const JWKS = createRemoteJWKSet(jwksUrl);
         const { payload } = await jwtVerify(input.credential, JWKS, {
           issuer: issuerDid,

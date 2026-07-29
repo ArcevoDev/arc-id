@@ -7,6 +7,7 @@ export function presentAuditLog(log: AuditLog) {
     identityId: log.identityId,
     tenantId: log.tenantId,
     ip: log.ip,
+    userAgent: log.userAgent,
     metadata: log.metadata,
     createdAt: log.createdAt,
   };

@@ -51,6 +51,17 @@ export const passwordResetConfirmFlow: Flow<
         action: "PASSWORD_CHANGED",
         identityId: tokenRecord.identityId,
         ip: ctx.ip,
+        requestId: ctx.requestId,
+      },
+      ctx.db,
+    );
+
+    await auditService.log(
+      {
+        action: "PASSWORD_RESET_COMPLETED",
+        identityId: tokenRecord.identityId,
+        ip: ctx.ip,
+        requestId: ctx.requestId,
       },
       ctx.db,
     );

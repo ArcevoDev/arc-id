@@ -10,6 +10,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { auditService } from "@/modules/audit/services/audit.service";
+import { blockJti } from "@/lib/security/jti-blocklist";
 
 export async function sessionRoute(fastify: FastifyInstance) {
   // GET /auth/sessions
@@ -74,6 +76,15 @@ export async function sessionRoute(fastify: FastifyInstance) {
       // a session belonging to a different user, even if the session ID were
       // somehow known to an attacker.
       await fastify.db.$transaction([
+        // Revoke all access tokens bound to this session
+        fastify.db.accessToken.updateMany({
+          where: {
+            sessionId: id,
+            identityId: req.identity.id,
+            revoked: false,
+          },
+          data: { revoked: true },
+        }),
         // Revoke all refresh tokens issued for this session, scoped to the
         // requesting identity (closes the ownership gap noted in Bug 4).
         fastify.db.refreshToken.updateMany({
@@ -90,6 +101,29 @@ export async function sessionRoute(fastify: FastifyInstance) {
           data: { valid: false },
         }),
       ]);
+
+      // Redis-block any access JTIs belonging to this session
+      const accessTokens = await fastify.db.accessToken.findMany({
+        where: { sessionId: id, identityId: req.identity.id, jti: { not: null } },
+        select: { jti: true, expiresAt: true },
+      });
+      for (const at of accessTokens) {
+        if (at.jti) {
+          const remainingTtlSec = Math.max(
+            Math.ceil((at.expiresAt.getTime() - Date.now()) / 1000),
+            1,
+          );
+          void blockJti(at.jti, remainingTtlSec).catch(() => {});
+        }
+      }
+
+      await auditService.log({
+        action: "SESSION_REVOKED",
+        identityId: req.identity.id,
+        ip: req.ip,
+        requestId: req.id,
+        metadata: { sessionId: id, accessTokensRevoked: accessTokens.length },
+      });
 
       return reply.send({ success: true });
     },

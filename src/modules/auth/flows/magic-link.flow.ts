@@ -6,6 +6,7 @@ import { SessionService } from "../services/session.service";
 import { TokenService } from "@/modules/oauth/services/token.service";
 import { ApiError } from "@/core/errors/api-error";
 import { config } from "@/core/config";
+import { auditService } from "@/modules/audit/services/audit.service";
 
 const MagicLinkSchema = z.object({ token: z.string().min(1) });
 
@@ -56,6 +57,21 @@ export const magicLinkFlow: Flow<z.infer<typeof MagicLinkSchema>, Output> = {
       tenantId: ctx.tenantId || "SYSTEM",
       authLevel: "aal1",
     });
+
+    void auditService
+      .log({
+        action: "SESSION_CREATED",
+        identityId: identity.id,
+        ip: ctx.ip,
+      })
+      .catch(() => {});
+    void auditService
+      .log({
+        action: "USER_LOGIN_SUCCESS",
+        identityId: identity.id,
+        ip: ctx.ip,
+      })
+      .catch(() => {});
 
     return {
       sessionId: session.id,
