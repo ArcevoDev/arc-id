@@ -1,0 +1,52 @@
+# Dependencies — rebuilt inside Docker
+node_modules/
+.pnpm-store/
+
+# Build artifacts — produced by Docker build
+dist/
+.next/
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Environment — injected by docker-compose at runtime
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend code — not needed for API image
+src/app/
+src/components/
+src/hooks/
+src/providers/
+src/store/
+src/sdk/
+
+# Documentation — not needed at runtime
+docs/
+*.md
+
+# CI/CD — not needed at runtime
+.github/
+
+# Scripts — not needed at runtime (except entrypoint, copied explicitly)
+scripts/
+
+# Agent artifacts — not needed at runtime
+.agent/
+.commandcode/
+
+# Certificates — handled by docker-compose volume mount, not build context
+# certs/ is intentionally NOT excluded — build copies certs/ for PEM signing
