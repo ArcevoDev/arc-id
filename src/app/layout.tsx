@@ -1,22 +1,8 @@
-// src/app/layout.tsx
-//
-// ROOT LAYOUT — applies to every page.
-//
-// FONT: Inter (UI) + JetBrains Mono (code/DIDs/JWTs) via next/font/google,
-// mapped into the Tailwind token system via globals.css --font-sans / --font-mono.
-//
-// METADATA: derived from ArcMetadata (src/lib/ui/metadata.ts) — that file is
-// the single source of truth for name/tagline/description/OG/Twitter copy.
-// Per-page metadata should use `buildMetadata()` from the same file via
-// `generateMetadata()`, not redefine these strings.
-
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Montserrat } from "next/font/google";
 import "@/styles/globals.css";
 import { Providers } from "@/providers";
 import { ArcMetadata } from "@/lib/ui/metadata";
-
-// ── Font loading ───────────────────────────────────────────────────────────────
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,23 +18,24 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
-// ── Metadata ───────────────────────────────────────────────────────────────────
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(ArcMetadata.url),
-
   title: {
     default: `${ArcMetadata.name} — ${ArcMetadata.tagline}`,
     template: `%s · ${ArcMetadata.name}`,
   },
-
   description: ArcMetadata.longDescription,
   keywords: [...ArcMetadata.keywords],
-
   authors: [{ name: ArcMetadata.org.name, url: ArcMetadata.org.url }],
   creator: ArcMetadata.org.name,
   publisher: ArcMetadata.org.name,
-
   openGraph: {
     type: "website",
     locale: ArcMetadata.locale,
@@ -64,7 +51,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-
   twitter: {
     card: "summary_large_image",
     title: `${ArcMetadata.name} — ${ArcMetadata.tagline}`,
@@ -72,13 +58,7 @@ export const metadata: Metadata = {
     images: [ArcMetadata.ogImage],
     creator: ArcMetadata.twitterHandle,
   },
-
-  robots: {
-    index: false, // Console app — never index
-    follow: false,
-    googleBot: { index: false, follow: false },
-  },
-
+  robots: { index: false, follow: false },
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -88,11 +68,8 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
     shortcut: "/favicon.ico",
   },
-
   manifest: "/site.webmanifest",
-
   applicationName: ArcMetadata.name,
-  category: "technology",
 };
 
 export const viewport: Viewport = {
@@ -104,21 +81,9 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-// ── Root layout ────────────────────────────────────────────────────────────────
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      // next-themes sets class="dark" here — suppressHydrationWarning avoids
-      // the React mismatch warning between SSR and client hydration
-      suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable}`}
-    >
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable} ${montserrat.variable}`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
