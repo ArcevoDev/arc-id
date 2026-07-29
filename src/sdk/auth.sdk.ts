@@ -1,68 +1,84 @@
-// src/sdk/auth.sdk.ts
-import { sdk } from "./client";
+import type { SdkClient } from "./client";
 
-export const authSdk = {
-  login: (email: string, password: string) =>
-    sdk.post<any>("/api/v1/auth/login", { email, password }),
+export function createAuthSdk(client: SdkClient) {
+  return {
+    login: (email: string, password: string) =>
+      client.post<{ accessToken: string; refreshToken: string; user: any }>("/auth/login", {
+        email,
+        password,
+      }),
 
-  register: (name: string, email: string, password: string) =>
-    sdk.post<any>("/api/v1/auth/register", { name, email, password }),
+    register: (name: string, email: string, password: string) =>
+      client.post<{ accessToken: string; refreshToken: string; user: any }>("/auth/register", {
+        name,
+        email,
+        password,
+      }),
 
-  // FIX: backend POST /auth/logout expects { sessionId: string }, not a token.
-  // The store is also fixed to pass the sessionId (not the access token).
-  logout: (sessionId: string) =>
-    sdk.post<void>("/api/v1/auth/logout", { sessionId }),
+    /** POST /auth/logout — revoke a session. sessionId is required. */
+    logout: (sessionId: string) =>
+      client.post("/auth/logout", { sessionId }),
 
-  me: () => sdk.get<any>("/api/v1/identity/me"),
+    /** GET /identity/profile — the authenticated user's profile with memberships */
+    me: () =>
+      client.get<{ id: string; email: string; name: string; memberships: any[]; plan: string; tenantId: string | null }>(
+        "/identity/profile",
+      ),
 
-  refreshToken: (refreshToken: string) =>
-    sdk.post<any>("/api/v1/oauth/token", {
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-    }),
+    /** POST /oauth/token with grant_type=refresh_token */
+    refresh: (refreshToken: string) =>
+      client.post<{ accessToken: string; refreshToken?: string }>("/oauth/token", {
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      }),
 
-  verifyMfa: (code: string, sessionId: string) =>
-    sdk.post<any>("/api/v1/auth/mfa/verify", { code, sessionId }),
+    listSessions: () => client.get<any[]>("/auth/sessions"),
 
-  verifyMfaRecovery: (code: string, sessionId: string) =>
-    sdk.post<any>("/api/v1/auth/mfa/recovery", { code, sessionId }),
+    revokeSession: (sessionId: string) =>
+      client.delete(`/auth/sessions/${sessionId}`),
 
-  setupMfa: () => sdk.post<any>("/api/v1/auth/mfa/setup", { type: "TOTP" }),
-  confirmMfa: (code: string) =>
-    sdk.post<any>("/api/v1/auth/mfa/confirm", { code }),
-  disableMfa: () => sdk.delete<any>("/api/v1/auth/mfa/disable"),
+    /** POST /auth/password/reset — request a password reset email */
+    forgotPassword: (email: string) =>
+      client.post("/auth/password/reset", { email }),
 
-  forgotPassword: (email: string) =>
-    sdk.post<void>("/api/v1/auth/password/reset/request", { email }),
+    /** POST /auth/password/reset/confirm — consume token and set new password */
+    resetPassword: (token: string, newPassword: string) =>
+      client.post("/auth/password/reset/confirm", { token, newPassword }),
 
-  resetPassword: (token: string, password: string) =>
-    sdk.post<void>("/api/v1/auth/password/reset/confirm", {
-      token,
-      newPassword: password,
-    }),
+    /** POST /auth/email/verify — verify email with token */
+    verifyEmail: (token: string) =>
+      client.post("/auth/email/verify", { token }),
 
-  verifyEmail: (token: string) =>
-    sdk.post<void>("/api/v1/auth/email/verify", { token }),
+    /** POST /auth/mfa/verify — verify TOTP code during login (requires sessionId) */
+    verifyMfa: (code: string, sessionId: string) =>
+      client.post<{ accessToken: string; refreshToken: string; user: any }>("/auth/mfa/verify", {
+        code,
+        sessionId,
+      }),
 
-  listPasskeys: () => sdk.get<any[]>("/api/v1/auth/passkey"),
-  deletePasskey: (id: string) => sdk.delete<void>(`/api/v1/auth/passkey/${id}`),
+    /** POST /auth/mfa/setup — initialize TOTP setup, returns QR code */
+    setupMfa: () =>
+      client.post<{ secret: string; qrCode: string; uri: string }>("/auth/mfa/setup", {
+        type: "TOTP",
+      }),
 
-  listSessions: () => sdk.get<any[]>("/api/v1/auth/sessions"),
-  revokeSession: (id: string) =>
-    sdk.delete<void>(`/api/v1/auth/sessions/${id}`),
+    /** POST /auth/mfa/confirm — confirm MFA setup with first TOTP code */
+    confirmMfa: (code: string) =>
+      client.post<{ recoveryCodes: string[] }>("/auth/mfa/confirm", { code }),
 
-  // FIX: step-up endpoint is POST /auth/step-up with discriminated union body.
-  // The SDK signature now reflects the actual route: { method, sessionId, password }.
-  stepUp: (
-    sessionId: string,
-    method: "password" | "totp",
-    credential: string,
-  ) =>
-    sdk.post<{ elevatedUntil: string }>("/api/v1/auth/step-up", {
-      method,
-      sessionId,
-      ...(method === "password"
-        ? { password: credential }
-        : { totpCode: credential }),
-    }),
-};
+    /**
+     * DELETE /auth/mfa/disable — disable MFA.
+     * Requires an elevated session (POST /auth/step-up must be called first).
+     */
+    disableMfa: () => client.delete("/auth/mfa/disable"),
+
+    /** POST /auth/step-up — elevate session for privileged operations */
+    stepUp: (method: "password" | "totp" | "passkey", sessionId: string, credential: Record<string, unknown>) =>
+      client.post<{ success: true; elevatedUntil: string }>("/auth/step-up", {
+        method,
+        sessionId,
+        ...credential,
+      }),
+
+  };
+}
