@@ -109,6 +109,15 @@ export async function consentRoute(fastify: FastifyInstance) {
         await db.oAuthConsent.deleteMany({
           where: { identityId: req.identity.id, clientId: client.id },
         });
+        await db.auditLog.create({
+          data: {
+            actionId: "OAUTH_CONSENT_REVOKED",
+            identityId: req.identity.id,
+            ip: req.ip,
+            userAgent: req.headers["user-agent"],
+            metadata: { clientId },
+          },
+        });
       }
       return reply.send({ success: true });
     },

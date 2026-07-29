@@ -1,4 +1,24 @@
 import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@prisma-client", () => ({
+  AuditLogAction: {},
+  VcFormat: { JWT: "JWT", LDP: "LDP" },
+  UserStatus: { ACTIVE: "ACTIVE", PENDING: "PENDING" },
+  MfaType: {},
+  Prisma: { DbNull: null, JsonNull: null, AnyNull: null },
+  PrismaClient: vi.fn(),
+}));
+
+vi.mock("@/core/db", () => ({}));
+
+const { mockAuditLog } = vi.hoisted(() => ({
+  mockAuditLog: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/modules/audit/services/audit.service", () => ({
+  auditService: { log: mockAuditLog },
+}));
+
 import { createTenantFlow } from "./create-tenant.flow";
 import { createMockFlowCtx } from "@/test-utils/mock-db";
 
@@ -39,26 +59,29 @@ const ALWAYS_GOOD_INPUT = {
   sector: "technology",
 };
 
+const MOCK_ROLES = [
+  { id: "role_admin", name: "ADMIN", description: "Tenant administrator" },
+  {
+    id: "role_member",
+    name: "MEMBER",
+    description: "Standard tenant member",
+  },
+];
 describe("createTenantFlow — tenant caps", () => {
   it("allows creation when under the FREE cap (current 0 < cap 1)", async () => {
     const ctx = makeCtx({ plan: "FREE" });
     ctx.db.tenantMembership.count.mockResolvedValue(0);
     ctx.db.tenant.findFirst.mockResolvedValue(null);
+
     ctx.db.tenant.create.mockResolvedValue({
       id: "t_1",
       name: "Test Org",
       slug: "test-org",
       sector: "technology",
       createdAt: new Date(),
+      roles: MOCK_ROLES,
     });
-    ctx.db.role.findMany = vi.fn().mockResolvedValue([
-      { id: "role_admin", name: "ADMIN", description: "Tenant administrator" },
-      {
-        id: "role_member",
-        name: "MEMBER",
-        description: "Standard tenant member",
-      },
-    ]);
+    ctx.db.role.findMany = vi.fn().mockResolvedValue(MOCK_ROLES);
     ctx.db.tenantMembership.create.mockResolvedValue({});
 
     // Added 'as any' to bypass the TS18046 unknown type error
@@ -69,12 +92,40 @@ describe("createTenantFlow — tenant caps", () => {
     expect(result).toBeDefined();
     expect(result.tenant).toBeDefined();
     expect(result.tenant.name).toBe("Test Org");
+
+    expect(mockAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "TENANT_CREATED",
+        identityId: "id-creator-1",
+        tenantId: expect.any(String),
+      }),
+    );
   });
 
   it("blocks creation when at the FREE cap (current 1 >= cap 1)", async () => {
     const ctx = makeCtx({ plan: "FREE" });
     ctx.db.tenantMembership.count.mockResolvedValue(1);
     ctx.db.tenant.findFirst.mockResolvedValue(null);
+    ctx.db.tenant.create.mockResolvedValue({
+      id: "t_blocked",
+      name: "Test Org",
+      slug: "test-org",
+      sector: "technology",
+      createdAt: new Date(),
+      roles: [
+        {
+          id: "role_admin",
+          name: "ADMIN",
+          description: "Tenant administrator",
+        },
+        {
+          id: "role_member",
+          name: "MEMBER",
+          description: "Standard tenant member",
+        },
+      ],
+    });
+    ctx.db.tenantMembership.create.mockResolvedValue({});
 
     await expect(
       createTenantFlow.execute(ALWAYS_GOOD_INPUT, ctx),
@@ -90,6 +141,26 @@ describe("createTenantFlow — tenant caps", () => {
     const ctx = makeCtx({ plan: "PRO" });
     ctx.db.tenantMembership.count.mockResolvedValue(5);
     ctx.db.tenant.findFirst.mockResolvedValue(null);
+    ctx.db.tenant.create.mockResolvedValue({
+      id: "t_blocked",
+      name: "Test Org",
+      slug: "test-org",
+      sector: "technology",
+      createdAt: new Date(),
+      roles: [
+        {
+          id: "role_admin",
+          name: "ADMIN",
+          description: "Tenant administrator",
+        },
+        {
+          id: "role_member",
+          name: "MEMBER",
+          description: "Standard tenant member",
+        },
+      ],
+    });
+    ctx.db.tenantMembership.create.mockResolvedValue({});
 
     await expect(
       createTenantFlow.execute(ALWAYS_GOOD_INPUT, ctx),
@@ -111,6 +182,7 @@ describe("createTenantFlow — tenant caps", () => {
       slug: "test-org",
       sector: "technology",
       createdAt: new Date(),
+      roles: MOCK_ROLES,
     });
     ctx.db.role.findMany = vi.fn().mockResolvedValue([
       { id: "role_admin", name: "ADMIN", description: "Tenant administrator" },
@@ -141,6 +213,7 @@ describe("createTenantFlow — tenant caps", () => {
       slug: "unlimited-org",
       sector: "technology",
       createdAt: new Date(),
+      roles: MOCK_ROLES,
     });
     ctx.db.role.findMany = vi.fn().mockResolvedValue([
       { id: "role_admin", name: "ADMIN", description: "Tenant administrator" },
@@ -165,6 +238,26 @@ describe("createTenantFlow — tenant caps", () => {
     const ctx = makeCtx({ plan: undefined });
     ctx.db.tenantMembership.count.mockResolvedValue(1);
     ctx.db.tenant.findFirst.mockResolvedValue(null);
+    ctx.db.tenant.create.mockResolvedValue({
+      id: "t_default",
+      name: "Test Org",
+      slug: "test-org",
+      sector: "technology",
+      createdAt: new Date(),
+      roles: [
+        {
+          id: "role_admin",
+          name: "ADMIN",
+          description: "Tenant administrator",
+        },
+        {
+          id: "role_member",
+          name: "MEMBER",
+          description: "Standard tenant member",
+        },
+      ],
+    });
+    ctx.db.tenantMembership.create.mockResolvedValue({});
 
     await expect(
       createTenantFlow.execute(ALWAYS_GOOD_INPUT, ctx),

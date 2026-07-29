@@ -5,7 +5,19 @@
 // This test verifies that federatedLogin throws ApiError.conflict when a
 // matching email identity exists but is not yet email-verified.
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.mock("@prisma-client", () => ({
+  AuditLogAction: {},
+  VcFormat: { JWT: "JWT", LDP: "LDP" },
+  UserStatus: { ACTIVE: "ACTIVE", PENDING: "PENDING" },
+  MfaType: {},
+  Prisma: { DbNull: null, JsonNull: null, AnyNull: null },
+  PrismaClient: vi.fn(),
+}));
+
+vi.mock("@/core/db", () => ({}));
+
 import { ApiError } from "@/core/errors";
 import { createMockDb } from "@/test-utils/mock-db";
 import { federatedLogin } from "./idp.service";

@@ -7,5 +7,6 @@ export function presentTenant(tenant: Tenant) {
     slug: tenant.slug,
     sector: tenant.sector,
     createdAt: tenant.createdAt,
+    updatedAt: tenant.updatedAt,
   };
 }
