@@ -100,7 +100,7 @@ All 4 call-site gaps fixed: `idp.route.ts` (OIDC discovery + token endpoint), `w
 - Identity-scoped signing key — permanently non-custodial by design
 - LegalConsent — schema-only until a concrete consumer (TOS acceptance flow)
 - CLI + SDK packages — after frontend rebuild stabilises API contract
-- Integration tests against real Postgres — **P3, after arc-ui ships**. SDK tests (73) run via `fastify.inject()` with mock DB covering the full API surface. Existing 395 mock-DB tests give good regression coverage. Real Postgres integration tests via testcontainers or enhanced CI service container deferred until arc-ui consumption stabilises the frontend contract
+- Integration tests against real Postgres — **P3, after facet ships**. SDK tests (73) run via `fastify.inject()` with mock DB covering the full API surface. Existing 395 mock-DB tests give good regression coverage. Real Postgres integration tests via testcontainers or enhanced CI service container deferred until facet consumption stabilises the frontend contract
 
 ---
 
@@ -184,7 +184,7 @@ Oracle Ampere A1 VM (2 OCPU, 12 GB RAM)
 `package.json` is `0.1.0`. Milestones:
 
 - `0.1.0` (current) — Backend complete: presentation endpoint, all Phase 0–3, 59 files / 395 tests
-- `0.2.0` — Frontend consumed from arc-ui, ArcWallet integration working end-to-end
+- `0.2.0` — Frontend consumed from facet, ArcWallet integration working end-to-end
 - `1.0.0` — Stable production with real-Postgres integration tests, secret scanning, migration rollback testing
 
 ---

@@ -78,11 +78,11 @@ shipped. See `CLAUDE.md` for the full verified status table. Open work:
   webhooks, and API keys. Pages still need final cleanup (some import SDK
   directly instead of through hooks — pragmatically acceptable).
   **Tenant list route (`GET /tenants`) + SDK + tenant switcher wired (2026-07-28).**
-- **SDK completeness** — All backend routes now have SDK coverage across 13 SDK
-  files (~59 methods). IdP SDK (`src/sdk/idp.sdk.ts`) added.  ~36 missing SDK
+- **SDK completeness** — All backend routes now have SDK coverage across **10 SDK
+  files (~102 methods)**. IdP SDK (`src/sdk/idp.sdk.ts`) added. ~36 missing SDK
   methods added across auth, identity, tenant, and webhooks SDKs.
-- **Phase 3 — Security hardening** — Cross-tenant HTTP integration test added (3 tests, fastify.inject, passes). SSRF call-site gaps (4/4 closed: idp.route OIDC discovery + token endpoint, webhook test-ping, SAML entryPoint). CSRF review complete — only OAuth state cookies in social.route.ts, all `sameSite: "lax"` + `httpOnly` + `secure`. Redis-backed distributed revocation still open.
-- **Phase 4 — Observability** — correlation IDs, metrics on auth/token paths.
+- **Phase 3 — Security hardening** — ✅ **Closed (2026-07-28).** Cross-tenant HTTP integration test added (3 tests, fastify.inject, passes). SSRF call-site gaps (4/4 closed: idp.route OIDC discovery + token endpoint, webhook test-ping, SAML entryPoint). CSRF review complete — only OAuth state cookies in social.route.ts, all `sameSite: "lax"` + `httpOnly` + `secure`. Redis-backed distributed revocation done — `AccessToken.sessionId` column + migration + `DELETE /sessions/:id` revokes bound access tokens + blocks JTIs in Redis (full kill chain).
+- **Phase 4 — Observability** — ✅ **Shipped (2026-07-28).** Correlation IDs through `FlowContext.requestId` → audit log metadata. `@fastify-metrics` at `GET /metrics`. Pino structured logs carry traceId on every flow init/ok/fail.
 - **CLI + SDK packages** — deferred until frontend rebuild stabilises the
   API contract.
 - **LegalConsent** — stays schema-only until a consumer exists.

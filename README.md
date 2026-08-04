@@ -37,7 +37,7 @@ Business logic lives in **Flows** (`src/modules/<domain>/flows/`), never in rout
 
 ## Status
 
-Pre-release. Versioning follows `0.0.x` → `0.1.0` (tenant policy + RBAC + external identifiers — **done**) → `0.2.0` (ArcWallet-facing credential surface — in progress) → `0.3.0` (test coverage bar) → `1.0.0` (first production deployment). Breaking changes should be expected at this stage.
+Pre-release. Versioning follows `0.1.0` (current — backend complete: all Phase 0–4 shipped, 59 files / 395 tests) → `0.2.0` (frontend rebuilt, ArcWallet integration end-to-end) → `1.0.0` (stable production with integration tests, secret scanning, migration rollback testing). Breaking changes should be expected at this stage.
 
 ## Getting started
 

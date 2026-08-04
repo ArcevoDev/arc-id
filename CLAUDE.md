@@ -1,6 +1,6 @@
 # ArcID — Claude Code Handbook
 
-> Verified against actual source on 2026-07-26. Do not trust claims from
+> Verified against actual source on 2026-07-30. Do not trust claims from
 > prior docs that aren't re-confirmed below — every status line here was
 > checked against running tests or live source files, not old summaries.
 
@@ -11,7 +11,7 @@
 ArcID is a sovereign, multi-tenant identity and access management backend.
 Fastify + Prisma + Next.js 16 monorepo (pnpm, ESM-only).
 
-**What it does today (0.0.1, pre-release):**
+**What it does today (0.1.0, pre-release):**
 - Full OAuth 2.0 / OIDC provider — authorize, token exchange/refresh/revoke/introspect, JWKS, PKCE (mandatory by default)
 - WebAuthn passkeys, TOTP MFA (setup/verify/recovery), magic-link auth, social login (Google/GitHub/Apple/Microsoft), SAML2 + OIDC federation
 - SD-JWT Verifiable Credentials — issue/verify/revoke, W3C BitstringStatusList, did:web + did:key
@@ -68,8 +68,8 @@ arc-id/
 │   └── testing-guide.MD          # Manual API test matrix (65 checks)
 ├── .github/workflows/
 │   ├── ci.yml         # PR push CI: lint, typecheck, test, build (api+web)
-│   ├── deploy-api.yml # Fastify API deploy
-│   └── deploy-web.yml # Next.js deploy
+│   ├── deploy-api.yml # Fastify API deploy (GHCR push → SSH Docker Compose)
+│   └── deploy-web.yml # Next.js deploy (SSH git pull → pnpm build:web → PM2)
 ├── AGENTS.md          # Loaded every session — compressed rules
 └── CLAUDE.md          # ← you are here
 ```
@@ -215,7 +215,7 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 | `setUsernameFlow` route | ✅ 100% | Registered in `auth.plugin.ts`, audit-logged, TOCTOU-safe |
 | Refresh token expiry vs replay | ✅ Fixed | `token-refresh.flow.ts` Step 2b: expired → clean "re-authenticate", revoked → kill-chain. Tested (9 tests) |
 | Email templates | ✅ 13 templates | All registered in `notification.service.ts`, compiled via React Email + Resend |
-| CI pipeline | ✅ 3 workflows (rewritten 2026-07-28) | `ci.yml` (self-hosted Postgres 17 service, no external DB), `deploy-api.yml` (GHCR → SSH Docker Compose), `deploy-web.yml` (SSH → PM2) |
+| CI pipeline | ✅ 3 workflows (rewritten 2026-07-28) | `ci.yml` (self-hosted Postgres 17 service, no external DB), `deploy-api.yml` (GHCR push → SSH Docker Compose on target VM), `deploy-web.yml` (SSH git pull → pnpm build:web → PM2 restart) |
 | `GET /tenants` route | ✅ 100% | `list-tenants.route.ts` — returns all tenants the user has ACTIVE membership in, with role + plan |
 | SDK completeness | ✅ **102 methods** | All 123 backend endpoints have SDK coverage across 10 SDK files. Latest: +29 (oauth consent/introspect/revoke, tenant projects/onboarding, credential verification, identity delegations/onboarding/wallet DID) |
 | Tenant store hydration | ✅ Wired | `AuthProvider` calls `tenants.list()` on mount, populates `useTenantStore` with enriched tenant data |
@@ -298,7 +298,7 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 | SSRF allowlist (network-level) | ✅ **Verified** | `assertSafeUrl()` already has full network-layer private-IP blocks (RFC1918, loopback, link-local, CGNAT, IPv6 ULA) + DNS rebinding defence + `fetchWithSsrfGuard` redirect protection — verified 2026-07-26 |
 | CSRF protection | ✅ **Verified** | Only cookie-mutating routes are OAuth state cookies in `social.route.ts` — all `sameSite: "lax"` + `httpOnly` + `secure` + 600s TTL + cleared after use. All other routes return tokens in JSON body (no cookies). CORS restricted to `config.base.allowedOrigins`. |
 | Docker compose | ✅ **Exists** | `docker-compose.yml` — 4 services (postgres 17-alpine, redis 7-alpine, api, workers) with health checks + mem limits |
-| Integration tests against real Postgres | 🔶 **P3 — deferred until arc-ui ships** | All tests are unit/mock-level with `createMockDb`. SDK tests (73) run against `fastify.inject()` with mock DB, covering the full API surface. Real Postgres integration tests deferred — would need `testcontainers` or enhanced CI service container config |
+| Integration tests against real Postgres | 🔶 **P3 — deferred until facet ships** | All tests are unit/mock-level with `createMockDb`. SDK tests (73) run against `fastify.inject()` with mock DB, covering the full API surface. Real Postgres integration tests deferred — would need `testcontainers` or enhanced CI service container config |
 | Migration rollback test | ❌ **Does not exist** | No prisma:migrate-down or rollback testing |
 | Dependency/secret scanning in CI | ❌ **Not in CI** | CI.yml has lint/typecheck/test/build, no trivy/snyk/secret-scan |
 | Production Dockerfile | ✅ **Exists** | Multi-stage (deps → builder → runner), node:22-alpine, auto-migrate entrypoint, 150MB |
