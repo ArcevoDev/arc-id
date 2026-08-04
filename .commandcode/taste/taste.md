@@ -9,11 +9,7 @@ See [documentation/taste.md](documentation/taste.md)
 [cmd]: https://commandcode.ai/
 See [taste-(continuously-learned-by-[commandcode][cmd])/taste.md](taste-(continuously-learned-by-[commandcode][cmd])/taste.md)
 # Workflow
-- Before applying bulk doc updates, show diffs to the user for review first. Confidence: 0.60
-- Before a frontend/architecture rebuild, first thoroughly audit both the upstream dependency codebase and the target codebase to build a complete overlap map of what to purge, keep, and refine. Confidence: 0.75
-- When auditing a sibling or dependency codebase, produce a categorized analysis covering: what exists (inventory), consumption overlap map, blockers, design inconsistencies, and ranked optimization opportunities for scalability & third-party dynamism — each with actionable recommendations. Confidence: 0.70
-- When automated exploration/subagent tools fail, fall back to manual systematic exploration (reading files one by one in a structured order) rather than retrying the failed automation. Confidence: 0.75
-
+See [workflow/taste.md](workflow/taste.md)
 # architecture
 - Keep pages thin: pages should only call components and hooks, never import SDK or stores directly. Confidence: 0.70
 - Reusable forms belong in a dedicated forms folder, not built inline in pages using shadcn form primitives. Confidence: 0.65
@@ -21,3 +17,5 @@ See [taste-(continuously-learned-by-[commandcode][cmd])/taste.md](taste-(continu
 
 # git
 - Use `chore:` prefix for commit messages when applying cleanup/fix work from code audits. Commit to the chore branch with well-defined messages, or alternatively to the specifically concerned branch. Confidence: 0.75
+- Commit changes as individual logical commits grouped by scope (config, docs, frontend, components, modules, etc.) rather than one bulk commit, and push to remote to maintain a clean working history. Confidence: 0.75
+- After IDE crashes or file corruption, proactively find and fix corrupted files (null files, broken JSON configs) before resuming development — commit and push to establish a clean slate. Confidence: 0.75

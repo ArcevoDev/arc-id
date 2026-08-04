@@ -1,5 +1,6 @@
 # Taste (Continuously Learned by [CommandCode][cmd])
 - Use pnpm as package manager. Confidence: 0.95
+- Pin exact versions of published third-party/published packages that lack test infrastructure (or are pre-stable), rather than `^` ranges — to protect against a breaking bump mid-work. Confidence: 0.65
 - ESM only — never emit `require()` / `module.exports`. Confidence: 0.95
 - Vitest for tests, never Jest. Confidence: 0.95
 - Zod for all runtime validation (`.schemas.ts` files). Confidence: 0.9

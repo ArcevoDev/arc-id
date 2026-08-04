@@ -1,8 +1,10 @@
 # Documentation
 - Maintain and update `output.txt` with todos, processes, and the next prompt after each session. Confidence: 0.75
-- Append new analysis to existing output files rather than overwriting them — preserve prior content and insert new material below it. Confidence: 0.70
+- Append new analysis to existing output files rather than overwriting them — preserve prior content and insert new material below it; but when the user explicitly asks to overwrite (or the new content supersedes prior audit sections), replace the file wholesale and mark it as superseding. Confidence: 0.70
+- When asked whether a dependency/package is ready to integrate, write to `.agent/output.txt` an evidence-based go/no-go verdict plus a phased execution plan ordered by risk with validation steps. Confidence: 0.65
 - Before updating `output.txt` with test results, re-run the full test suite yourself and verify results — never copy previously reported results without re-verification. Confidence: 0.75
 - Keep planning docs (roadmap) and agent docs (CLAUDE.md, AGENTS.md, .agent/output.txt) in sync as code changes emerge — never let them go stale. During active work, update these docs with the current stage/progress. Confidence: 0.85
+- When the user says "fix all..." after a comprehensive audit report, systematically fix every stale/redundant/contradictory doc across all affected repos — verify each claim against reality, then fix all of them in a single batch without further confirmation. Confidence: 0.75
 - Update `.agent/output.txt` with every audit result and file state, and update planning docs + `.agent/` output on every repo change and every shell command run. Confidence: 0.75
 - Read files under `.agent/` directory to understand current test suite and build state before making changes. Confidence: 0.80
 - For test flows: run once, fix if it fails, run again. If it fails or hangs a second time stop immediately and tell the user to run it manually. Never have more than one test-running shell command in flight at a time. Confidence: 0.75
