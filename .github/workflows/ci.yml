@@ -68,6 +68,12 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Migration rollback guard (live Postgres)
+        run: pnpm test:rollback
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/arcid_test
+          SHADOW_DATABASE_URL: postgresql://test:test@localhost:5432/arcid_shadow
+
       - name: Build API
         run: pnpm build:api
 
