@@ -140,7 +140,8 @@ console.log(
   "✨ Success! Structure and all contents written to arcid_codebase_snapshot.txt",
 );
 
-// ── Regenerate .agent/output.txt after every snapshot ──────────────────────
+// ── Report only — gen-output.js no longer overwrites .agent/output.txt
+// (that file is the manual session tracker; see its header).
 import("./gen-output.js")
-  .then(() => console.log("✨ Output summary regenerated in .agent/output.txt"))
-  .catch(() => console.log("⚠️  gen-output.js skipped (output.txt not updated)"));
+  .then(() => console.log("ℹ️  gen-output.js ran in report-only mode (tracker untouched)"))
+  .catch(() => console.log("⚠️  gen-output.js skipped (report not printed)"));

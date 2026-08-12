@@ -1,10 +1,16 @@
-// gen-output.js — Regenerate .agent/output.txt from current project state
+// gen-output.js — verify + report project state WITHOUT clobbering the tracker
 //
 // Usage: node gen-output.js
-// Writes: .agent/output.txt
 //
-// This script is run automatically at the end of gen-snapshot.js so every
-// codebase snapshot carries an up-to-date output summary alongside it.
+// .agent/output.txt is now a MANUAL, facet-style session tracker + build
+// roadmap (see ../facet/.agent/output.txt for the convention). It must NOT
+// be overwritten by a script — every session updates it by hand (crossing
+// out done items), and gen-snapshot.js used to chain this script and stomp
+// on those edits.
+//
+// This script now only PRINTS a verification snapshot to stdout (test counts
+// from a real `pnpm test` parse) so a human/agent can paste the numbers into
+// the tracker. It never writes .agent/output.txt.
 
 import { execSync } from "child_process";
 import fs from "fs";
@@ -12,6 +18,13 @@ import path from "path";
 
 const ROOT = process.cwd();
 const OUTPUT_FILE = path.join(ROOT, ".agent", "output.txt");
+
+if (fs.existsSync(OUTPUT_FILE)) {
+  console.log(
+    "ℹ️  .agent/output.txt is a MANUAL tracker — gen-output.js no longer overwrites it.\n" +
+      "   Run `pnpm test` and copy the file/test counts into output.txt by hand.\n",
+  );
+}
 
 // ── Run a command, return output or empty string on failure ───────────────
 function run(cmd, opts = {}) {
@@ -30,7 +43,6 @@ function run(cmd, opts = {}) {
 
 // ── Parse test results from human-readable vitest output ─────────────────
 function runTestSummary() {
-  // Strip ANSI escape codes so regexes match on any terminal
   const output = run("pnpm test", { env: { ...process.env, NO_COLOR: "1" } });
   const clean = output.replace(/\x1B\[[0-9;]*m/g, "");
   const filesMatch = clean.match(/Test Files\s+\d+\s+passed\s+\((\d+)\)/);
@@ -38,90 +50,13 @@ function runTestSummary() {
   return {
     fileCount: filesMatch ? filesMatch[1] : "[parse failed]",
     testCount: testsMatch ? testsMatch[1] : "[parse failed]",
-    duration: "",
     full: output,
   };
 }
 
-// ── Build report ──────────────────────────────────────────────────────────
 const test = runTestSummary();
 
-const report = `# ArcID Full Audit Report — Generated ${new Date().toISOString().slice(0, 10)}
-
-## Suite Status
-
-| Check | Status | Detail |
-|-------|--------|--------|
-| \`pnpm test\` | ✅ **${test.fileCount} files, ${test.testCount} tests** | All passing |
-| \`pnpm typecheck\` | ⚠️  Run manually | \`pnpm typecheck\` (not run by this script) |
-
----
-
-## Phase Status
-
-### ✅ Phase 0 — Bug fixes (all 7 verified)
-All 7 Phase 0 bugs fixed and verified. See \`docs/planning/arcid-v1-roadmap.md\` for the full table.
-
-### ✅ Phase 1 — OAuth/aal gap (all 4 items)
-All 4 Phase 1 items shipped. See roadmap for the full table.
-
-### ✅ Phase 2 — ArcWallet-facing API (all 3 items)
-All 3 Phase 2 items shipped. See roadmap for the full table.
-
-### ✅ Phase 3 — Security hardening (ALL CLOSED 2026-07-28)
-
-The remaining Phase 3 gap — per-session access token revocation — was closed this session:
-
-| What | Why | Status |
-|------|-----|--------|
-| \`AccessToken.sessionId\` column | AccessToken model had no \`sessionId\`, so \`DELETE /sessions/:id\` could only revoke refresh tokens, not bound access tokens | ✅ **Added** — nullable \`String?\` + index |
-| Prisma migration | \`20260728143918_add_access_token_session_id\` — adds column + index to production DB | ✅ **Applied** |
-| \`token.service.ts\` | \`issue()\` now writes \`sessionId\` to the \`AccessToken\` row at creation | ✅ **Wired** |
-| \`DELETE /sessions/:id\` | Now revokes bound access tokens (DB) + blocks their JTIs (Redis) — full kill chain: session → refresh tokens → access tokens | ✅ **Wired** |
-| Tests | 59/59 files, 395/395 tests passing with the changes | ✅ **Verified** |
-
-All other Phase 3 items (cross-tenant isolation, SSRF, CSRF, Redis revocation) were closed in prior sessions.
-
----
-
-## 🟡 Phase 4 — Observability (NOT STARTED)
-
-Request correlation IDs through FlowContext + auditService, P95/error-rate metrics on auth/token paths. Zero tracing today.
-
----
-
-## Deployment
-
-| Item | Status |
-|------|--------|
-| Dockerfile | ✅ Multi-stage, node:22-alpine, ~150MB |
-| docker-compose.yml | ✅ 4 services (postgres 17, redis 7, api, workers) |
-| CI (ci.yml) | ✅ Self-hosted Postgres 17, lint/typecheck/test/build |
-| Deploy API | ✅ GHCR push → SSH Docker Compose |
-| Deploy Web | ✅ SSH git pull → pnpm build:web → PM2 |
-| Integration tests vs real Postgres | ❌ Not yet — unit/mock level only |
-
----
-
-## Remaining Gaps (not blocking)
-
-1. **Phase 4 — Observability**: Request correlation IDs, P95/error-rate metrics on auth/token paths. Zero tracing today.
-2. **Secrets/PII in logs scan**: No automated scan.
-3. **Migration rollback test**: No \`prisma migrate down\` testing.
-4. **Dependency/secret scanning in CI**: No trivy/snyk/secret-scan step.
-
----
-
-## Version
-
-\`0.1.0\` — Backend complete. All Phase 0–3 shipped (${test.fileCount} files / ${test.testCount} tests). Next: frontend rebuild → Phase 4.
-
----
-
-_Regenerated by gen-output.js — run \`node gen-output.js\` after any session that changes test count, closes a phase, or modifies the roadmap._
-`;
-
-// ── Write output ──────────────────────────────────────────────────────────
-fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
-fs.writeFileSync(OUTPUT_FILE, report, "utf-8");
-console.log(`✅ Regenerated ${OUTPUT_FILE}`);
+console.log(`Latest verified numbers for the tracker:
+  pnpm test  →  ${test.fileCount} files / ${test.testCount} tests (all passing)
+  pnpm typecheck → run manually (tsc --noEmit)
+`);
