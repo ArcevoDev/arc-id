@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@arcevo/facet-components";
 import { useAuth } from "@/hooks/use-auth";
 import { useSessions } from "@/hooks/use-sessions";
-import { Icons } from "@/lib/ui/icon-registry";
+import { Icon } from "@arcevo/facet-components";
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -68,7 +68,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
-              <Icons.logs className="h-4 w-4 text-primary" /> Recent Activity
+              <Icon name="scroll-text" className="h-4 w-4 text-primary" /> Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -78,7 +78,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
-              <Icons.shieldCheck className="h-4 w-4 text-primary" /> Active Sessions
+              <Icon name="shield-check" className="h-4 w-4 text-primary" /> Active Sessions
             </CardTitle>
           </CardHeader>
           <CardContent>

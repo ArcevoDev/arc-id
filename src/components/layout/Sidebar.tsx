@@ -5,9 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { navConfig } from "@/config/nav";
-import { Icons } from "@/lib/ui/icon-registry";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Icon, ScrollArea, Separator } from "@arcevo/facet-components";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -19,7 +17,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-[260px] flex-col border-r bg-sidebar">
       {/* Brand */}
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-5">
-        <Icons.shield className="h-6 w-6 text-primary" />
+        <Icon name="shield" className="h-6 w-6 text-primary" />
         <span className="font-semibold text-sidebar-foreground">ArcID</span>
       </div>
 
@@ -33,7 +31,6 @@ export function Sidebar() {
               </p>
               <ul className="space-y-1">
                 {section.items.map((item) => {
-                  const Icon = Icons[item.icon];
                   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
                   return (
@@ -47,7 +44,7 @@ export function Sidebar() {
                             : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         )}
                       >
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon name={item.icon} className="h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
                       </Link>
                     </li>

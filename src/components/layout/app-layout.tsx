@@ -1,6 +1,6 @@
 "use client";
 
-import { Icons } from "@/lib/ui/icon-registry";
+import { Icon } from "@arcevo/facet-components";
 
 /**
  * Auth shell — split-panel on large screens, centered card on mobile.
@@ -14,7 +14,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col gap-8">
           {/* Logo + Product Name */}
           <div className="flex items-center gap-3">
-            <Icons.shield className="h-10 w-10 text-[#4AD3F5]" />
+            <Icon name="shield" className="h-10 w-10 text-[#4AD3F5]" />
             <span
               className="font-heading text-2xl font-bold text-white"
             >
@@ -30,19 +30,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Benefit statements */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <Icons.check className="h-4 w-4 text-[#4AD3F5]" />
+              <Icon name="check" className="h-4 w-4 text-[#4AD3F5]" />
               <span className="text-sm text-white/70">Passkey-native authentication</span>
             </div>
             <div className="flex items-center gap-3">
-              <Icons.check className="h-4 w-4 text-[#4AD3F5]" />
+              <Icon name="check" className="h-4 w-4 text-[#4AD3F5]" />
               <span className="text-sm text-white/70">Multi-tenant by design</span>
             </div>
             <div className="flex items-center gap-3">
-              <Icons.check className="h-4 w-4 text-[#4AD3F5]" />
+              <Icon name="check" className="h-4 w-4 text-[#4AD3F5]" />
               <span className="text-sm text-white/70">Verifiable Credentials built-in</span>
             </div>
             <div className="flex items-center gap-3">
-              <Icons.check className="h-4 w-4 text-[#4AD3F5]" />
+              <Icon name="check" className="h-4 w-4 text-[#4AD3F5]" />
               <span className="text-sm text-white/70">WebAuthn + TOTP MFA</span>
             </div>
           </div>
@@ -60,7 +60,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 flex-col items-center justify-center p-4 lg:p-8">
         {/* Mobile-only logo row (hidden on lg+) */}
         <div className="mb-8 flex flex-col items-center gap-2 lg:hidden">
-          <Icons.shield className="h-10 w-10 text-primary" />
+          <Icon name="shield" className="h-10 w-10 text-primary" />
           <h1 className="text-xl font-bold text-foreground">ArcID</h1>
           <p className="text-sm text-muted-foreground">Sovereign Identity Engine</p>
         </div>

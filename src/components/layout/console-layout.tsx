@@ -5,7 +5,7 @@ import { useUI } from "@/hooks/use-ui";
 import { useMobile } from "@/hooks/use-mobile";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@arcevo/facet-components";
 
 /**
  * Dashboard shell — sidebar + topbar + centered content area.

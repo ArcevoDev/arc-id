@@ -12,7 +12,7 @@
  * and filter in the Sidebar.
  */
 
-import type { IconName } from "@/lib/ui/icon-registry";
+import type { IconName } from "@arcevo/facet-components";
 
 export interface NavItem {
   /** Full route path e.g. "/security/sessions" */
@@ -37,31 +37,31 @@ export interface NavSection {
 export const navConfig: NavSection[] = [
   {
     title: "Overview",
-    items: [{ href: "/dashboard", label: "Dashboard", icon: "barChart" }],
+    items: [{ href: "/dashboard", label: "Dashboard", icon: "chart-column" }],
   },
   {
     title: "Identity",
     items: [
       { href: "/admin", label: "Admin", icon: "shield", requiredPermission: "admin:system" },
       { href: "/identities", label: "Identities", icon: "users", requiredPermission: "admin:system" },
-      { href: "/tenants", label: "Tenants", icon: "tenant" },
+      { href: "/tenants", label: "Tenants", icon: "building-2" },
     ],
   },
   {
     title: "Billing",
-    items: [{ href: "/billing", label: "Billing", icon: "billing" }],
+    items: [{ href: "/billing", label: "Billing", icon: "credit-card" }],
   },
   {
     title: "Credentials",
-    items: [{ href: "/credentials", label: "Credentials", icon: "credential" }],
+    items: [{ href: "/credentials", label: "Credentials", icon: "file-check" }],
   },
   {
     title: "Security",
     items: [
       { href: "/security/sessions", label: "Sessions", icon: "monitor" },
-      { href: "/security/passkeys", label: "Passkeys", icon: "passkey" },
+      { href: "/security/passkeys", label: "Passkeys", icon: "key" },
       { href: "/security/mfa", label: "Two-Factor", icon: "lock" },
-      { href: "/security/audit", label: "Audit Log", icon: "logs", requiredPermission: "audit:read:any" },
+      { href: "/security/audit", label: "Audit Log", icon: "scroll-text", requiredPermission: "audit:read:any" },
     ],
   },
   {

@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@arcevo/facet-components";
 
 export function TenantSwitcher() {
   const { activeTenant, tenants: tenantList, isLoading, switchTenant } = useTenant();

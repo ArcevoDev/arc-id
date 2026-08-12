@@ -3,9 +3,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useAuthStore } from "@/store/auth.store";
 import { useUI } from "@/hooks/use-ui";
-import { Icons } from "@/lib/ui/icon-registry";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Icon, Button, Avatar, AvatarFallback } from "@arcevo/facet-components";
 import { TenantSwitcher } from "@/components/layout/tenant-switcher";
 import {
   DropdownMenu,
@@ -13,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@arcevo/facet-components";
 import Link from "next/link";
 
 export function Topbar() {
@@ -33,7 +31,7 @@ export function Topbar() {
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden">
-          <Icons.menu className="h-5 w-5" />
+          <Icon name="menu" className="h-5 w-5" />
         </Button>
         <TenantSwitcher />
       </div>
@@ -57,7 +55,7 @@ export function Topbar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/settings/profile" className="cursor-pointer">
-                <Icons.settings className="h-4 w-4 mr-2" />
+                <Icon name="settings" className="h-4 w-4 mr-2" />
                 Settings
               </Link>
             </DropdownMenuItem>
@@ -69,7 +67,7 @@ export function Topbar() {
                 localStorage.removeItem("arcid-auth");
               }}
             >
-              <Icons.logout className="h-4 w-4 mr-2" />
+              <Icon name="logout" className="h-4 w-4 mr-2" />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
