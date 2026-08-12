@@ -22,6 +22,7 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
@@ -47,11 +48,10 @@ next-env.d.ts
 /prisma/generated/
 .zhanlu/
 .husky\_/
-/prisma/migrations/
-/prisma/migrations/*.sql
 
 # design standards
 ArcevoCirqle_Design_Standards_Manual_v1.0..txt
 
 # agent state
-.agent/
+.agent/logs.txt
+.agent/*.txt.tmp
