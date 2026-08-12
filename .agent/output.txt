@@ -63,7 +63,10 @@ P0.5 — PAGE WIRING (architectural decision + phased execution)
       fcf0b34): security/sessions wired via useSessions (list + revoke +
       optimistic row removal); identities page + new use-identities hook
       (search + status/plan/joined table). Typecheck clean, tests pass.
-  [ ] Phase B — credentials/offers wiring. [importance HIGH · effort M]
+  [x] Phase B — credentials/offers wiring. DONE (2026-08-12, commit
+      81ffa2d): credentials page lists held credentials + revoke; offer
+      accept tab (paste token -> VcSdk.acceptOffer); verify tab (JWT ->
+      VcSdk.verify). Typecheck clean, credentials + SDK tests pass.
   [ ] Phase C — tenants/membership wiring. [importance HIGH · effort M]
   [ ] Phase D — security/settings wiring. [importance MED · effort M]
   [ ] Phase E — developers/billing wiring. [importance MED · effort M]
