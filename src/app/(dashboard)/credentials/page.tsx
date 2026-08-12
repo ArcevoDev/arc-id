@@ -1,8 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent } from "@arcevo/facet-components";
 
 export default function CredentialsPage() {
   return (

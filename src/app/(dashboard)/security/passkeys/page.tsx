@@ -1,8 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Button } from "@arcevo/facet-components";
 
 export default function PasskeysPage() {
   return (

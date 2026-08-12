@@ -1,8 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input, Button } from "@arcevo/facet-components";
 
 export default function AdminPage() {
   return (

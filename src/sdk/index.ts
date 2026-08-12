@@ -1,87 +1,109 @@
 /**
- * ArcID SDK — factory pattern singleton getters.
+ * ArcID SDK — singleton wiring for @arcevo/facet-sdk.
  *
- * Usage:
- *   import { auth, tenants } from "@/sdk";
- *   const { data, error } = await auth.login("...", "...");
- *
- * The SDK is fully typed. Responses are always { data: T | null, error: ApiError | null }.
- * Components never call fetch() directly.
+ * The domain SDKs live in the published `@arcevo/facet-sdk` package
+ * (class-based: `new AuthSdk(client)`). This module owns the single
+ * `ArcIdClient` instance, wired to the Zustand auth store for token
+ * refresh + auth-cleared handling, and re-exports the domain SDKs as
+ * singletons so consumers keep the same `import { auth } from "@/sdk"` API.
  */
 
-import { createSdkClient } from "./client";
-import { createAuthSdk } from "./auth.sdk";
-import { createBillingSdk } from "./billing.sdk";
-import { createAuditSdk } from "./audit.sdk";
-import { createTenantSdk } from "./tenant.sdk";
-import { createCredentialsSdk } from "./credentials.sdk";
-import { createIdentitySdk } from "./identity.sdk";
-import { createOAuthSdk } from "./oauth.sdk";
-import { createWebhookSdk } from "./webhooks.sdk";
-import { createPasskeySdk } from "./passkey.sdk";
-import { createIdpSdk } from "./idp.sdk";
+import {
+  ArcIdClient,
+  AuthSdk,
+  BillingSdk,
+  AuditSdk,
+  TenantSdk,
+  VcSdk,
+  IdentitySdk,
+  OAuthSdk,
+  WebhooksSdk,
+  PasskeySdk,
+  IdpSdk,
+  type AuditListParams,
+  type ApiError,
+  type ApiResponse,
+  type User,
+} from "@arcevo/facet-sdk";
 import { useAuthStore } from "@/store/auth.store";
+import { useTenantStore } from "@/store/tenant.store";
 
 // ── Client singleton ─────────────────────────────────────────────────────────
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
-function getAccessToken() {
-  return useAuthStore.getState().accessToken;
+const AUTH_STORAGE_KEY = "arcid-auth";
+
+/** Persist the current session so AuthProvider can restore it on page load. */
+export function persistSession(user: User, accessToken: string, refreshToken: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(
+    AUTH_STORAGE_KEY,
+    JSON.stringify({ user, accessToken, refreshToken }),
+  );
 }
 
-async function refreshToken(): Promise<string | null> {
-  const state = useAuthStore.getState();
-  if (!state.refreshToken) return null;
-
-  try {
-    const res = await fetch(`${BASE_URL}/oauth/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "refresh_token",
-        refresh_token: state.refreshToken,
-      }),
-    });
-
-    if (!res.ok) {
-      useAuthStore.getState().clearAuth();
-      return null;
-    }
-
-    const data = await res.json();
-    const accessToken = data.access_token ?? data.accessToken;
-    const newRefreshToken = data.refresh_token ?? data.refreshToken;
-    useAuthStore.getState().setTokens(accessToken, newRefreshToken);
-    return accessToken;
-  } catch {
-    useAuthStore.getState().clearAuth();
-    return null;
-  }
+/** Remove the persisted session (logout, refresh failure, auth cleared). */
+export function clearPersistedSession() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
 function onAuthCleared() {
   useAuthStore.getState().clearAuth();
-  localStorage.removeItem("arcid-auth");
+  useTenantStore.getState().reset();
+  clearPersistedSession();
 }
 
-const client = createSdkClient({
+// Re-entrancy guard: the client's request() retries with a fresh token after
+// onTokenRefresh resolves, but the refresh call itself goes through the same
+// client. If POST /oauth/token ever 401s, request() would call onTokenRefresh
+// again — recursing forever. The flag short-circuits the second entry so the
+// original failure path (onAuthCleared) runs instead.
+let refreshInFlight = false;
+
+let authSdk: AuthSdk;
+
+const client = new ArcIdClient({
   baseUrl: BASE_URL,
-  getAccessToken,
-  refreshToken,
+  onTokenRefresh: async () => {
+    const state = useAuthStore.getState();
+    if (!state.refreshToken || refreshInFlight) return null;
+
+    refreshInFlight = true;
+    try {
+      const { data, error } = await authSdk.refresh(state.refreshToken);
+      if (error || !data?.accessToken) {
+        onAuthCleared();
+        return null;
+      }
+
+      useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+      return data.accessToken;
+    } finally {
+      refreshInFlight = false;
+    }
+  },
   onAuthCleared,
 });
 
-// ── Domain SDKs ──────────────────────────────────────────────────────────────
+// ── Domain SDKs (facet-sdk classes) ─────────────────────────────────────────
 
-export const auth = createAuthSdk(client);
-export const tenants = createTenantSdk(client);
-export const billing = createBillingSdk(client);
-export const credentials = createCredentialsSdk(client);
-export const audit = createAuditSdk(client);
-export const identity = createIdentitySdk(client);
-export const oauth = createOAuthSdk(client);
-export const webhooks = createWebhookSdk(client);
-export const passkeys = createPasskeySdk(client);
-export const idp = createIdpSdk(client);
+authSdk = new AuthSdk(client);
 
+export const auth = authSdk;
+export const tenants = new TenantSdk(client);
+export const billing = new BillingSdk(client);
+export const credentials = new VcSdk(client);
+export const audit = new AuditSdk(client);
+export const identity = new IdentitySdk(client);
+export const oauth = new OAuthSdk(client);
+export const webhooks = new WebhooksSdk(client);
+export const passkeys = new PasskeySdk(client);
+export const idp = new IdpSdk(client);
+
+// Re-export the client so providers can push token updates.
+export const arcIdClient = client;
+
+// Re-export shared types for consumers.
+export type { AuditListParams, ApiError, ApiResponse };

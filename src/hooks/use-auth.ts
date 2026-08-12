@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
-import { auth } from "@/sdk";
+import { auth, arcIdClient, persistSession, clearPersistedSession } from "@/sdk";
 
 export function useAuth() {
   const { user, isAuthenticated, isLoading, accessToken } = useAuthStore();
@@ -10,7 +10,16 @@ export function useAuth() {
   const login = useCallback(async (email: string, password: string) => {
     const result = await auth.login(email, password);
     if (result.data) {
-      useAuthStore.getState().setAuth(result.data.user, result.data.accessToken, result.data.refreshToken);
+      // MFA-required logins return only sessionId + identity (no tokens).
+      if (result.data.accessToken) {
+        useAuthStore.getState().setAuth(result.data.identity, result.data.accessToken, result.data.refreshToken ?? "");
+        arcIdClient.setAccessToken(result.data.accessToken);
+        persistSession(
+          result.data.identity,
+          result.data.accessToken,
+          result.data.refreshToken ?? "",
+        );
+      }
     }
     return result;
   }, []);
@@ -18,14 +27,17 @@ export function useAuth() {
   const register = useCallback(async (name: string, email: string, password: string) => {
     const result = await auth.register(name, email, password);
     if (result.data) {
-      useAuthStore.getState().setAuth(result.data.user, result.data.accessToken, result.data.refreshToken);
+      // Registration returns only the identity (no tokens) in facet-sdk.
+      useAuthStore.getState().setUser(result.data.identity);
     }
     return result;
   }, []);
 
   const logout = useCallback(async (sessionId: string) => {
     await auth.logout(sessionId);
+    arcIdClient.setAccessToken(null);
     useAuthStore.getState().clearAuth();
+    clearPersistedSession();
   }, []);
 
   const forgotPassword = useCallback(async (email: string) => {
@@ -43,7 +55,17 @@ export function useAuth() {
   const verifyMfa = useCallback(async (code: string, sessionId: string) => {
     const result = await auth.verifyMfa(code, sessionId);
     if (result.data) {
-      useAuthStore.getState().setAuth(result.data.user, result.data.accessToken, result.data.refreshToken);
+      // verifyMfa returns a TokenBundle: { sessionId, accessToken, refreshToken, idToken, expiresIn }.
+      const { accessToken, refreshToken } = result.data;
+      // Fetch the full profile so the store has both user + tokens.
+      const me = await auth.me();
+      if (me.data) {
+        useAuthStore.getState().setAuth(me.data, accessToken, refreshToken);
+        persistSession(me.data, accessToken, refreshToken);
+      } else {
+        useAuthStore.getState().setTokens(accessToken, refreshToken);
+      }
+      arcIdClient.setAccessToken(accessToken);
     }
     return result;
   }, []);
@@ -54,8 +76,14 @@ export function useAuth() {
     const result = await auth.refresh(state.refreshToken);
     if (result.data) {
       useAuthStore.getState().setTokens(result.data.accessToken, result.data.refreshToken);
+      arcIdClient.setAccessToken(result.data.accessToken);
+      if (state.user) {
+        persistSession(state.user, result.data.accessToken, result.data.refreshToken ?? state.refreshToken);
+      }
     } else {
+      arcIdClient.setAccessToken(null);
       useAuthStore.getState().clearAuth();
+      clearPersistedSession();
     }
   }, []);
 

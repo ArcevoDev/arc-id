@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { useTenantStore } from "@/store/tenant.store";
-import { tenants } from "@/sdk";
+import { tenants, arcIdClient } from "@/sdk";
 
 /**
  * AuthProvider — reads stored tokens on mount and restores session.
@@ -29,6 +29,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               parsed.accessToken,
               parsed.refreshToken ?? "",
             );
+            // Keep the facet client's bearer token in sync with the store.
+            arcIdClient.setAccessToken(parsed.accessToken);
           }
         }
       } catch {
@@ -37,18 +39,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled) setLoading(false);
       }
 
-      // Hydrate tenant store with user's organisations
+      // Hydrate tenant store with user's organisations. hydrated.current is
+      // only set after a successful list — a transient network failure must
+      // not permanently disable tenant hydration for the whole session.
       if (!cancelled && useAuthStore.getState().isAuthenticated && !hydrated.current) {
-        hydrated.current = true;
         const result = await tenants.list();
-        if (!cancelled && result.data && result.data.length > 0) {
-          useTenantStore.getState().setTenants(result.data);
-          const stored = localStorage.getItem("arcid-active-tenant");
-          const saved = stored ? JSON.parse(stored) : null;
-          const target = saved
-            ? result.data.find((t: any) => t.id === saved.id)
-            : result.data[0];
-          if (target) useTenantStore.getState().setActiveTenant(target);
+        if (!cancelled) {
+          if (result.data && result.data.length > 0) {
+            useTenantStore.getState().setTenants(result.data);
+            const stored = localStorage.getItem("arcid-active-tenant");
+            const saved = stored ? JSON.parse(stored) : null;
+            const target = saved
+              ? result.data.find((t: any) => t.id === saved.id)
+              : result.data[0];
+            if (target) useTenantStore.getState().setActiveTenant(target);
+          }
+          hydrated.current = true;
         }
       }
     }

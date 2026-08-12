@@ -1,8 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, Button } from "@arcevo/facet-components";
 
 export default function BillingPage() {
   return (

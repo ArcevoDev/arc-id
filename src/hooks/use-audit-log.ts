@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { audit } from "@/sdk";
-import type { AuditListParams } from "@/sdk/audit.sdk";
+import type { AuditListParams } from "@/sdk";
 
 export function useAuditLog() {
   const accessToken = useAuthStore((s) => s.accessToken);

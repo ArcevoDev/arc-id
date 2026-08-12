@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Input, Button, Label } from "@arcevo/facet-components";
 
 export function ForgotPasswordForm() {
   const { forgotPassword } = useAuth();

@@ -1,12 +1,7 @@
 import { create } from "zustand";
+import type { User } from "@arcevo/facet-sdk";
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  emailVerified: boolean;
-  aal: number;
-}
+export type { User };
 
 export interface AuthState {
   user: User | null;
@@ -31,12 +26,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuth: (user, accessToken, refreshToken) =>
     set({ user, accessToken, refreshToken, isAuthenticated: true, isLoading: false }),
 
-  setUser: (user) => set({ user }),
+  setUser: (user) =>
+    set((state) => ({
+      user,
+      // A user without a token isn't authenticated yet (e.g. post-register).
+      isAuthenticated: state.isAuthenticated,
+    })),
 
   setTokens: (accessToken, refreshToken) =>
     set((state) => ({
       accessToken,
       ...(refreshToken ? { refreshToken } : {}),
+      // Receiving a token bundle means authentication succeeded.
+      isAuthenticated: state.isAuthenticated || accessToken !== null,
     })),
 
   clearAuth: () =>

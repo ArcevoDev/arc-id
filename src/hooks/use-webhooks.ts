@@ -13,7 +13,7 @@ export function useWebhooks() {
   }, [accessToken]);
 
   const create = useCallback(
-    async (data: { url: string; events: string[]; secret?: string; enabled?: boolean }) => {
+    async (data: { url: string; eventTypes: string[]; secret?: string; enabled?: boolean }) => {
       if (!accessToken) return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
       return webhooks.create(data);
     },
@@ -21,7 +21,7 @@ export function useWebhooks() {
   );
 
   const update = useCallback(
-    async (id: string, data: { url?: string; events?: string[]; enabled?: boolean }) => {
+    async (id: string, data: { url?: string; eventTypes?: string[]; enabled?: boolean }) => {
       if (!accessToken) return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
       return webhooks.update(id, data);
     },

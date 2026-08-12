@@ -84,63 +84,6 @@
   }
 }
 
-/* ── Design tokens — dark-first (no media query, app is always dark) ──────── */
-:root {
-  /* Backgrounds — deep navy, not pure black */
-  --background: oklch(0.12 0.02 240);
-  --foreground: oklch(0.95 0.01 240);
-
-  /* Cards — slightly elevated from background */
-  --card: oklch(0.155 0.02 240);
-  --card-foreground: oklch(0.95 0.01 240);
-
-  /* Popover — dropdown menus, tooltips */
-  --popover: oklch(0.14 0.02 240);
-  --popover-foreground: oklch(0.95 0.01 240);
-
-  /* Primary — indigo, ArcID brand colour */
-  --primary: oklch(0.58 0.23 273);
-  --primary-foreground: oklch(0.99 0 0);
-
-  /* Secondary — subtle surface */
-  --secondary: oklch(0.19 0.02 240);
-  --secondary-foreground: oklch(0.95 0.01 240);
-
-  /* Muted — de-emphasised text and backgrounds */
-  --muted: oklch(0.19 0.02 240);
-  --muted-foreground: oklch(0.65 0.02 240);
-
-  /* Accent — hover state surface */
-  --accent: oklch(0.22 0.03 240);
-  --accent-foreground: oklch(0.98 0 0);
-
-  /* Destructive — error / danger */
-  --destructive: oklch(0.577 0.245 27.325);
-
-  /* Borders and inputs */
-  --border: oklch(0.22 0.02 240);
-  --input: oklch(0.22 0.02 240);
-  --ring: oklch(0.58 0.23 273 / 50%);
-  --radius: 0.5rem;
-
-  /* Charts */
-  --chart-1: oklch(0.58 0.23 273); /* indigo */
-  --chart-2: oklch(0.696 0.17 162); /* teal */
-  --chart-3: oklch(0.398 0.07 227); /* slate */
-  --chart-4: oklch(0.828 0.189 84); /* amber */
-  --chart-5: oklch(0.769 0.188 70); /* gold */
-
-  /* Sidebar — slightly different from card for depth */
-  --sidebar: oklch(0.135 0.02 240);
-  --sidebar-foreground: oklch(0.95 0.01 240);
-  --sidebar-primary: oklch(0.58 0.23 273);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.19 0.02 240);
-  --sidebar-accent-foreground: oklch(0.95 0.01 240);
-  --sidebar-border: oklch(0.22 0.02 240);
-  --sidebar-ring: oklch(0.58 0.23 273 / 50%);
-}
-
 /* ── Base layer ────────────────────────────────────────────────────────────── */
 @layer base {
   * {

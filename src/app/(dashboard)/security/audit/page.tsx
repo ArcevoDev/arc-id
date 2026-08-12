@@ -1,8 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@arcevo/facet-components";
 
 export default function AuditPage() {
   return (

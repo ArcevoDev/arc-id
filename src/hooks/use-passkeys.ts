@@ -12,21 +12,20 @@ export function usePasskeys() {
     return passkeys.list();
   }, [accessToken]);
 
-  const registrationOptions = useCallback(async (name: string) => {
-    if (!accessToken) return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
-    return passkeys.registrationOptions({ name });
-  }, [accessToken]);
+  const registrationOptions = useCallback(async () => {
+    return passkeys.registrationOptions();
+  }, []);
 
-  const register = useCallback(async (data: Record<string, unknown>) => {
+  const register = useCallback(async (data: { response: unknown; challengeId: string }) => {
     if (!accessToken) return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
     return passkeys.register(data);
   }, [accessToken]);
 
-  const authenticationOptions = useCallback(async (sessionId?: string) => {
-    return passkeys.authenticationOptions(sessionId);
+  const authenticationOptions = useCallback(async (identityId?: string) => {
+    return passkeys.authenticationOptions(identityId);
   }, []);
 
-  const authenticate = useCallback(async (data: Record<string, unknown>) => {
+  const authenticate = useCallback(async (data: { response: unknown; challengeId: string }) => {
     return passkeys.authenticate(data);
   }, []);
 
