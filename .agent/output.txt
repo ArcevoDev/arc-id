@@ -46,6 +46,25 @@ P0 — FACET MIGRATION (finish the UI, per priority/effort)
       billing, dashboard) -> route through hooks per the strict chain
       rule. [importance LOW · effort M]
 
+P0.5 — PAGE WIRING (architectural decision + phased execution)
+-------------------------------------------------------------
+  DECISION NEEDED before wiring pages end-to-end:
+  - Strict chain: page -> component -> hook (use-*.ts) -> Zustand store
+    -> SDK (src/sdk/index.ts) -> API. NO page/component imports the SDK
+    directly. This is the non-negotiable convention (see CLAUDE.md).
+  - Phased execution (per module, verify each phase):
+    Phase A: identity + sessions pages (list, revoke, logout).
+    Phase B: credentials + offers pages (list, accept, present).
+    Phase C: tenants + membership pages (switch, members, policy).
+    Phase D: security pages (mfa, passkeys, audit) + settings.
+    Phase E: developers pages (oauth apps, api keys, webhooks) + billing.
+  - Each phase = one commit, typecheck + tests + build gate.
+  [ ] Phase A — identity/sessions wiring. [importance HIGH · effort M]
+  [ ] Phase B — credentials/offers wiring. [importance HIGH · effort M]
+  [ ] Phase C — tenants/membership wiring. [importance HIGH · effort M]
+  [ ] Phase D — security/settings wiring. [importance MED · effort M]
+  [ ] Phase E — developers/billing wiring. [importance MED · effort M]
+
 P1 — BACKEND HARDENING / API LAYER (no leaks or gaps)
 -----------------------------------------------------
   [x] Phase 3 — Security hardening (CLOSED 2026-07-28): cross-tenant
@@ -80,6 +99,27 @@ P3 — DEFERRED (do not start early)
   [ ] LegalConsent — schema-only until a consumer exists.
   [ ] ExternalIdentifier.verified -> VC issuance — needs design.
   [ ] BBS+/did:jwk/full OIDC4VCI-OIDC4VP/OPA-Cedar-SCIM-Terraform — v2+.
+
+P2.5 — ARC-WALLET (parallel track — CAN start now)
+--------------------------------------------------
+  DECISION (2026-08-12): ArcWallet builds against @arcevo/facet-sdk NOW,
+  in parallel — do NOT wait for MVP to ship to prod.
+  - SDK verified RN-safe: zero npm deps, single ESM bundle, no
+    localStorage/window/Buffer/process.env; plain fetch with RequestInit
+    passthrough (fetchInit config + per-call signal for timeouts).
+  - Wallet-facing surface already in SDK: VcSdk.offer/acceptOffer/
+    createVerificationSession/presentForVerification/getStatusList/
+    resolveTenantDidDoc + IdentitySdk.registerWalletDid.
+  - Presentation endpoints (/verify/session, /verify/present) are
+    unauthenticated by design + rate-limited — fine for the QR/deep-link
+    flow (see docs/planning/presentation-envelope-design.md).
+  - Risk if MVP contract shifts: small — base-URL + param change, not a
+    rewire. Gate on prod only for runtime concerns (CORS/TLS/rate-limits).
+  [ ] ArcWallet repo: scaffold RN app against facet-sdk (registerWalletDid
+      first). [importance HIGH · effort L]
+  [ ] Wallet flows: accept offer -> hold VC -> present via QR/deep link.
+      [importance HIGH · effort L]
+  [ ] End-to-end smoke vs arc-id MVP once deployed. [importance HIGH · effort M]
 
 ================================================================
 VERIFICATION GATES (last pass 2026-08-12)
