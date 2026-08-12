@@ -26,8 +26,8 @@ ArcID is a Fastify + PostgreSQL (Prisma) backend. Current state, verified agains
 
 - **ArcWallet** — a companion React Native app (separate repo) where individuals hold their credentials and keys; ArcID never custodies wallet private keys.
 - **ArcVerify** — the verifier-facing counterpart for institutions checking a presented credential.
-- **Frontend rebuild** — `src/app/`, `src/components/`, `src/hooks/`, `src/store/` are being replaced from scratch to ship a proper admin dashboard alongside ArcWallet.
-- **Public SDK and CLI** — once the API surface above is stable, `packages/sdk` and `packages/cli` will be extracted for external integrators.
+- **Frontend rebuild** — `src/app/`, `src/components/`, `src/hooks/`, `src/store/` were replaced from scratch to ship an admin dashboard. The SDK layer is a thin wiring over the published `@arcevo/facet-sdk`, CSS tokens come from `@arcevo/facet-tokens`, and all UI primitives come from `@arcevo/facet-components` (facet migration Phases 1–3 done). The remaining migration phases (auth forms via `@arcevo/facet-auth`, layout, purge) are in progress.
+- **Public SDK and CLI** — the frontend already consumes the published `@arcevo/facet-sdk`; a standalone `packages/cli` for external integrators comes once the API surface stabilises.
 
 Live, granular status — what's done, what's in progress, what's explicitly deferred — is tracked in `docs/planning/arcid-v1-roadmap.md`, kept current as the actual source of truth for project state.
 
@@ -37,7 +37,7 @@ Business logic lives in **Flows** (`src/modules/<domain>/flows/`), never in rout
 
 ## Status
 
-Pre-release. Versioning follows `0.1.0` (current — backend complete: all Phase 0–4 shipped, 59 files / 395 tests) → `0.2.0` (frontend rebuilt, ArcWallet integration end-to-end) → `1.0.0` (stable production with integration tests, secret scanning, migration rollback testing). Breaking changes should be expected at this stage.
+Pre-release. Versioning follows `0.1.0` (current — backend complete: all Phase 0–4 shipped, 62 files / 340 tests) → `0.2.0` (frontend consumed from facet, ArcWallet integration end-to-end) → `1.0.0` (stable production with integration tests, secret scanning, migration rollback testing). Breaking changes should be expected at this stage.
 
 ## Getting started
 

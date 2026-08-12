@@ -23,7 +23,7 @@ Fastify + Prisma + Next.js 16 monorepo (pnpm, ESM-only).
 - Email via Resend (13 templates, React Email components, mail preview at :3000/mail/preview)
 - SMS via Brevo (transactional SMS for MFA codes + security alerts)
 
-**Test suite: 59 files / 395 tests, 0 code failures** — all passing clean, 83.6s runtime with `--pool=threads` on Windows. Updated 2026-07-28.
+**Test suite: 62 files / 340 tests / 0 code failures** — all passing clean, ~4-5 min runtime on Windows (route-level + Prisma import chains dominate). Updated 2026-08-12.
 
 ---
 
@@ -36,10 +36,10 @@ arc-id/
 │   │   ├── plugins/   # auth-guard, jwt, db, rate-limit, swagger, cors
 │   │   ├── routes/    # well-known, health, DID document, mail-preview
 │   │   └── server/    # build-server.ts, start-server.ts, start-workers.ts
-│   ├── app/           # Next.js 16 App Router — being rebuilt from scratch
-│   ├── components/    # React components — being rebuilt from scratch
+│   ├── app/           # Next.js 16 App Router — dashboard + auth routes
+│   ├── components/    # React components — auth forms + layout (in-repo)
 │   ├── core/          # Shared: config, db, errors, flows, mail
-│   ├── hooks/         # React hooks — being rebuilt from scratch
+│   ├── hooks/         # React hooks — use-*.ts over the facet SDKs
 │   ├── jobs/          # Background jobs — token-cleanup, webhook-worker
 │   ├── lib/           # Utilities: jwt, crypto, kms, security, url-safety
 │   │   ├── kms/       # AES-256-GCM key encryption/decryption + rotation
@@ -55,9 +55,9 @@ arc-id/
 │   │   ├── oauth/     # authorize, token, revoke, introspect, userinfo, clients, consent
 │   │   ├── tenant/    # CRUD, policy, members, signing keys, projects, onboarding
 │   │   └── webhooks/  # endpoint config + delivery event routes
-│   ├── providers/     # React context — being rebuilt
-│   ├── sdk/           # Frontend HTTP client — being rebuilt
-│   ├── store/         # Zustand stores — being rebuilt
+│   ├── providers/     # React context — ThemeProvider, AuthProvider
+│   ├── sdk/           # Thin singleton wiring over @arcevo/facet-sdk (index.ts only)
+│   ├── store/         # Zustand stores — auth, tenant, ui
 │   └── types/         # Shared TypeScript types
 ├── prisma/
 │   ├── schema.prisma  # Single source of truth — 50+ models
@@ -91,7 +91,7 @@ pnpm dev:workers         # Background workers only
 pnpm typecheck
 pnpm lint
 pnpm format
-pnpm test                # 395 tests, 59 files, all passing
+pnpm test                # 340 tests, 62 files, all passing
 pnpm test:watch
 pnpm test:coverage
 pnpm build:api
@@ -217,7 +217,9 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 | Email templates | ✅ 13 templates | All registered in `notification.service.ts`, compiled via React Email + Resend |
 | CI pipeline | ✅ 3 workflows (rewritten 2026-07-28) | `ci.yml` (self-hosted Postgres 17 service, no external DB), `deploy-api.yml` (GHCR push → SSH Docker Compose on target VM), `deploy-web.yml` (SSH git pull → pnpm build:web → PM2 restart) |
 | `GET /tenants` route | ✅ 100% | `list-tenants.route.ts` — returns all tenants the user has ACTIVE membership in, with role + plan |
-| SDK completeness | ✅ **102 methods** | All 123 backend endpoints have SDK coverage across 10 SDK files. Latest: +29 (oauth consent/introspect/revoke, tenant projects/onboarding, credential verification, identity delegations/onboarding/wallet DID) |
+| SDK layer | ✅ **Migrated to `@arcevo/facet-sdk@1.0.1`** | `src/sdk/` is now `index.ts` only — an `ArcIdClient` singleton (401 auto-refresh wired to the Zustand auth store) re-exporting the facet domain SDK classes (`AuthSdk`, `TenantSdk`, `VcSdk`, …). Old factory-pattern `src/sdk/*.sdk.ts` deleted (2026-08-05). |
+| UI components | ✅ **Migrated to `@arcevo/facet-components@1.3.0`** | `src/components/ui/` deleted; all consumers import from the facet package. Icons use the package's native `<Icon name="…" />` registry (`getIcon`/`lucideIconMap`); `src/lib/ui/icon-registry.ts` + `navigation.ts` deleted as duplicates. `cn` re-exported from `@/lib/utils`. Verified typecheck + 340 tests green (2026-08-12). |
+| CSS tokens | ✅ **Migrated to `@arcevo/facet-tokens@1.1.0`** | `tokens.css` imported before `globals.css` in `layout.tsx`; `:root` block removed from globals.css; arc-id keeps its indigo primary via override. |
 | Tenant store hydration | ✅ Wired | `AuthProvider` calls `tenants.list()` on mount, populates `useTenantStore` with enriched tenant data |
 | Tenant switcher UI | ✅ Built | `TenantSwitcher` component in Topbar — visible when user has 2+ tenants, triggers context switch |
 
@@ -225,10 +227,10 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 
 | Priority | Item | Why now |
 |----------|------|---------|
-| **P0** | Frontend rebuild (Prompt 2) | **SDK/stores/hooks/providers/layout complete.** Factory-pattern SDK with no framework deps, typed singletons, 401 auto-refresh in SDK client.ts (not AuthProvider). New hooks: useCredentials, useMfa, useWebhooks, useApiKeys. Pages still need final cleanup (some import SDK directly instead of hooks — pragmatically acceptable). **Tenant list route + SDK + UI switcher wired (2026-07-28).** |
+| **P0** | Facet migration Phases 4–6 | **Phases 1–3 done (2026-08-12).** Phase 1: `src/sdk/` is a thin `ArcIdClient` singleton wiring over `@arcevo/facet-sdk@1.0.1`. Phase 2: `@arcevo/facet-tokens/tokens.css` imported before `globals.css` in `layout.tsx`, `:root` token block removed from `globals.css`. Phase 3: `src/components/ui/` deleted — all consumers now import `@arcevo/facet-components@1.3.0`, icons via the native `<Icon name="…" />`. **Remaining:** Phase 4 `src/components/auth/` → `@arcevo/facet-auth` (5 forms), Phase 5 layout → `@arcevo/facet-layout`, Phase 6 purge. |
 | **P1** | Phase 3 — Security hardening | **✅ Closed (2026-07-28).** SSRF (4/4 fixed), CSRF review complete, Redis-backed distributed revocation wired. **Per-session access token revocation**: `AccessToken.sessionId` column + migration + `DELETE /sessions/:id` revokes bound access tokens + blocks JTIs in Redis. Full kill chain: session → refresh → access tokens. JTI blocklist (14 tests, 3 files): in-memory Map fallback, retries every call. Introspect route: Redis + DB dual check. |
-| **P2** | Phase 4 — Observability | ✅ **Shipped (2026-07-28).** `requestId` in all error responses + audit log metadata. `@fastify-metrics` at `GET /metrics`. Correlation IDs flow through FlowContext.requestId → auditService.log → DB. Pino structured logs carry traceId on every flow init/ok/fail. |
-| **P3** | CLI + SDK packages | `packages/cli/` + `packages/sdk/` extraction after frontend rebuild stabilises API contract |
+| **P2** | Phase 4 — Observability | **✅ Shipped (2026-07-28).** `requestId` in all error responses + audit log metadata. `@fastify-metrics` at `GET /metrics`. Correlation IDs flow through FlowContext.requestId → auditService.log → DB. Pino structured logs carry traceId on every flow init/ok/fail. |
+| **P3** | CLI + SDK packages | `packages/cli/` extraction after frontend rebuild stabilises API contract. Design basis: `docs/planning/arcid-cli-design.md`. |
 | **P4** | LegalConsent → wire to flow | Schema-only today — needs a consumer |
 | **P5** | ExternalIdentifier.verified → VC issuance | `issue-credential.flow.ts` doesn't resolve `subjectDid` → `Identity` yet |
 
@@ -244,13 +246,13 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 
 ## Test coverage detail
 
-### 59 test files, 395 tests — modules with coverage
+### 62 test files, 340 tests — modules with coverage
 
-> All 59 files pass on `pnpm test`. Typecheck clean (`tsc --noEmit`).
+> All 62 files pass on `pnpm test`. Typecheck clean (`tsc --noEmit`).
 
 | Module | Test files | Tests | Source files | Coverage breadth |
 |--------|-----------|-------|-------------|-----------------|
-| `auth` | 14 | 76 | 38 | All 13 flows covered (login, register, logout, email-verify, magic-link, mfa-setup/verify, passkey-register/auth, password-reset-request/confirm, set-username, switch-context) + session.service |
+| `auth` | 14 | 76 | 38 | All 13 flows covered (login, register, logout, email-verify, magic-link, mfa-setup/verify, passkey-register/auth, password-reset-request/confirm, set-username, switch-context) + session.service + `session.route` (DELETE /sessions/:id — 3 tests) |
 | `credentials` | 7 | 55 | 20 | Issue/verify/offer/revoke flows + route-level (offer, verify-session, verify-present) + status-list service |
 | `oauth` | 6 | 47 | 21 | authorize.flow, token-exchange.flow, token-refresh.flow, token-revoke.flow, revoke-token-by-id.flow + token.service |
 | `tenant` | 7 | 27 | 22 | create-tenant, add-member, remove-member, provision-tenant-did + did.route + cross-tenant-isolation (HTTP + unit) |
@@ -261,7 +263,7 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 | `webhooks` | 1 | 6 | 4 | webhook-config route |
 | `lib/*` | 8 | 55 | ~15 | url-safety, rbac, password-rules, jws-proof, jti-blocklist (3 files, inc. Redis), kms |
 | `test-utils` | 2 | 5 | 2 | test-infra + sanity |
-| `sdk` | 1 | 73 | 10 | Full SDK integration tests — all domain modules + passkey + idp |
+| `sdk` | 1 | 4 | 1 | `src/sdk/index.ts` singleton wiring over `@arcevo/facet-sdk` — exports + client token round-trip |
 | `root` | 1 | 1 | — | root sanity test |
 
 ### Modules with zero test coverage (14 files, all low-to-medium risk)
@@ -309,7 +311,7 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 
 Current: `0.1.0` (package.json). Pre-release — no stability promises.
 
-- `0.1.0` (current) — Backend complete: all Phase 0–4 shipped; 59 test files / 395 tests, 0 code failures
+- `0.1.0` (current) — Backend complete: all Phase 0–4 shipped; 62 test files / 340 tests, 0 code failures
 - `0.2.0` — Frontend rebuilt, ArcWallet integration working end-to-end
 - `1.0.0` — Stable production-ready milestone with Phase 3+4 hardening
 

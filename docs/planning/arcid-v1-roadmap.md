@@ -1,7 +1,7 @@
-# ArcID v1 Roadmap — Updated 2026-07-28
+# ArcID v1 Roadmap — Updated 2026-08-12
 
-> Backend complete (0.1.0 equivalent). All Phase 0–4 shipped. **59 files / 395 tests / 0 code failures on `pnpm test` (all passing). Typecheck clean.**
-> Next work: frontend rebuild (Prompt 2) → SDK packages.
+> Backend complete (0.1.0 equivalent). All Phase 0–4 shipped. **62 files / 340 tests / 0 code failures on `pnpm test` (all passing). Typecheck clean.**
+> Next work: facet migration Phases 4–6 (auth forms → layout → purge) → CLI/SDK packages.
 
 ---
 
@@ -43,19 +43,20 @@
 Architecture constraint (non-negotiable):
 
 ```
-page → component(s) → hook (use-*.ts) → Zustand store → SDK (src/sdk/*.sdk.ts) → API
+page → component(s) → hook (use-*.ts) → Zustand store → SDK (src/sdk/index.ts → @arcevo/facet-sdk) → API
 ```
 
-### Completed (2026-07-23, updated 2026-07-28)
+### Completed (2026-07-23, updated 2026-08-12)
 
 | Step | What | Status |
 |------|------|--------|
-| 1 | **SDK layer** (`src/sdk/`) | **Done.** Factory pattern (`createClient(config)` + per-domain `create*Sdk(client)`). Pure fetch wrappers — no React, no Next.js. **102 methods across 10 SDK files** — all 123 backend endpoints have SDK coverage. Latest additions (2026-07-28): +7 OAuth (consent, introspect, revoke, userinfo, jwks), +10 tenant (projects CRUD, onboarding flows CRUD, createSigningKey, getJwksBySlug), +5 credentials (acceptOffer, verification session, present, status list, tenant DID), +7 identity (delegations, onboarding, wallet DID). Bug fix: `provisionDid` missing `domain` body param. |
-| 2 | **Zustand stores** (`src/store/`) | **Done.** `auth.store.ts` has `setTokens()` (called by the SDK barrel-level `refreshToken()` function during 401 recovery). `tenant.store.ts` enhanced with `isLoading` state + `setLoading` action. `ui.store.ts` unchanged — already correct. |
-| 3 | **Hooks** (`src/hooks/`) | **Done.** Added `use-credentials.ts`, `use-mfa.ts`, `use-webhooks.ts`, `use-api-keys.ts`. `use-tenant.ts` enhanced with `hydrateTenants()` + `switchTenant()`. Existing 11 hooks (use-auth, use-tenant, use-ui, use-oauth-tokens, use-sessions, use-passkeys, use-audit-log, use-step-up, use-pagination, use-debounce, use-mobile) all correct. |
-| 4 | **Providers** (`src/providers/`) | **Done.** 401 auto-refresh wired in `src/sdk/client.ts` (the SDK `request()` method retries once on 401 via the `refreshToken` callback before calling `onAuthCleared`). `AuthProvider` restores session from localStorage on mount AND hydrates tenant store via `GET /tenants`. `ThemeProvider` unchanged. |
-| 5 | **Layout** (`src/components/layout/`) | **Done.** AppLayout, ConsoleLayout, Sidebar, Topbar, PageHeader all correct. **TenantSwitcher component added to Topbar** — visible when user has 2+ tenants, triggers context switch via `POST /auth/switch-context`. |
-| 6 | **Pages** (`src/app/`) | **Partial.** All `as any` casts eliminated from admin page (was using `identitySdk.listAdmin` / `updateStatus`) and credentials page (was using `credentialsSdk.list`). API keys page upgraded from raw `sdk.get/post/delete` to `apiKeysSdk`. Other pages use proper typed SDK methods. Pages that import SDK directly (bypassing hooks) remain per existing pattern — pragmatically acceptable for simple reads. |
+| 1 | **SDK layer** (`src/sdk/`) | **Done — migrated to `@arcevo/facet-sdk` (2026-08-05).** `src/sdk/` is now `index.ts` only: an `ArcIdClient` singleton with 401 auto-refresh (wired to the Zustand auth store) re-exporting the facet domain SDK classes (`AuthSdk`, `TenantSdk`, `VcSdk`, `OAuthSdk`, `PasskeySdk`, `IdpSdk`, …). Old factory-pattern `src/sdk/*.sdk.ts` files deleted. Full route coverage lives in the published package — see `docs/migration/facet-migration-guide.md` Phase 1. |
+| 2 | **Zustand stores** (`src/store/`) | **Done.** `auth.store.ts` uses the facet-sdk `User` type (memberships-aware). `auth.store.test.ts` added (5 tests, 2026-08-12). `tenant.store.ts` has `isLoading` state + `setLoading` action. `ui.store.ts` unchanged. |
+| 3 | **Hooks** (`src/hooks/`) | **Done.** Added `use-credentials.ts`, `use-mfa.ts`, `use-webhooks.ts`, `use-api-keys.ts`. `use-tenant.ts` enhanced with `hydrateTenants()` + `switchTenant()`. Existing 11 hooks all correct. |
+| 4 | **Providers** (`src/providers/`) | **Done.** 401 auto-refresh wired in `src/sdk/index.ts`. `AuthProvider` restores session from localStorage on mount AND hydrates tenant store via `GET /tenants`. |
+| 5 | **Layout** (`src/components/layout/`) | **Done.** AppLayout, ConsoleLayout, Sidebar, Topbar, PageHeader all correct. **TenantSwitcher in Topbar** — visible when user has 2+ tenants. |
+| 6 | **UI primitives** | **Done — migrated to `@arcevo/facet-components@1.3.0` (2026-08-12).** `src/components/ui/` deleted; icons use the package's native `<Icon name="…" />` registry. Dead `src/lib/ui/icon-registry.ts` + `navigation.ts` deleted. `@/lib/utils` re-exports facet's `cn`. |
+| 7 | **Pages** (`src/app/`) | **Partial.** All `as any` casts eliminated from admin + credentials pages. API keys page uses `apiKeysSdk`. Pages that import SDK directly (login, register, billing, dashboard) remain per existing pattern — pragmatically acceptable. |
 
 ### Remaining gaps (low priority, not blocking)
 - Some pages import SDK modules directly instead of going through hooks (e.g. login, register, billing, dashboard). These work correctly but violate the strict chain rule.
@@ -99,8 +100,8 @@ All 4 call-site gaps fixed: `idp.route.ts` (OIDC discovery + token endpoint), `w
 - OPA/Cedar policy engine, SCIM, Terraform provider — all v2+
 - Identity-scoped signing key — permanently non-custodial by design
 - LegalConsent — schema-only until a concrete consumer (TOS acceptance flow)
-- CLI + SDK packages — after frontend rebuild stabilises API contract
-- Integration tests against real Postgres — **P3, after facet ships**. SDK tests (73) run via `fastify.inject()` with mock DB covering the full API surface. Existing 395 mock-DB tests give good regression coverage. Real Postgres integration tests via testcontainers or enhanced CI service container deferred until facet consumption stabilises the frontend contract
+- CLI + SDK packages — after frontend rebuild stabilises API contract. CLI basis is designed: see `docs/planning/arcid-cli-design.md` (command surface, DB/auth detection, safe overwrite/revert, facet-cli core reuse).
+- Integration tests against real Postgres — **P3, after facet ships**. SDK tests (4) run via `fastify.inject()` with mock DB covering the singleton wiring. Existing 340 mock-DB tests give good regression coverage. Real Postgres integration tests via testcontainers or enhanced CI service container deferred until facet consumption stabilises the frontend contract. **Migration rollback guard now exists** (2026-08-12): `prisma/migrations/rollback.test.ts` — Tier 1 static chain checks always run; Tier 2 (live `prisma migrate diff` + `deploy`) is opt-in via `pnpm test:rollback` (`ARC_ID_ROLLBACK_TEST=1`) and wired into CI against the Postgres service with `SHADOW_DATABASE_URL`.
 
 ---
 
@@ -117,12 +118,12 @@ All 4 call-site gaps fixed: `idp.route.ts` (OIDC discovery + token endpoint), `w
 | 5 | 🟡 **MEDIUM** | `tenant.sdk.ts:list()` calls `GET /tenants` — no backend route exists, always returns 404 | Removed method |
 | 6 | 🟡 **MEDIUM** | `email-verify.flow.test.ts` crashed at import — `auditService.log()` import chain reached real PrismaClient without `$extends` mock | Added `vi.mock` for auditService |
 
-### Suite status: 59 files / 361 tests / 0 failures. Typecheck clean.
+### Suite status: 62 files / 340 tests / 0 failures. Typecheck clean.
 
 ### Remaining gaps (low/moderate, no fix needed now)
 - **Login passkey edge case test** — existing test at login.flow.test.ts:223 mocks identity directly bypassing the repository. Now that the repository is fixed, the mock approach masks the fix's verification. New test needed that exercises the full `findForAuth` → `hasPasskey` path.
 - **21 missing audit assertions** — 21 out of 24 flows with audit side effects don't verify the call. Low risk (fire-and-forget `.catch(() => {})`), but weakens regression detection.
-- **SDK completeness** — **Closed (2026-07-28).** **102 SDK methods across 10 files** — all 123 backend endpoints have SDK coverage. 29 methods added in latest pass: OAuth consent/introspect/revoke/userinfo/jwks, tenant projects CRUD/onboarding flows CRUD/createSigningKey/getJwksBySlug, credential acceptOffer/verification session/present/status list/tenant DID, identity delegations/onboarding/wallet DID. `provisionDid` bug fixed (now requires `{ domain }` body).
+- **SDK completeness** — **Superseded (2026-08-05):** route coverage moved out of the repo into the published `@arcevo/facet-sdk@1.0.1`. `src/sdk/` now only wires the client + singletons. All 123 backend endpoints are covered by the facet-sdk package (verified 2026-08-04 per `docs/migration/facet-migration-guide.md`).
 
 ---
 
@@ -183,7 +184,7 @@ Oracle Ampere A1 VM (2 OCPU, 12 GB RAM)
 
 `package.json` is `0.1.0`. Milestones:
 
-- `0.1.0` (current) — Backend complete: presentation endpoint, all Phase 0–3, 59 files / 395 tests
+- `0.1.0` (current) — Backend complete: presentation endpoint, all Phase 0–4, 62 files / 340 tests
 - `0.2.0` — Frontend consumed from facet, ArcWallet integration working end-to-end
 - `1.0.0` — Stable production with real-Postgres integration tests, secret scanning, migration rollback testing
 

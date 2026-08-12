@@ -1,174 +1,115 @@
-# FACET INTEGRATION READINESS AUDIT — ArcID
-Generated: 2026-08-04
+================================================================
+  ArcID: SESSION TRACKER & BUILD ROADMAP
+  Updated: 2026-08-12 (SESSION 2 — FACET IMPORTS FIX + DOC SYNC)
+  Author: arc-id (Arcevo Ecosystem Identity/IAM Backend)
+================================================================
 
-## Verdict
+VERIFIED REPO STATE (2026-08-12)
+--------------------------------
+- Branch: chore (working tree carries the facet migration Phases 1-3 +
+  uncommitted doc sync — see .agent/logs.txt).
+- Version 0.1.0 (package.json). pnpm 11.21.0. ESM-only. Next.js 16.2.6.
+- Test suite: 62 files / 340 tests / 0 failures on `pnpm test`
+  (~4-5 min on Windows; slowest = route-level tests + prisma imports).
+  Typecheck: clean (`tsc --noEmit`). Next build: compiles clean.
+- Backend complete: Phases 0-4 shipped (OAuth2/OIDC, WebAuthn, TOTP MFA,
+  SD-JWT VCs, did:web/did:key, presentation endpoint, multi-tenant
+  policy/RBAC, webhook delivery, observability, Redis revocation).
+- Facet migration: Phases 1-3 DONE. Phase 1 (SDK -> @arcevo/facet-sdk),
+  Phase 2 (CSS tokens -> @arcevo/facet-tokens), Phase 3 (components ->
+  @arcevo/facet-components, native <Icon name="..."/> registry, dead
+  icon-registry.ts + navigation.ts deleted). Phases 4-6 pending.
+- Facet packages pinned: sdk 1.0.1, components 1.3.0, auth 1.1.1,
+  layout 1.2.0, tokens 1.1.0, cli 0.3.0 (installed, unused — CLI basis),
+  docs 1.3.0 (installed, unused — docs scaffold basis).
 
-**@arcevo/facet-sdk@1.0.1 is FULLY READY to build arc-id on.** Verified directly
-against the published npm artifact and arc-id's actual registered routes.
-Arc-id can continue development now; facet package bumps flow in as normal
-dependency updates.
+================================================================
+MILESTONES / TODOS — BY PRIORITY
+(weight tags: importance [HIGH/MED/LOW] · effort [S/M/L])
+================================================================
 
-The full facet package set is published and consumable:
+P0 — FACET MIGRATION (finish the UI, per priority/effort)
+----------------------------------------------------------
+  [ ] Phase 4 — auth forms: replace src/components/auth/* (5 forms:
+      login/register/mfa/forgot/reset) with @arcevo/facet-auth.
+      Requires ArcProvider + TokenStorage unification decision with the
+      Zustand auth store. [importance HIGH · effort L]
+      NOTE: verify facet-auth exports before starting (SignIn/SignUp/
+      MfaDialog state machine vs arc-id's inline forms).
+  [ ] Phase 5 — layout: adopt @arcevo/facet-layout shells (ConsoleLayout/
+      AuthLayout) or keep arc-id's wrapper; migrate incrementally.
+      [importance MED · effort M]
+  [ ] Phase 6 — purge: delete src/components/auth/* once Phase 4 green;
+      confirm zero in-repo shadcn/facet duplicates remain.
+      [importance MED · effort S]
+  [ ] Pages cleanup: routes importing SDK directly (login, register,
+      billing, dashboard) -> route through hooks per the strict chain
+      rule. [importance LOW · effort M]
 
-| Package              | Version | Status |
-|----------------------|---------|--------|
-| @arcevo/facet-sdk        | 1.0.1   | ✅ Verified against arc-id routes |
-| @arcevo/facet-components | 1.1.0   | ✅ Published (57 components) |
-| @arcevo/facet-auth       | 1.0.3   | ✅ Published |
-| @arcevo/facet-layout     | 1.1.0   | ✅ Published |
-| @arcevo/facet-tokens     | 1.0.1   | ✅ Published |
-| @arcevo/facet-docs       | 1.1.0   | ✅ Published (docs engine) |
+P1 — BACKEND HARDENING / API LAYER (no leaks or gaps)
+-----------------------------------------------------
+  [x] Phase 3 — Security hardening (CLOSED 2026-07-28): cross-tenant
+      isolation (6 tests), SSRF 4/4 call sites, CSRF review,
+      Redis-backed distributed revocation + per-session access-token
+      kill chain. [importance HIGH · effort M]
+  [x] Phase 4 — Observability (SHIPPED 2026-07-28): requestId
+      correlation, @fastify-metrics at /metrics, pino traceId on every
+      flow. [importance HIGH · effort M]
+  [ ] Secrets/PII log scan: scripts/scan-secrets.ts EXISTS (pnpm
+      scan:secrets) but NOT wired into CI. Wire as a CI step.
+      [importance HIGH · effort S]
+  [ ] CI pnpm version alignment: actions pin pnpm 11.5.1, package.json
+      declares pnpm@11.21.0 — align to one version. [importance MED · effort S]
+  [ ] Audit-log coverage gaps: 21 flows with audit side effects don't
+      verify the call; ROLE_* + OAUTH_CLIENT_UPDATED enum values unused.
+      [importance MED · effort M]
+  [ ] Migration rollback Tier 2: opt-in via ARC_ID_ROLLBACK_TEST=1, wired
+      into CI with real Postgres + shadow DB. [importance MED · effort M]
 
----
+P2 — CLI + SDK PACKAGES (deferred until API contract stable)
+------------------------------------------------------------
+  [ ] packages/cli extraction: design basis exists
+      (docs/planning/arcid-cli-design.md) — init/doctor/migrate/setup,
+      safe-overwrite/revert via .arcid/generated.json, reuses
+      @arcevo/facet-cli core (installed). [importance MED · effort L]
+  [ ] @arcevo/facet-docs integration for hosted docs. [importance LOW · effort M]
 
-## 1. Evidence — facet-sdk readiness
+P3 — DEFERRED (do not start early)
+----------------------------------
+  [ ] Integration tests vs real Postgres — after facet ships.
+  [ ] LegalConsent — schema-only until a consumer exists.
+  [ ] ExternalIdentifier.verified -> VC issuance — needs design.
+  [ ] BBS+/did:jwk/full OIDC4VCI-OIDC4VP/OPA-Cedar-SCIM-Terraform — v2+.
 
-### 1.1 Published artifact verified (not just the repo)
+================================================================
+VERIFICATION GATES (last pass 2026-08-12)
+================================================================
+- pnpm test                        PASS 62 files / 340 tests
+- npx tsc --noEmit                 PASS (after facet import fix)
+- npx next build                   PASS (compiles; TS phase clean)
+- pnpm scan:secrets                PASS (exists; not yet in CI)
 
-Downloaded `facet-sdk-1.0.1.tgz` from registry.npmjs.org and inspected it:
+================================================================
+FACET PACKAGES — ARC-ID PINS (verified against codebase)
+================================================================
+| Package              | Pin      | Used in repo?          |
+|----------------------|----------|------------------------|
+| @arcevo/facet-sdk    | 1.0.1    | yes — src/sdk/index.ts |
+| @arcevo/facet-components | 1.3.0 | yes — pages/layout/forms |
+| @arcevo/facet-tokens | 1.1.0    | yes — layout.tsx       |
+| @arcevo/facet-auth   | 1.1.1    | no — Phase 4 (next)    |
+| @arcevo/facet-layout | 1.2.0    | no — Phase 5 (next)    |
+| @arcevo/facet-cli    | 0.3.0    | no — CLI work basis    |
+| @arcevo/facet-docs   | 1.3.0    | no — docs scaffold     |
 
-- `dist/index.js` (22,141 bytes) + `dist/index.d.ts` (27,532 bytes), ESM + types
-- `sideEffects: false`, zero runtime dependencies — ideal Next.js consumer shape
-- Published 2026-08-01, `latest` dist-tag, maintained by `abefe` (ArcevoDev)
+================================================================
+GAPS / OPEN ITEMS (tracked)
+================================================================
+- .agent/ is fully gitignored (the whole dir, not just logs) — only
+  committed via -f if we want the tracker in git history.
+- .agent/tc.txt, typecheck-direct.txt, typecheck-migration.txt are
+  stale scratch outputs — deleted this session.
+- Session resumption: .agent/logs.txt carries the session id at the top.
 
-### 1.2 All 10 domain SDKs present in the published bundle
-
-AuthSdk, PasskeySdk, VcSdk, IdentitySdk, OAuthSdk, TenantSdk, BillingSdk,
-WebhooksSdk, AuditSdk, IdpSdk + ArcIdClient. All present in the shipped dist.
-
-### 1.3 Every SDK path maps to a real arc-id route
-
-Extracted 50+ hardcoded request paths from the published bundle and matched
-them against `src/modules/*/routes/*` (prefixes confirmed via plugin files):
-
-- `/auth/*` — login, register, logout, sessions, password reset/change, email
-  verify, MFA (verify/setup/confirm/disable/recovery), step-up, magic-link,
-  username, passkey (options/register/authenticate + CRUD), switch-context
-- `/identity/*` — profile, admin, devices, linked-accounts, external-ids,
-  delegations, onboarding (start/progress/advance), wallet/did
-- `/tenants/*` — CRUD, members, policy, invites/accept, did, signing-keys,
-  projects, onboarding-flows, jwks (bare)
-- `/oauth/*` — clients, tokens, consent(s), introspect, revoke (RFC 7009),
-  token (bare), userinfo (bare), jwks (bare)
-- `/credentials/*` — list, issue, offers + accept, revoke, verify (bare),
-  verify/session (bare), verify/present (bare), status-lists/:id (bare),
-  tenants/:slug/did.json (bare)
-- `/webhooks/*` — endpoints CRUD + test, events + retry
-- `/idp/connections/*` — SAML2/OIDC/OAUTH2 CRUD
-- `/billing/subscription` — GET only (see §2.1)
-- `/audit/logs` — paginated list
-
-### 1.4 Envelope handling matches arc-id exactly
-
-- Domain routes respond `{ success: true, data }` → client unwraps by default
-  (verified in login.route.ts, issue.route.ts, did.route.ts, offer.route.ts)
-- Protocol/public endpoints respond bare → `bare: true` option used
-  (verified in tokens.route.ts, jwks.route.ts, userinfo.route.ts,
-  verify-session.route.ts, status.route.ts)
-- `ApiResponse<T> = { data, error } | { data: null, error }` — identical to
-  arc-id's inline SDK contract
-- Plan-gate fields (`currentPlan`, `requiredPlan`) surfaced on 402 errors
-
-### 1.5 401 auto-refresh — the old blocker is closed
-
-`ArcIdClient` supports `onTokenRefresh` (retry exactly once) and
-`onAuthCleared`. Wired into the request retry loop (client.ts:170-178) with
-real unit tests. Matches arc-id's inline client behavior.
-
-### 1.6 Facet SDK has its own tests
-
-- `client.test.ts` — envelope unwrap, bare responses, error mapping,
-  401 refresh/retry/clear, all HTTP verbs
-- `auth.sdk.test.ts` — login (MFA + no-MFA), register, verifyMfa,
-  forgotPassword, refresh normalization, revokeSession, error surfacing
-
----
-
-## 2. Gaps / notes (not blockers)
-
-| Item | Status | Detail |
-|------|--------|--------|
-| Billing SDK is GET-only | By design | arc-id removed self-service upgrade (410 Gone). Plan changes flow through Paystack/Stripe webhooks. UI must not expect an upgrade endpoint |
-| Social login has no SDK method | By design | `social.route.ts` is redirect/callback — UI uses `window.location` to `/auth/social/:provider`, never fetch |
-| No magic-link/username/mfa-recovery SDK tests | Minor | Methods present and correct; test files only cover client + auth so far |
-| Zero tests in components/auth/layout packages | Caution | Pin exact versions (no `^`) until facet stabilizes |
-| Facet structural changes in flight | Insulated | Published packages are unaffected; consume version bumps normally |
-
----
-
-## 3. Execution plan — integrate facet into arc-id
-
-### Phase 0 — Guardrails
-- Pin exact versions in package.json: `@arcevo/facet-sdk@1.0.1`,
-  `@arcevo/facet-components@1.1.0`, `@arcevo/facet-auth@1.0.3`,
-  `@arcevo/facet-layout@1.1.0`, `@arcevo/facet-tokens@1.0.1` (no `^`)
-- Add to dependencies + `pnpm install`
-
-### Phase 1 — SDK swap (lowest risk, do first)
-- Replace `src/sdk/*` with `@arcevo/facet-sdk`
-- Keep arc-id's `src/sdk/index.ts` as a thin adapter that re-exports
-  `ArcIdClient` + domain SDKs, or import facet-sdk directly from hooks
-- Rewire token lifecycle: `setAccessToken` + `onTokenRefresh` →
-  Zustand auth store getters (same pattern as the current inline client)
-- Delete inline `src/sdk/*` domain modules after adapter verifies
-
-### Phase 2 — Tokens
-- Import `@arcevo/facet-tokens/tokens.css` in globals.css
-- Remove duplicated `:root` CSS variable declarations (keep `@theme`,
-  `@utility`, `@keyframes` blocks)
-
-### Phase 3 — Components
-- Replace `src/components/ui/*` with `@arcevo/facet-components`
-- Update imports to `@arcevo/facet-components`
-- Purge inline shadcn components after verification
-
-### Phase 4 — Auth
-- Replace `src/components/auth/*` with `@arcevo/facet-auth`
-- Bridge decision: either replace Zustand auth store with ArcProvider
-  (React Context), or wrap ArcProvider and sync to Zustand for backward
-  compat
-- Preserve tenant hydration logic in `AuthProvider` (arc-id keeps this)
-- MFA flow: confirm facet-auth MfaDialog is wired to `verifyMfa` (the old
-  blocker — placeholder stub — must be resolved)
-
-### Phase 5 — Layout
-- Adopt `@arcevo/facet-layout` shells (ConsoleLayout/AuthLayout) or keep
-  arc-id layout wrapper initially and migrate incrementally
-
-### Phase 6 — Validation
-- `pnpm test` (395 tests) — must stay green
-- `pnpm typecheck`
-- `pnpm build:web` + `pnpm build:api`
-- Manual smoke: login → MFA → tenant switch → passkey
-
-### Keep in arc-id (facet has no equivalent)
-- `src/store/*` — Zustand stores (auth, tenant, ui)
-- `src/hooks/*` — page-level hooks
-- `src/providers/auth-provider.tsx` — tenant hydration
-- `src/styles/globals.css` — `@theme`, `@utility`, `@keyframes` only
-- All pages — import from hooks, never SDK directly
-
----
-
-## 4. Rebuild plan (optional full UI replacement)
-
-If arc-id's UI is rebuilt wholesale on facet:
-
-1. Scaffold new pages on the facet stack: tokens → components → auth →
-   layout → sdk, all from npm (no workspace linkage)
-2. Keep the API contract frozen at current 1.x — facet-sdk paths are the
-   contract; backend route changes must land as facet-sdk bumps
-3. Future facet updates: `pnpm add @arcevo/facet-*@latest`, review changelog,
-   run typecheck + test suite before commit
-
----
-
-## 5. Conclusion
-
-facet is ready. Arc-id development continues on it now. The old audit blockers
-(401 auto-refresh, envelope mismatch, MFA placeholder) are resolved on the SDK
-side; the only true remaining UI blocker is confirming facet-auth's MFA dialog
-calls the real `verifyMfa` flow during Phase 4. Integration-test-on-real-
-Postgres (P3) can be scheduled after the frontend contract stabilizes.
-
-_Regenerated 2026-08-04 — supersedes previous ARC-UI audit sections._
+_Keep this file current. Every session that closes an item or discovers
+a new one updates output.txt AND logs.txt in the same session._

@@ -3,23 +3,26 @@
 > **Target**: Replace arc-id's in-repo shadcn/ui components, auth UI, and SDK
 > client with the published `@arcevo/facet-*` packages.
 >
-> **Status**: `@arcevo/facet-sdk@1.0.1` verified complete against arc-id's
-> registered routes (2026-08-04). All six facet packages are published to npm.
-> This guide is the execution plan. See `docs/planning/arcid-v1-roadmap.md`
-> for overall project state.
+> **Status (2026-08-12)**: Phases 0–3 DONE. `@arcevo/facet-sdk@1.0.1`
+> verified complete against arc-id's registered routes (2026-08-04);
+> `@arcevo/facet-tokens/tokens.css` wired (Phase 2); `src/components/ui/`
+> deleted and all consumers on `@arcevo/facet-components@1.3.0` (Phase 3).
+> Phases 4–6 (auth forms, layout, purge) are the remaining work queue.
+> All six facet packages are published to npm and pinned in package.json.
+> See `docs/planning/arcid-v1-roadmap.md` for overall project state.
 
 ---
 
 ## Overview
 
-arc-id currently duplicates three things that the facet packages now own from
+arc-id currently duplicates two things that the facet packages now own from
 a single source of truth:
 
 | Duplicated in arc-id | Replaced by | Files affected |
 |---|---|---|
-| `src/components/ui/*` (shadcn components) | `@arcevo/facet-components` | ~25 files |
-| `src/components/auth/*` (LoginForm, RegisterForm, etc.) | `@arcevo/facet-auth` | ~6 files |
-| `src/sdk/*` (client + 10 domain SDKs) | `@arcevo/facet-sdk` | ~13 files |
+| ~~`src/components/ui/*` (shadcn components)~~ | ✅ `@arcevo/facet-components` — **done (2026-08-12)** | ~25 files, all migrated, dir deleted |
+| `src/components/auth/*` (LoginForm, RegisterForm, etc.) | `@arcevo/facet-auth` | ~6 files — Phase 4 (pending) |
+| ~~`src/sdk/*` (client + 10 domain SDKs)~~ | ✅ `@arcevo/facet-sdk` — **done (2026-08-05)** | ~13 files, dir reduced to `index.ts` |
 
 **What arc-id keeps**: layout components (`src/components/layout/`), pages
 (`src/app/`), Zustand stores (`src/store/`), hooks (`src/hooks/`), nav config,
@@ -30,10 +33,12 @@ providers, and CSS custom utilities.
 | Package | Version |
 |---|---|
 | `@arcevo/facet-sdk` | 1.0.1 |
-| `@arcevo/facet-components` | 1.1.0 |
-| `@arcevo/facet-auth` | 1.0.3 |
-| `@arcevo/facet-layout` | 1.1.0 |
-| `@arcevo/facet-tokens` | 1.0.1 |
+| `@arcevo/facet-components` | 1.3.0 |
+| `@arcevo/facet-auth` | 1.1.1 |
+| `@arcevo/facet-layout` | 1.2.0 |
+| `@arcevo/facet-tokens` | 1.1.0 |
+| `@arcevo/facet-cli` | 0.3.0 (installed — basis for `packages/cli` work) |
+| `@arcevo/facet-docs` | 1.3.0 (installed — docs scaffold basis) |
 
 ---
 
@@ -47,7 +52,7 @@ Do them in order, testing after each phase.
 ### Phase 0 — Add `@arcevo/facet-*` as dependencies
 
 ```sh
-pnpm add @arcevo/facet-sdk@1.0.1 @arcevo/facet-auth@1.0.3 @arcevo/facet-components@1.1.0 @arcevo/facet-tokens@1.0.1 @arcevo/facet-layout@1.1.0
+pnpm add @arcevo/facet-sdk@1.0.1 @arcevo/facet-auth@1.1.1 @arcevo/facet-components@1.3.0 @arcevo/facet-tokens@1.1.0 @arcevo/facet-layout@1.2.0 @arcevo/facet-cli@0.3.0 @arcevo/facet-docs@1.3.0
 ```
 
 Exact pins are intentional — the components/auth/layout packages have no test
@@ -84,7 +89,9 @@ singleton orchestration, or re-export facet-sdk directly from hooks).
 
 ---
 
-### Phase 2 — Replace CSS variables
+### Phase 2 — Replace CSS variables — ✅ DONE (2026-08-12)
+
+Done in the working tree:
 
 1. Import facet-tokens BEFORE the existing globals.css:
 
@@ -94,7 +101,7 @@ import "@arcevo/facet-tokens/tokens.css";
 import "@/styles/globals.css";
 ```
 
-2. In `src/styles/globals.css`, **keep**:
+2. In `src/styles/globals.css`, **kept**:
    - Font family declarations (`--font-sans`, `--font-mono`, `--font-heading`)
    - `@tailwindcss` + `tw-animate-css` imports
    - Sidebar tokens (`--sidebar-*`)
@@ -102,18 +109,19 @@ import "@/styles/globals.css";
    - `@utility` blocks (`glow-indigo`, `border-glow`, `glass`, `text-gradient`)
    - `@layer base` styles
 
-3. **Remove** from `globals.css`:
+3. **Removed** from `globals.css`:
    - `:root { --background: ... }` through `--radius` — facet-tokens' `tokens.css`
      provides these (same OKLCH values, same variable names — verified).
 
 **Design token conflict note**: arc-id uses indigo (`oklch(0.58 0.23 273)`) as its
 primary. facet-tokens uses Electric Cyan (`#4AD3F5` / `oklch(0.78 0.18 200)`) per
-the Alpha Palette. Decide which wins — override `--primary` in globals.css after
-the facet-tokens import, or adopt the Alpha Palette across arc-id.
+the Alpha Palette. **Resolved in favour of arc-id's indigo**: `globals.css`
+overrides the tokens after the facet-tokens import, and the custom utilities
+(glow-indigo, text-gradient, focus rings) keep the indigo identity.
 
 ---
 
-### Phase 3 — Replace `src/components/ui/` with `@arcevo/facet-components`
+### Phase 3 — Replace `src/components/ui/` with `@arcevo/facet-components` — ✅ DONE (2026-08-12)
 
 Mechanical find-and-replace. The components share the same Radix primitives,
 named exports, and props.
@@ -123,10 +131,26 @@ named exports, and props.
 + import { Button } from "@arcevo/facet-components";
 ```
 
-facet-components uses `cn()` internally from `tailwind-merge` + `clsx`.
-arc-id's own `@/lib/utils` still exists for consumer-side usage — no conflict.
+**Icons — do NOT recreate a local registry.** `@arcevo/facet-components@1.3.0`
+ships a full icon registry: `<Icon name="…" />` resolves semantic aliases
+(`settings`, `logout`, `menu`) plus **any** lowercase lucide kebab name
+(`shield-check`, `chevron-down`, `chart-column`, …). Resolution order is
+`IconProvider` overrides → `registerIcon` global → built-in semantic map →
+lucide map. For dynamic icons (e.g. sidebar nav) pass the name as a string:
 
-**After phase 3 is green, DELETE `src/components/ui/`.**
+```tsx
+import { Icon } from "@arcevo/facet-components";
+<Icon name="shield" className="h-4 w-4" />     // semantic
+<Icon name="shield-check" className="h-4 w-4" /> // any lucide name
+```
+
+The old in-repo `src/lib/ui/icon-registry.ts` (a hand-rolled `Icons` map) and
+the duplicate `src/lib/ui/navigation.ts` were **deleted** — both were dead
+duplicates of what the facet package ships. `@/lib/utils` now just
+re-exports facet's `cn`.
+
+**After phase 3 is green, DELETE `src/components/ui/`** — done; the directory
+is removed and no `@/components/ui/` imports remain.
 
 ---
 
@@ -205,12 +229,14 @@ phase's commit. The old files aren't deleted until Phase 6.
 | Check | How |
 |---|---|
 | `pnpm typecheck` | Clean across all phases |
-| `pnpm test` | All 395 tests passing |
+| `pnpm test` | All 340 tests passing |
 | `pnpm dev:all` | Manual smoke test: login, register, MFA, tenant switch, passkey |
 | Facet docs match | Compare facet's docs gallery against rendered components in arc-id |
 | CSS regression | Sidebar, Topbar, TenantSwitcher, and pages render with correct colors |
 
 ---
 
-_Guide updated 2026-08-04 for the published `@arcevo/facet-*` packages
-(previously tracked arc-ui). Update it if any facet package API changes._
+_Guide updated 2026-08-12 — Phases 0–3 done (SDK + CSS tokens + components).
+Phase 4 (auth forms) is the next work item. All six facet packages pinned
+at their latest verified versions (sdk 1.0.1, components 1.3.0, auth 1.1.1,
+layout 1.2.0, tokens 1.1.0, cli 0.3.0, docs 1.3.0)._
