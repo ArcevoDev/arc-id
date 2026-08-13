@@ -25,6 +25,16 @@ export function useTenant() {
     setLoading(false);
   }, [setActiveTenant, setTenants, setLoading]);
 
+  const listMembers = useCallback(
+    async (tenantId: string) => {
+      if (!useAuthStore.getState().accessToken) {
+        return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
+      }
+      return tenants.listMembers(tenantId);
+    },
+    [],
+  );
+
   const switchTenant = useCallback(
     async (tenantId: string) => {
       const result = await tenants.switchTenant(tenantId);
@@ -58,6 +68,7 @@ export function useTenant() {
     setActiveTenant,
     setTenants,
     hydrateTenants,
+    listMembers,
     switchTenant,
   };
 }

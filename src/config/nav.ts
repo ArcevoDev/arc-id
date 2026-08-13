@@ -8,8 +8,8 @@
  * is NOT enforced in v1. All nav items are shown to authenticated
  * users. The backend is the real enforcement boundary.
  *
- * When GET /auth/me/permissions exists, set requiredPermission
- * and filter in the Sidebar.
+ * When GET /identity/profile exposes the caller's permissions, set
+ * requiredPermission and filter in the Sidebar.
  */
 
 import type { IconName } from "@arcevo/facet-components";

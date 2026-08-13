@@ -1,24 +1,6 @@
 "use client";
 
-interface PageHeaderProps {
-  title: string;
-  description?: string;
-  actions?: React.ReactNode;
-}
-
-/**
- * Consistent page header used across all dashboard pages.
- */
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
-  return (
-    <div className="flex items-center justify-between mb-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-        {description && (
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
-        )}
-      </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
-    </div>
-  );
-}
+// PageHeader is owned by @arcevo/facet-layout — this re-export keeps the
+// @/components/layout/page-header import path working for dashboard pages.
+export { PageHeader } from "@arcevo/facet-layout";
+export type { PageHeaderProps } from "@arcevo/facet-layout";

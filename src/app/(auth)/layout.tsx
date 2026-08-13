@@ -1,5 +1,8 @@
-import { AppLayout } from "@/components/layout/app-layout";
+"use client";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return <AppLayout>{children}</AppLayout>;
+import { AuthLayout } from "@arcevo/facet-layout";
+import { buildLayoutConfig } from "@/config/layout";
+
+export default function AuthLayoutGroup({ children }: { children: React.ReactNode }) {
+  return <AuthLayout config={buildLayoutConfig()}>{children}</AuthLayout>;
 }
