@@ -67,7 +67,15 @@ P0.5 — PAGE WIRING (architectural decision + phased execution)
       81ffa2d): credentials page lists held credentials + revoke; offer
       accept tab (paste token -> VcSdk.acceptOffer); verify tab (JWT ->
       VcSdk.verify). Typecheck clean, credentials + SDK tests pass.
-  [ ] Phase C — tenants/membership wiring. [importance HIGH · effort M]
+  [x] Phase C — tenants/membership wiring. DONE (2026-08-13, commit
+      646fed1): tenants page lists organisations with active badge +
+      switch (via useTenant.switchTenant, token scoped to new tenant);
+      members table for the active tenant (useTenant.listMembers).
+  [x] Phase 5 — layout migration. DONE (2026-08-13, commit 646fed1):
+      route groups now consume @arcevo/facet-layout AuthLayout +
+      ConsoleLayout; in-repo app-layout/console-layout/sidebar/topbar/
+      tenant-switcher deleted (AppLayout deprecated in favour of
+      AuthLayout per facet-layout); page-header re-exports facet's.
   [ ] Phase D — security/settings wiring. [importance MED · effort M]
   [ ] Phase E — developers/billing wiring. [importance MED · effort M]
 
