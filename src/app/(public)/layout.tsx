@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LandingLayout } from "@arcevo/facet-layout";
 import { Badge, Button, Icon } from "@arcevo/facet-components";
+import { TypewriterText } from "@/components/ui/typewriter-text";
 
 /**
  * Public site shell - shared hero, nav, and footer around LandingLayout.
@@ -40,8 +41,17 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <Badge variant="outline" className="mb-6 border-primary/30 text-primary text-xs tracking-wider uppercase px-4 py-1">
             Sovereign identity for the ArcevoCirqle ecosystem
           </Badge>
-          <h1 className="text-gradient text-4xl md:text-6xl font-extrabold tracking-tight max-w-4xl">
-            One identity. Verified once, trusted everywhere.
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight max-w-4xl">
+            <span className="text-foreground">One identity.</span>
+            <br />
+            <TypewriterText
+              className="text-gradient"
+              phrases={[
+                "Verified once, trusted everywhere.",
+                "Sovereign across every sector.",
+                "Held by the person, not the platform.",
+              ]}
+            />
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
             ArcID is a sovereign multi-tenant identity and access management engine.
@@ -58,6 +68,22 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Button variant="glass" size="lg" asChild>
               <Link href="/login">Sign in</Link>
             </Button>
+          </div>
+
+          <div className="mt-16 grid w-full max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
+            {[
+              { value: "OAuth2 + OIDC", label: "Provider" },
+              { value: "SD-JWT", label: "Credentials" },
+              { value: "Multi-tenant", label: "By design" },
+              { value: "Passkey", label: "Native auth" },
+            ].map((stat) => (
+              <div key={stat.label} className="glass rounded-xl px-4 py-6 text-center">
+                <div className="text-lg font-bold text-foreground">{stat.value}</div>
+                <div className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       }
