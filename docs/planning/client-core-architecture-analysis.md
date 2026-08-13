@@ -1,113 +1,134 @@
-# ArcID / Facet Client-Core Architecture Analysis
+# ArcID / Facet Client-Core Architecture — Canonical Conventions
 
-> Context: should the SDK + store + hooks + CLI move out of arc-id into a
-> new workspace/repo (working name "beacon"), with facet staying UI/docs
-> only? Plain analysis, grounded in the current repo state.
+> Purpose: the single source of truth for how the ArcID client core
+> (SDK, stores, hooks, CLI) is packaged, named, and consumed across
+> arc-id, arc-wallet, and any future integrator. This replaces the
+> earlier split-vs-stay analysis with a definitive, framework-agnostic
+> convention set.
 
-Date: 2026-08-13
+Date: 2026-08-13 (rewritten)
 
 ---
 
-## 1. Where we actually are today (verified)
+## 1. The one rule: headless core + thin UI kit, one monorepo
 
-- `@arcevo/facet-sdk@1.0.1` is PUBLISHED and consumed by BOTH arc-id and
-  arc-wallet as a dependency. The SDK boundary already exists.
-- arc-id still owns, in-repo: `src/store/` (auth, tenant, ui) and
-  `src/hooks/` (13 use-* hooks). These wrap the facet-sdk.
-- arc-wallet REIMPLEMENTED its own `src/stores/auth-store.ts` and
-  `src/services/*` because the shared hooks/stores do not exist as a
-  package. This is the duplication the architecture should kill.
-- `@arcevo/facet-cli@0.3.0` is already published (installed in arc-id,
-  unused so far) and `@arcevo/facet-docs@1.3.0` is published.
-- facet repo already publishes: sdk, components, auth, layout, tokens,
-  cli, docs. It is a multi-package monorepo today.
+The client core and the UI kit ship from **one versioning + publish
+pipeline** (the facet monorepo). No second repo. This is the classic
+"headless SDK + UI kit" split done the low-friction way: one release
+line, no cross-repo coordination, apps stay thin.
 
-## 2. The model you are describing (recap)
+```
+facet monorepo (single versioning + publish)
+├─ @arcevo/facet-sdk        headless client (pure fetch, zero UI)
+├─ @arcevo/facet-store      framework-agnostic stores (zustand) + injectable persistence
+├─ @arcevo/facet-react      the use-* hooks (React only, thin over store/SDK)
+├─ @arcevo/facet-cli        the CLI (facet pkg / doctor / update / up / clean / prep)
+├─ @arcevo/facet-components UI kit (React + Radix)
+├─ @arcevo/facet-layout     shells (Console/Auth/Landing)
+├─ @arcevo/facet-auth       auth UI + presets
+├─ @arcevo/facet-tokens     design tokens
+└─ @arcevo/facet-docs       installable docs engine
+```
 
-- facet = UI + docs only (components, layout, tokens, auth UI).
-- NEW workspace ("beacon") = the client core: SDK + store + hooks + CLI.
-- arc-id and arc-wallet consume the new workspace packages, no local
-  store/hooks duplication.
+Branding: "beacon" is the PRODUCT line (the identity client integrators
+adopt). It is shipped from the facet packages — the package names stay
+`@arcevo/facet-*` unless a future product decision renames the scope.
+Naming direction is a product decision, not an architecture one.
 
-## 3. Plain verdict: sound direction, one correction
+## 2. Dependency direction (non-negotiable)
 
-The SPLIT (client-core vs UI) is correct and is the classic
-"headless SDK + UI kit" architecture. The CORRECTION is WHERE it lives.
+Layering is strict and one-way. Lower layers never import higher ones.
 
-Putting the SDK in a second repo while facet already owns facet-sdk
-splits one trust/versioning boundary across two repos. The ecosystem is
-already a monorepo. The clean move:
+```
+page → component → hook (use-*) → store (facet-store) → SDK (facet-sdk) → API
+```
 
-    facet (existing monorepo, one versioning + publish pipeline)
-      ├─ @arcevo/facet-sdk        (exists - the headless client)
-      ├─ @arcevo/facet-store      (NEW - zustand stores, framework-agnostic)
-      ├─ @arcevo/facet-react      (NEW - the use-* hooks, React only)
-      ├─ @arcevo/facet-cli        (exists - the CLI)
-      ├─ @arcevo/facet-components (exists - UI)
-      ├─ @arcevo/facet-layout     (exists - shells)
-      └─ @arcevo/facet-tokens     (exists - design tokens)
+- `facet-sdk` imports nothing from the other facet packages (pure fetch,
+  zero UI, zero React).
+- `facet-store` depends only on `facet-sdk` + an injectable persistence
+  adapter. No React.
+- `facet-react` depends on `facet-store` + `facet-sdk` + React. No UI.
+- Components/layout/auth depend on the layers below (hooks/store/sdk)
+  only through props or thin wrappers — never by reaching into internals.
+- Apps (arc-id, arc-wallet) are thin: they wire the singleton once and
+  consume published packages. No in-repo store/hooks duplication.
 
-Arc-id + arc-wallet become thin apps: no in-repo store/hooks, everything
-from @arcevo/facet-store / @arcevo/facet-react.
+## 3. Canonical identity (the actual product problem)
 
-This gives: one version line, one publish, no drift, apps stay small.
+The product problem is **identity fragmentation**: a single user's
+canonical identity should verify claims across systems and sectors. The
+architecture convention:
 
-## 4. Why "beacon" as a second repo is architectural debt (be plain)
+- `@arcevo/facet-sdk` exposes the canonical identity client: one
+  `ArcIdClient` per environment (constructed in the app's wiring point,
+  e.g. `src/sdk/index.ts`), with 401 auto-refresh wired once.
+- Every integrator constructs the client the same way and hands it to
+  the store/hooks. There is no per-app reimplementation.
+- The store keeps ONE canonical session shape (from `facet-sdk` types),
+  so claims (aal, preferred_username, memberships, wallet DID) resolve
+  consistently across tenants and projects.
+- Persistence is an injected adapter (localStorage for web,
+  expo-secure-store for RN) so arc-wallet stops re-implementing
+  auth-store.
 
-- Two repos must coordinate releases (a store change that needs an SDK
-  change becomes a cross-repo dance).
-- facet-sdk already carries the auth/refresh/error envelope logic; the
-  store is a thin wrapper over it. Splitting them across repos adds
-  friction for almost zero gain.
-- The name is great for the PRODUCT/brand (the identity client you hand
-  to integrators). Keep "beacon" as the product line: "Beacon - the
-  ArcID client". Ship it FROM the facet monorepo.
+## 4. Package conventions (agnostic + portable)
 
-## 5. The actual work this unlocks (what to build)
+- **SDK**: pure fetch, dependency-free, typed domain classes
+  (`AuthSdk`, `TenantSdk`, `VcSdk`, `OAuthSdk`, `PasskeySdk`, `IdpSdk`,
+  ...). Works in browser, Node, edge. No React.
+- **Store**: zustand stores extracted from arc-id (`auth.store`,
+  `tenant.store`, `ui.store`). Framework-agnostic. Token persistence via
+  adapter interface. React 18/19 agnostic.
+- **Hooks**: the 13 use-* hooks take the client as input (or read a
+  default singleton) and return `{ data, error }` shapes. React only.
+- **CLI**: `facet pkg / doctor / update / up / clean / prep` —
+  commands must EXECUTE real tasks, never silently assume. A registry
+  hiccup is surfaced (warn, non-zero exit), never reported as
+  "up to date".
+- **UI**: components/layout/auth are domain-customizable (fintech/med/
+  edu/enterprise presets), never hardcoded. Every surface accepts
+  overrides (children, slots, config) rather than baking in copy or
+  colors.
 
-- @arcevo/facet-store: extract arc-id's auth.store + tenant.store +
-  ui.store into a published package. Token persistence becomes an
-  injectable adapter (localStorage for web, expo-secure-store for RN)
-  so arc-wallet stops re-implementing auth-store.
-- @arcevo/facet-react: extract the 13 use-* hooks. The hooks take the
-  SDK client as input (or read a default singleton) and return the same
-  { data, error } shapes. arc-id and arc-wallet import these, keeping
-  the page -> hook -> store -> SDK -> API convention.
-- Wire the CLI (facet-cli already installed) to a real `arcid` command.
-- Keep arc-id's src/sdk/index.ts as the SINGLE wiring point that
-  constructs the client + wires onTokenRefresh, then everything else
-  consumes the published packages.
+## 5. The wiring point convention
 
-## 6. Risks / honest caveats
+Each app keeps ONE wiring file (arc-id's `src/sdk/index.ts` pattern):
 
-- This is a refactor of the frontend foundation AFTER the pages are
-  built. Order matters: finish the page-wiring phases first, THEN extract
-  the packages (extraction is mechanical; rewriting pages twice is not).
-- The wallet currently works with its own auth-store. Moving to
-  @arcevo/facet-store means a one-time migration of secure-store
-  persistence into the adapter model.
-- Versioning: facet-sdk is 1.0.1 (stable-ish). The new packages start at
-  0.x until consumed by both apps.
+1. Construct `ArcIdClient` with base URL + token storage.
+2. Wire `onTokenRefresh` to the auth store.
+3. Export the client singleton.
+4. Everything else imports from the published packages.
 
-## 7. Recommendation (plain)
+This keeps the "page → hook → store → SDK → API" chain intact and makes
+the app trivially portable to any backend shape.
 
-Do the split. Keep it in the facet monorepo (no second repo). Brand the
-product "beacon" for the identity-client story. Sequence:
+## 6. Sequencing (what unlocks what)
 
-1. Finish arc-id page wiring (Phase E) + wallet polish.
-2. Extract @arcevo/facet-store (auth/tenant/ui stores + persistence
+1. Finish arc-id page wiring (Phase E) + wallet polish (do NOT extract
+   while pages are mid-rewrite — extraction is mechanical, rewriting
+   pages twice is not).
+2. Extract `@arcevo/facet-store` (auth/tenant/ui stores + persistence
    adapter) from arc-id.
-3. Extract @arcevo/facet-react (the 13 hooks) from arc-id.
+3. Extract `@arcevo/facet-react` (the 13 hooks) from arc-id.
 4. Migrate arc-wallet to consume both (kills its duplicate auth-store).
-5. Wire the CLI to real arcid commands.
+5. Wire the CLI to real `arcid` commands (init/doctor/migrate/setup
+   surface, per arcid-cli-design.md).
 6. Rebrand the client story as beacon for integrators/docs.
 
-## 8. Open questions before grounding it
+## 7. Risks (honest)
 
-- Does the facet repo OWN these new packages, or do you still want a
-  distinct beacon repo for political/branding reasons? (Architecturally
-  one repo is better; brand can still be beacon.) - i believe leaving it under facet is a better choice, we could jsut give the naming direction in their respective pkg files.. like @arcevo/beacon-* or just leave as facet --- since it also carries a weighty meaning... whichever you think is best...
-- Do we keep arc-id's src/sdk/index.ts as the client singleton forever,
-  or move it into facet-store as the default export? depends on how the canonical identity is planned to be conumed across tenants and project.. since we are working against duplicated users auth... where any integrator system uses the single canonical identity of a specific user to verify claims and personality across systems and sectors... solving the identity fragmentation... or what'd you think....
-- Scope of CLI for v1: init/doctor/migrate/setup (from the existing
-  arcid-cli-design.md) or a smaller surface first? wwhatever the best convention is.... at thhis point.. i am a bit lost...
+- Order matters: finish page wiring before extraction.
+- Wallet migration: one-time move of secure-store persistence into the
+  adapter model.
+- Versioning: new packages start at 0.x until consumed by both apps.
+- The strict chain has pragmatic exceptions today (some pages import
+  SDK directly). Those are acceptable, tracked, and should shrink.
+
+## 8. Decisions (recorded)
+
+- One monorepo (facet) owns the client core + UI. No second repo.
+- "beacon" is a product brand, not a package scope.
+- The SDK singleton stays in the app wiring file (convention 5), not a
+  package default export — keeps the app in control of env/token wiring.
+- CLI v1 surface: init/doctor/migrate/setup, grown from what
+  arcid-cli-design.md specifies.
