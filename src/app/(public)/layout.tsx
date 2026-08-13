@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LandingLayout } from "@arcevo/facet-layout";
 import { Badge, Button, Icon } from "@arcevo/facet-components";
+import { ThemeToggle } from "@/providers/theme-provider";
 
 /**
  * Public site shell — shared hero, nav, and footer around LandingLayout.
@@ -48,6 +49,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Link href="/feedback" className="hover:text-foreground">Feedback</Link>
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <ThemeToggle />
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Sign in</Link>
             </Button>

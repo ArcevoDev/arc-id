@@ -85,6 +85,54 @@ export default function LandingPage() {
         ))} />
       </section>
 
+      {/* Who it's for */}
+      <section id="audience" className="mx-auto max-w-6xl px-6 space-y-8">
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold text-foreground">Who ArcID is for</h2>
+          <p className="text-muted-foreground">Three roles, one trust layer.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              title: "Issuers",
+              icon: "badge-check" as const,
+              lines: [
+                "Institutions that verify facts once — a university, a licensor, a bank.",
+                "Issue SD-JWT credentials with tenant-owned signing keys and revocation.",
+              ],
+            },
+            {
+              title: "Holders",
+              icon: "wallet" as const,
+              lines: [
+                "Individuals who own their data — students, professionals, customers.",
+                "Accept credentials into their wallet and present them on demand.",
+              ],
+            },
+            {
+              title: "Verifiers",
+              icon: "scan-search" as const,
+              lines: [
+                "Anyone who needs proof — employers, regulators, service providers.",
+                "Create a verification session, scan a code, and get signed claims.",
+              ],
+            },
+          ].map((role) => (
+            <Card key={role.title}>
+              <CardHeader>
+                <Icon name={role.icon} className="h-8 w-8 text-primary mb-2" />
+                <CardTitle className="text-lg">{role.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {role.lines.map((line, i) => (
+                  <CardDescription key={i}>{line}</CardDescription>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="mx-auto max-w-4xl px-6">
         <Card className="text-center py-12">

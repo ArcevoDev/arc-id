@@ -1,17 +1,13 @@
 "use client";
 
-import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { ThemeProvider as FacetThemeProvider } from "@arcevo/facet-components/theme";
+
+export { ThemeToggle, useTheme } from "@arcevo/facet-components/theme";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
-    <NextThemesProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem={false}
-      forcedTheme="dark"
-      disableTransitionOnChange
-    >
+    <FacetThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       {children}
-    </NextThemesProvider>
+    </FacetThemeProvider>
   );
 }
