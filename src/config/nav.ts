@@ -78,7 +78,14 @@ export const navConfig: NavSection[] = [
     ],
   },
   {
+    title: "Organization",
+    items: [{ href: "/organization", label: "Organization", icon: "building" }],
+  },
+  {
     title: "Account",
-    items: [{ href: "/settings/profile", label: "Profile", icon: "user" }],
+    items: [
+      { href: "/user", label: "Account", icon: "user" },
+      { href: "/settings/profile", label: "Profile settings", icon: "settings" },
+    ],
   },
 ];

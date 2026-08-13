@@ -106,8 +106,8 @@ product "beacon" for the identity-client story. Sequence:
 
 - Does the facet repo OWN these new packages, or do you still want a
   distinct beacon repo for political/branding reasons? (Architecturally
-  one repo is better; brand can still be beacon.)
+  one repo is better; brand can still be beacon.) - i believe leaving it under facet is a better choice, we could jsut give the naming direction in their respective pkg files.. like @arcevo/beacon-* or just leave as facet --- since it also carries a weighty meaning... whichever you think is best...
 - Do we keep arc-id's src/sdk/index.ts as the client singleton forever,
-  or move it into facet-store as the default export?
+  or move it into facet-store as the default export? depends on how the canonical identity is planned to be conumed across tenants and project.. since we are working against duplicated users auth... where any integrator system uses the single canonical identity of a specific user to verify claims and personality across systems and sectors... solving the identity fragmentation... or what'd you think....
 - Scope of CLI for v1: init/doctor/migrate/setup (from the existing
-  arcid-cli-design.md) or a smaller surface first?
+  arcid-cli-design.md) or a smaller surface first? wwhatever the best convention is.... at thhis point.. i am a bit lost...

@@ -80,8 +80,22 @@ P0.5 — PAGE WIRING (architectural decision + phased execution)
       eae0834): (public)/layout.tsx wraps LandingLayout (hero + nav +
       footer); home page = features grid + sectors Marquee + CTA;
       feedback page = working form. All on @arcevo/facet-components.
-  [ ] Phase D — security/settings wiring. [importance MED · effort M]
-  [ ] Phase E — developers/billing wiring. [importance MED · effort M]
+  [x] Phase D — security/settings wiring. DONE (2026-08-13, commit
+      9528630): mfa (setup QR/confirm/recovery codes), passkeys (list +
+      deregister), audit (filterable log), profile (edit name via
+      useProfile + delete-account).
+  [x] Phase E — developers/billing wiring. DONE (2026-08-13, commit
+      5e066ce): billing (real subscription), webhooks (list/create/
+      delete), oauth applications (list with PKCE), oauth tokens (list +
+      revoke via use-oauth hook), api-keys (honest not-implemented state).
+  [x] Theme hydration fix + em-dash sweep (2026-08-13, commit 5e066ce):
+      SSR-safe ThemeToggle wrapper; all em/en dashes to hyphens.
+  [x] Clerk-style portals (2026-08-13): /user (profile + security
+      sections) and /organization (overview + members + billing) tabbed
+      shells added; nav redefined (Organization section, Account ->
+      /user). Theme toggle removed from layouts.
+  [x] Landing glassmorphism hero (2026-08-13): tech-grid bg + blur glow +
+      text-gradient headline + glass CTA, matching facet/landing style.
 
 P1 — BACKEND HARDENING / API LAYER (no leaks or gaps)
 -----------------------------------------------------

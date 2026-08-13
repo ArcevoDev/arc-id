@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { LandingLayout } from "@arcevo/facet-layout";
 import { Badge, Button, Icon } from "@arcevo/facet-components";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 /**
  * Public site shell - shared hero, nav, and footer around LandingLayout.
@@ -13,29 +12,54 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <LandingLayout
       hero={
-        <section className="mx-auto max-w-6xl px-6 py-16 text-center space-y-6">
-          <Badge variant="secondary" className="mx-auto">
+        <div className="relative flex flex-col items-center text-center px-6 py-20">
+          {/* Tech grid background (fades toward the edges) */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px)",
+              backgroundSize: "44px 44px",
+              maskImage:
+                "radial-gradient(ellipse 70% 60% at 50% 35%, black 30%, transparent 75%)",
+              WebkitMaskImage:
+                "radial-gradient(ellipse 70% 60% at 50% 35%, black 30%, transparent 75%)",
+            }}
+          />
+          {/* Soft glow behind the headline */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-0 -z-10 h-72 w-[42rem] max-w-full -translate-x-1/2 rounded-full opacity-40"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, oklch(0.58 0.23 273 / 25%), transparent 70%)",
+              filter: "blur(40px)",
+            }}
+          />
+          <Badge variant="outline" className="mb-6 border-primary/30 text-primary text-xs tracking-wider uppercase px-4 py-1">
             Sovereign identity for the ArcevoCirqle ecosystem
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground">
-            One identity.
-            <br />
-            <span className="text-primary">Verified once, trusted everywhere.</span>
+          <h1 className="text-gradient text-4xl md:text-6xl font-extrabold tracking-tight max-w-4xl">
+            One identity. Verified once, trusted everywhere.
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+          <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
             ArcID is a sovereign multi-tenant identity and access management engine.
             Issue a verifiable credential once - let the holder present it anywhere
             it is trusted, without re-exposing the underlying documents.
           </p>
-          <div className="flex items-center justify-center gap-4">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Button size="lg" asChild>
-              <Link href="/register">Get started</Link>
+              <Link href="/register" className="gap-2">
+                Get started
+                <Icon name="arrow-right" size={16} />
+              </Link>
             </Button>
-            <Button variant="outline" size="lg" asChild>
+            <Button variant="glass" size="lg" asChild>
               <Link href="/login">Sign in</Link>
             </Button>
           </div>
-        </section>
+        </div>
       }
       nav={
         <nav className="flex items-center gap-6 px-6 py-4">
@@ -49,7 +73,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Link href="/feedback" className="hover:text-foreground">Feedback</Link>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            <ThemeToggle />
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Sign in</Link>
             </Button>

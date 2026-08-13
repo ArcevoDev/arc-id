@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConsoleLayout } from "@arcevo/facet-layout";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { buildLayoutConfig } from "@/config/layout";
 import { useTenant } from "@/hooks/use-tenant";
 
@@ -24,7 +23,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       activeTenant={activeTenant}
       onTenantSwitch={(id) => switchTenant(id)}
       router={router}
-      topbar={<ThemeToggle />}
     >
       {children}
     </ConsoleLayout>
