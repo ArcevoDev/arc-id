@@ -48,25 +48,29 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               className="text-gradient"
               phrases={[
                 "Verified once, trusted everywhere.",
+                "A key that opens every door.",
+                "Your story, told in credentials.",
                 "Sovereign across every sector.",
-                "Held by the person, not the platform.",
               ]}
             />
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
             ArcID is a sovereign multi-tenant identity and access management engine.
-            Issue a verifiable credential once - let the holder present it anywhere
+            Issue a verifiable credential once - let the holder carry it anywhere
             it is trusted, without re-exposing the underlying documents.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Button size="lg" asChild>
-              <Link href="/register" className="gap-2">
-                Get started
-                <Icon name="arrow-right" size={16} />
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 whitespace-nowrap"
+              >
+                Begin your journey
+                <Icon name="arrow-right" size={16} className="shrink-0" />
               </Link>
             </Button>
             <Button variant="glass" size="lg" asChild>
-              <Link href="/login">Sign in</Link>
+              <Link href="/login">Welcome back</Link>
             </Button>
           </div>
 

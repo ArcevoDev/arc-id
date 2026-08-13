@@ -19,18 +19,18 @@ export default function FeedbackPage() {
     <div className="mx-auto max-w-xl px-6 py-16">
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Feedback</CardTitle>
+          <CardTitle className="text-2xl">Speak your mind</CardTitle>
           <CardDescription>
-            We&apos;d love to hear your thoughts, suggestions, or any issues you&apos;ve
-            encountered.
+            Tell us what sings, what stumbles, and what you wish existed. Every
+            word finds its way into the build.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {sent ? (
             <div className="text-center space-y-3 py-8">
-              <p className="text-lg font-medium text-foreground">Thank you!</p>
+              <p className="text-lg font-medium text-foreground">Heard, loud and clear.</p>
               <p className="text-sm text-muted-foreground">
-                Your feedback has been received.
+                Thank you for shaping what comes next.
               </p>
             </div>
           ) : (
