@@ -8,7 +8,7 @@ export default function AdminPage() {
     <div className="space-y-6">
       <PageHeader
         title="Admin"
-        description="System administration — manage identities"
+        description="System administration - manage identities"
         actions={<Button>Refresh</Button>}
       />
       <div className="flex gap-2">

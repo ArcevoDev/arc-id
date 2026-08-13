@@ -83,7 +83,7 @@ export default function SessionsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {s.lastUsedAt ? new Date(s.lastUsedAt).toLocaleString() : "—"}
+                  {s.lastUsedAt ? new Date(s.lastUsedAt).toLocaleString() : "-"}
                 </TableCell>
                 <TableCell>
                   <Button

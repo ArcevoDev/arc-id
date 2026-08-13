@@ -87,7 +87,7 @@ export default function AuditPage() {
                   <Badge variant="outline">{e.action}</Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {e.targetType ? `${e.targetType} ${e.targetId ? "· " + e.targetId.slice(0, 8) : ""}` : "—"}
+                  {e.targetType ? `${e.targetType} ${e.targetId ? "· " + e.targetId.slice(0, 8) : ""}` : "-"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {new Date(e.createdAt).toLocaleString()}

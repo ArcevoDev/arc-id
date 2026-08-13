@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { LandingLayout } from "@arcevo/facet-layout";
 import { Badge, Button, Icon } from "@arcevo/facet-components";
-import { ThemeToggle } from "@/providers/theme-provider";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 /**
- * Public site shell — shared hero, nav, and footer around LandingLayout.
+ * Public site shell - shared hero, nav, and footer around LandingLayout.
  * Used by /home (landing), /feedback, and future public pages.
  */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +24,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             ArcID is a sovereign multi-tenant identity and access management engine.
-            Issue a verifiable credential once — let the holder present it anywhere
+            Issue a verifiable credential once - let the holder present it anywhere
             it is trusted, without re-exposing the underlying documents.
           </p>
           <div className="flex items-center justify-center gap-4">
@@ -64,7 +64,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <div className="mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Icon name="shield" className="h-5 w-5" />
-              <span>ArcID — Sovereign Identity Engine</span>
+              <span>ArcID - Sovereign Identity Engine</span>
             </div>
             <div className="flex items-center gap-6">
               <Link href="/home#features" className="hover:text-foreground">Features</Link>

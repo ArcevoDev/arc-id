@@ -72,10 +72,10 @@ export default function PasskeysPage() {
                   {p.backedUp ? " · synced" : ""}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—"}
+                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "-"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleString() : "—"}
+                  {p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleString() : "-"}
                 </TableCell>
                 <TableCell>
                   <Button

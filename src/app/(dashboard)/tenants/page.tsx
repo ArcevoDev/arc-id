@@ -85,8 +85,8 @@ export default function TenantsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{t.slug}</TableCell>
-                    <TableCell className="text-muted-foreground">{t.plan ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{t.role ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{t.plan ?? "-"}</TableCell>
+                    <TableCell className="text-muted-foreground">{t.role ?? "-"}</TableCell>
                     <TableCell>
                       {activeTenant?.id !== t.id && (
                         <Button
@@ -139,11 +139,11 @@ export default function TenantsPage() {
                 ) : (
                   members.map((m, i) => (
                     <TableRow key={m.tenantId + i}>
-                      <TableCell>{m.name ?? "—"}</TableCell>
+                      <TableCell>{m.name ?? "-"}</TableCell>
                       <TableCell className="text-muted-foreground">{m.role}</TableCell>
                       <TableCell>
                         <Badge variant={m.status === "ACTIVE" ? "success" : "default"}>
-                          {m.status ?? "—"}
+                          {m.status ?? "-"}
                         </Badge>
                       </TableCell>
                     </TableRow>

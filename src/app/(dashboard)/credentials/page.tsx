@@ -53,7 +53,7 @@ export default function CredentialsPage() {
     if (!offerToken) return;
     const result = await acceptOffer(offerToken);
     if (result.data) {
-      setOfferResult("✓ Offer accepted — credential is now in your wallet.");
+      setOfferResult("✓ Offer accepted - credential is now in your wallet.");
       setOfferToken("");
       load();
     } else {
@@ -109,10 +109,10 @@ export default function CredentialsPage() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.type}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {c.subjectDid ? c.subjectDid.slice(0, 24) + "…" : "—"}
+                      {c.subjectDid ? c.subjectDid.slice(0, 24) + "…" : "-"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {c.issuedAt ? new Date(c.issuedAt).toLocaleDateString() : "—"}
+                      {c.issuedAt ? new Date(c.issuedAt).toLocaleDateString() : "-"}
                     </TableCell>
                     <TableCell>
                       <Badge variant={c.expiresAt && new Date(c.expiresAt) < new Date() ? "destructive" : "default"}>

@@ -6,7 +6,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Icon
 const FEATURES = [
   {
     title: "Passkey-native auth",
-    description: "WebAuthn passkeys, TOTP MFA, and magic links — phishing-resistant sign-in out of the box.",
+    description: "WebAuthn passkeys, TOTP MFA, and magic links - phishing-resistant sign-in out of the box.",
     icon: "key-round" as const,
   },
   {
@@ -97,7 +97,7 @@ export default function LandingPage() {
               title: "Issuers",
               icon: "badge-check" as const,
               lines: [
-                "Institutions that verify facts once — a university, a licensor, a bank.",
+                "Institutions that verify facts once - a university, a licensor, a bank.",
                 "Issue SD-JWT credentials with tenant-owned signing keys and revocation.",
               ],
             },
@@ -105,7 +105,7 @@ export default function LandingPage() {
               title: "Holders",
               icon: "wallet" as const,
               lines: [
-                "Individuals who own their data — students, professionals, customers.",
+                "Individuals who own their data - students, professionals, customers.",
                 "Accept credentials into their wallet and present them on demand.",
               ],
             },
@@ -113,7 +113,7 @@ export default function LandingPage() {
               title: "Verifiers",
               icon: "scan-search" as const,
               lines: [
-                "Anyone who needs proof — employers, regulators, service providers.",
+                "Anyone who needs proof - employers, regulators, service providers.",
                 "Create a verification session, scan a code, and get signed claims.",
               ],
             },
@@ -141,7 +141,7 @@ export default function LandingPage() {
               Ready to put identity back in the holder&apos;s hands?
             </h2>
             <p className="text-muted-foreground">
-              Spin up a tenant, issue your first credential, and integrate the SDK — all today.
+              Spin up a tenant, issue your first credential, and integrate the SDK - all today.
             </p>
             <Button size="lg" asChild>
               <Link href="/register">Create your account</Link>

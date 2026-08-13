@@ -86,9 +86,9 @@ export default function IdentitiesPage() {
                     {u.status ?? "PENDING"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{u.plan ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{u.plan ?? "-"}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
+                  {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "-"}
                 </TableCell>
               </TableRow>
             ))

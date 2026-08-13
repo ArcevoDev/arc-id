@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConsoleLayout } from "@arcevo/facet-layout";
-import { ThemeToggle } from "@/providers/theme-provider";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { buildLayoutConfig } from "@/config/layout";
 import { useTenant } from "@/hooks/use-tenant";
 

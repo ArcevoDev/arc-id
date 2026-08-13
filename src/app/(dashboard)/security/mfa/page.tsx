@@ -35,7 +35,7 @@ export default function MfaPage() {
     if (result.data) {
       setRecoveryCodes(result.data.recoveryCodes);
     } else {
-      setError(result.error?.message ?? "Invalid code — please try again");
+      setError(result.error?.message ?? "Invalid code - please try again");
     }
   };
 
@@ -66,7 +66,7 @@ export default function MfaPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Store these somewhere safe — they&apos;re shown only once and can
+              Store these somewhere safe - they&apos;re shown only once and can
               recover your account if you lose your authenticator.
             </p>
             <div className="grid grid-cols-2 gap-2">

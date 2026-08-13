@@ -29,7 +29,7 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   metadataBase: new URL(ArcMetadata.url),
   title: {
-    default: `${ArcMetadata.name} — ${ArcMetadata.tagline}`,
+    default: `${ArcMetadata.name} - ${ArcMetadata.tagline}`,
     template: `%s · ${ArcMetadata.name}`,
   },
   description: ArcMetadata.longDescription,
@@ -41,20 +41,20 @@ export const metadata: Metadata = {
     type: "website",
     locale: ArcMetadata.locale,
     siteName: ArcMetadata.name,
-    title: `${ArcMetadata.name} — ${ArcMetadata.tagline}`,
+    title: `${ArcMetadata.name} - ${ArcMetadata.tagline}`,
     description: ArcMetadata.longDescription,
     images: [
       {
         url: ArcMetadata.ogImage,
         width: 1200,
         height: 630,
-        alt: `${ArcMetadata.name} — ${ArcMetadata.tagline}`,
+        alt: `${ArcMetadata.name} - ${ArcMetadata.tagline}`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${ArcMetadata.name} — ${ArcMetadata.tagline}`,
+    title: `${ArcMetadata.name} - ${ArcMetadata.tagline}`,
     description: ArcMetadata.description,
     images: [ArcMetadata.ogImage],
     creator: ArcMetadata.twitterHandle,
