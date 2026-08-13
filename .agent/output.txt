@@ -139,13 +139,19 @@ P2.5 — ARC-WALLET (parallel track — IN PROGRESS)
       secure-store persistence + restore; login/register/mfa screens +
       wallet home (credential list); auth-gated Stack layout. Typecheck
       clean.
-  [ ] Phase 2 — wallet core: credential cards, offer accept (deep link),
-      QR/deep-link presentation via VcSdk.presentForVerification.
+  [x] Phase 2 — wallet core: credential cards, offer accept (deep link),
+      QR/deep-link presentation via VcSdk.presentForVerification. DONE
+      (2026-08-13, arc-wallet commits e69ee8d + c556132).
       [importance HIGH · effort L]
-  [ ] Phase 3 — wallet DID: registerWalletDid on first launch (Ed25519
-      keypair on device, public JWK only — non-custodial). Service
-      (src/services/wallet-did.ts) exists, screen pending.
+  [x] Phase 3 — wallet DID: registerWalletDid on first launch (Ed25519
+      keypair on device, public JWK only — non-custodial). DONE
+      (2026-08-13, arc-wallet commit 97b9135): /did screen + home
+      first-launch redirect; did:key derived on-device.
       [importance HIGH · effort M]
+  [x] Theme + landing (2026-08-13, arc-id commit cba2810): facet
+      ThemeProvider/ThemeToggle replace next-themes (dashboard topbar +
+      public nav); landing gains "Who ArcID is for" (Issuers/Holders/
+      Verifiers) section.
   [ ] Phase 4 — full integration: tenant context, OAuth/webhook mgmt,
       audit/billing display. [importance MED · effort L]
   [ ] End-to-end smoke vs arc-id MVP once deployed. [importance HIGH · effort M]
