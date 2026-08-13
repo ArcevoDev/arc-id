@@ -76,6 +76,10 @@ P0.5 — PAGE WIRING (architectural decision + phased execution)
       ConsoleLayout; in-repo app-layout/console-layout/sidebar/topbar/
       tenant-switcher deleted (AppLayout deprecated in favour of
       AuthLayout per facet-layout); page-header re-exports facet's.
+  [x] Public site (landing + feedback) — DONE (2026-08-13, commit
+      eae0834): (public)/layout.tsx wraps LandingLayout (hero + nav +
+      footer); home page = features grid + sectors Marquee + CTA;
+      feedback page = working form. All on @arcevo/facet-components.
   [ ] Phase D — security/settings wiring. [importance MED · effort M]
   [ ] Phase E — developers/billing wiring. [importance MED · effort M]
 
