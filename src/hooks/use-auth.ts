@@ -87,6 +87,21 @@ export function useAuth() {
     }
   }, []);
 
+  const requestMagicLink = useCallback(async (email: string) => {
+    return auth.requestMagicLink(email);
+  }, []);
+
+  const authenticateMagicLink = useCallback(async (token: string) => {
+    const result = await auth.authenticateMagicLink(token);
+    if (result.data?.accessToken) {
+      const { identity, accessToken, refreshToken, sessionId } = result.data;
+      useAuthStore.getState().setAuth(identity, accessToken, refreshToken ?? "", sessionId);
+      arcIdClient.setAccessToken(accessToken);
+      persistSession(identity, accessToken, refreshToken ?? "");
+    }
+    return result;
+  }, []);
+
   return {
     user,
     isAuthenticated,
@@ -100,5 +115,13 @@ export function useAuth() {
     verifyEmail,
     verifyMfa,
     refreshAuth,
+    requestMagicLink,
+    authenticateMagicLink,
   };
+}
+
+/** OAuth social login URL against the ArcID API. */
+export function socialAuthUrl(provider: "google" | "github") {
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+  return `${base}/auth/${provider}`;
 }

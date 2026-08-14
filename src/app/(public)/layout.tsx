@@ -57,10 +57,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <TypewriterText
               className="text-gradient"
               phrases={[
-                "Verified once, trusted everywhere.",
-                "A key to every door.",
-                "Your story, in credentials.",
-                "Sovereign in every sector.",
+                "One key, every door.",
+                "Own your identity.",
+                "Verifiable anywhere.",
+                "Passkeys, not passwords.",
+                "Sign once, trust always.",
+                "Your proof, on demand.",
               ]}
             />
           </h1>
