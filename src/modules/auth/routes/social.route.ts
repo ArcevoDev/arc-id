@@ -50,7 +50,9 @@ import { auditService } from "@/modules/audit/services/audit.service";
 // missing env vars surface at startup rather than at first request.
 
 function buildRedirectUri(provider: string) {
-  return `${config.base.apiUrl}/auth/social/${provider}/callback`;
+  // The social routes are mounted under /auth (see auth.plugin.ts prefix),
+  // so the callback is /auth/{provider}/callback, not /auth/social/...
+  return `${config.base.apiUrl}/auth/${provider}/callback`;
 }
 
 function getGoogle() {

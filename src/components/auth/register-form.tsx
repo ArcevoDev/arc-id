@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, socialAuthUrl } from "@/hooks/use-auth";
-import { Button, Icon, Input, Label, Separator } from "@arcevo/facet-components";
+import { useAuth } from "@/hooks/use-auth";
+import { Button, Input, Label } from "@arcevo/facet-components";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -32,23 +32,6 @@ export function RegisterForm() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" asChild>
-          <a href={socialAuthUrl("github")} className="inline-flex items-center justify-center gap-2">
-            <Icon name="github" className="h-4 w-4" />
-            GitHub
-          </a>
-        </Button>
-        <Button variant="outline" asChild>
-          <a href={socialAuthUrl("google")} className="inline-flex items-center justify-center gap-2">
-            <Icon name="globe" className="h-4 w-4" />
-            Google
-          </a>
-        </Button>
-      </div>
-
-      <Separator />
-
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="space-y-1">
         <Label htmlFor="name">Full name</Label>
