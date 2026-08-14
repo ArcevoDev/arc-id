@@ -52,17 +52,17 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             Sovereign identity for the ArcevoCirqle ecosystem
           </Badge>
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight max-w-4xl">
-            <span className="text-foreground">One identity.</span>
+            <span className="text-foreground">One identity,</span>
             <br />
             <TypewriterText
               className="text-gradient"
               phrases={[
-                "One key, every door.",
-                "Own your identity.",
-                "Verifiable anywhere.",
-                "Passkeys, not passwords.",
-                "Sign once, trust always.",
-                "Your proof, on demand.",
+                "verified once, trusted everywhere.",
+                "one key, every door.",
+                "owned by you, everywhere.",
+                "passkeys, not passwords.",
+                "signed once, verifiable anywhere.",
+                "your proof, on demand.",
               ]}
             />
           </h1>
