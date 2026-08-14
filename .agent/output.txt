@@ -1,11 +1,11 @@
 ================================================================
   ArcID: SESSION TRACKER & BUILD ROADMAP
-  Updated: 2026-08-12 (SESSION 2 — FACET IMPORTS FIX + DOC SYNC)
+  Updated: 2026-08-14 (SESSION 3 — AUDIT: VOID-RESPONSE BUG FIXES + DOC SYNC)
   Author: arc-id (Arcevo Ecosystem Identity/IAM Backend)
 ================================================================
 
-VERIFIED REPO STATE (2026-08-12)
---------------------------------
+VERIFIED REPO STATE (2026-08-14)
+-------------------------------
 - Branch: chore (working tree carries the facet migration Phases 1-3 +
   uncommitted doc sync — see .agent/logs.txt).
 - Version 0.1.0 (package.json). pnpm 11.21.0. ESM-only. Next.js 16.2.6.
@@ -15,13 +15,15 @@ VERIFIED REPO STATE (2026-08-12)
 - Backend complete: Phases 0-4 shipped (OAuth2/OIDC, WebAuthn, TOTP MFA,
   SD-JWT VCs, did:web/did:key, presentation endpoint, multi-tenant
   policy/RBAC, webhook delivery, observability, Redis revocation).
-- Facet migration: Phases 1-3 DONE. Phase 1 (SDK -> @arcevo/facet-sdk),
+- Facet migration: Phases 1-5 DONE. Phase 1 (SDK -> @arcevo/facet-sdk),
   Phase 2 (CSS tokens -> @arcevo/facet-tokens), Phase 3 (components ->
   @arcevo/facet-components, native <Icon name="..."/> registry, dead
-  icon-registry.ts + navigation.ts deleted). Phases 4-6 pending.
-- Facet packages pinned: sdk 1.0.1, components 1.3.0, auth 1.1.1,
-  layout 1.2.0, tokens 1.1.0, cli 0.3.0 (installed, unused — CLI basis),
-  docs 1.3.0 (installed, unused — docs scaffold basis).
+  icon-registry.ts + navigation.ts deleted), Phase 4 (auth pages ->
+  @arcevo/facet-auth, commit d6f6707), Phase 5 (layouts ->
+  @arcevo/facet-layout). Phase 6 purge partial (forgot/reset forms remain).
+- Facet packages pinned: sdk 1.1.0, components 1.5.0, auth 1.1.4,
+  layout 1.3.1, tokens 1.1.0, cli 0.4.0 (installed, unused — CLI basis),
+  docs 1.4.1 (installed, unused — docs scaffold basis).
 
 ================================================================
 MILESTONES / TODOS — BY PRIORITY
@@ -30,18 +32,18 @@ MILESTONES / TODOS — BY PRIORITY
 
 P0 — FACET MIGRATION (finish the UI, per priority/effort)
 ----------------------------------------------------------
-  [ ] Phase 4 — auth forms: replace src/components/auth/* (5 forms:
-      login/register/mfa/forgot/reset) with @arcevo/facet-auth.
-      Requires ArcProvider + TokenStorage unification decision with the
-      Zustand auth store. [importance HIGH · effort L]
-      NOTE: verify facet-auth exports before starting (SignIn/SignUp/
-      MfaDialog state machine vs arc-id's inline forms).
-  [ ] Phase 5 — layout: adopt @arcevo/facet-layout shells (ConsoleLayout/
-      AuthLayout) or keep arc-id's wrapper; migrate incrementally.
-      [importance MED · effort M]
-  [ ] Phase 6 — purge: delete src/components/auth/* once Phase 4 green;
-      confirm zero in-repo shadcn/facet duplicates remain.
-      [importance MED · effort S]
+  [x] Phase 4 — auth forms: login/register/mfa pages on
+      @arcevo/facet-auth (SignIn/SignUp/MfaDialog), ArcProvider +
+      zustandTokenStorage bridge to the Zustand auth store.
+      DONE (2026-08-14, commit d6f6707). In-repo login/register/mfa
+      forms deleted; forgot/reset forms remain (in use).
+  [x] Phase 5 — layout: (auth) group on AuthLayout, (dashboard) group
+      on ConsoleLayout from @arcevo/facet-layout; in-repo sidebar/
+      topbar/tenant-switcher deleted. DONE (2026-08-13, commit 646fed1).
+  [x] Phase 6 — purge: ALL auth pages now on @arcevo/facet-auth
+      (SignIn/SignUp/MfaDialog/ForgotPasswordForm/ResetPasswordForm).
+      In-repo src/components/auth/ emptied and deleted.
+      DONE (2026-08-14, commits d6f6707 + e402622).
   [ ] Pages cleanup: routes importing SDK directly (login, register,
       billing, dashboard) -> route through hooks per the strict chain
       rule. [importance LOW · effort M]
@@ -106,16 +108,51 @@ P1 — BACKEND HARDENING / API LAYER (no leaks or gaps)
   [x] Phase 4 — Observability (SHIPPED 2026-07-28): requestId
       correlation, @fastify-metrics at /metrics, pino traceId on every
       flow. [importance HIGH · effort M]
-  [ ] Secrets/PII log scan: scripts/scan-secrets.ts EXISTS (pnpm
-      scan:secrets) but NOT wired into CI. Wire as a CI step.
+  [x] Secrets/PII log scan: scripts/scan-secrets.ts wired into CI as a
+      step in ci.yml (2026-08-14). PASS: 440 files scanned, clean.
       [importance HIGH · effort S]
-  [ ] CI pnpm version alignment: actions pin pnpm 11.5.1, package.json
-      declares pnpm@11.21.0 — align to one version. [importance MED · effort S]
+  [x] CI pnpm version alignment: actions pin pnpm 11.21.0 to match
+      package.json (2026-08-14). [importance MED · effort S]
   [ ] Audit-log coverage gaps: 21 flows with audit side effects don't
       verify the call; ROLE_* + OAUTH_CLIENT_UPDATED enum values unused.
       [importance MED · effort M]
   [ ] Migration rollback Tier 2: opt-in via ARC_ID_ROLLBACK_TEST=1, wired
       into CI with real Postgres + shadow DB. [importance MED · effort M]
+
+P2.8 — FRONTEND AUDIT (SESSION 3, 2026-08-14)
+---------------------------------------------
+  Scope: production-grade pass over the uncommitted P2.75 work + pages.
+
+  BUGS FIXED — void-response success checks (pages treated ApiResponse<void>
+  as failure because they checked result.data instead of !result.error):
+  [x] credentials page revoke — false "Failed to revoke credential"
+      error on success; row not removed.
+  [x] webhooks page delete — false "Failed to delete webhook" on success.
+  [x] sessions page revoke — false "Failed to revoke session" on success.
+  [x] passkeys page deregister — false "Failed to deregister passkey" on
+      success (also missing await on deregister).
+  [x] oauth tokens page revoke — false "Failed to revoke token" on success.
+  [x] mfa page disable — false "Failed to disable MFA" on success.
+  [x] profile page delete-account — false "Failed to delete account" on
+      success (also now clears the persisted session before redirect).
+  [x] mfa page post-auth redirect — now routes through
+      resolvePostAuthRoute() (general user -> /wallet, not /dashboard).
+
+  VERIFIED: pnpm test 340/340, tsc --noEmit clean, scan:secrets clean,
+  all after fixes.
+
+  OPEN (unchanged, tracked under P2.75):
+  [x] OAuth listClients 403 "client:read" — FIXED (2026-08-14): the
+      MEMBER role (default for new registrations) had zero permissions;
+      seed.ts now wires client:read + webhook:read:events (self-service
+      reads) to MEMBER, create/delete stay ADMIN-gated.
+  [ ] Audit list E2E error — investigated: route is requirePlan("PRO");
+      a fresh FREE user gets 402 UPGRADE_REQUIRED by design, not a bug.
+      Verify E2E passes on a PRO-plan identity.
+  [ ] Tenant member/policy routes need a real org tenantId (PRO only).
+  [ ] SDK TenantSdk.create() fix (returns Tenant) needs a test + changeset.
+  [ ] Wallet page (/wallet) has no auth guard — dashboard group relies on
+      page-level 401 handling; consider a shared guard for consistency.
 
 P2 — CLI + SDK PACKAGES (deferred until API contract stable)
 ------------------------------------------------------------
@@ -132,8 +169,57 @@ P3 — DEFERRED (do not start early)
   [ ] ExternalIdentifier.verified -> VC issuance — needs design.
   [ ] BBS+/did:jwk/full OIDC4VCI-OIDC4VP/OPA-Cedar-SCIM-Terraform — v2+.
 
+P2.75 — SDK / STORE / HOOK CONTRACT VERIFICATION (2026-08-14)
+-------------------------------------------------------------
+  What this is: prove the arc-id server <-> @arcevo/facet-sdk <-> store
+  <-> hook chain has NO hidden gaps before extracting facet-store /
+  facet-react into published packages. arc-id consumes the SDK like a
+  third party even though it is first-party.
+
+  DONE this session:
+  [x] Audit script (facet/scripts/audit-arcid-consumption.cjs): every
+      arc-id ROUTES endpoint has an SDK method; every SDK module is used
+      by the app. No orphaned endpoints.
+  [x] New framework-agnostic Zustand stores built in arc-id:
+      credentials.store.ts, webhooks.store.ts, audit.store.ts
+      (shared state + loading/error; web + wallet portable).
+  [x] Hooks upgraded to hydrate the stores: use-credentials (list/issue/
+      revoke), use-webhooks (list/create/update/remove/test), use-audit-log
+      (paginated list). Method name `list` preserved for consumers.
+  [x] Full E2E (scratch-e2e/e2e-full.mjs) vs live API: auth/identity/
+      tenant/oauth/credentials/webhooks/audit round-trips. 15 pass.
+  [x] SDK fix: TenantSdk.create() returned ApiResponse<void> but the
+      server returns the created tenant — now ApiResponse<Tenant>
+      (consumers could not get the new tenant id). Rebuilt. Committed
+      on facet main (78c49ac).
+
+  DECISION — the `me()` naming (recorded 2026-08-14):
+  - KEEP `me()` in @arcevo/facet-sdk (stable public API since 1.0.x;
+      renaming breaks arc-wallet + external integrators). The SDK
+      abstracts the HTTP surface: me() -> GET /identity/profile is fine.
+  - arc-id hooks rename the APP-FACING name to getProfile()/fetchProfile()
+      while internally calling auth.me(). Hook layer = semantic names;
+      SDK layer = stable client methods.
+
+  OPEN (findings to fix):
+  [x] OAuth listClients 403 "Permission required: client:read" — FIXED
+      (2026-08-14): MEMBER role (default for registrations) now gets
+      client:read + webhook:read:events in seed.ts; create/delete remain
+      ADMIN-gated.
+  [ ] Audit list in E2E returned error — investigated: route is
+      requirePlan("PRO"); fresh FREE user gets 402 by design. Verify on
+      a PRO-plan identity.
+  [ ] Tenant member/policy routes require a real org tenantId (cuid);
+      FREE plan ships only the SYSTEM tenant (id "SYSTEM") + caps create
+      at 1. E2E skips those on FREE. Verify against a PRO instance.
+  [ ] SDK create() fix (returns Tenant) needs an SDK test + changeset.
+
+  WHEN DONE: extract @arcevo/facet-store + @arcevo/facet-react per
+  client-core-architecture-analysis.md sequencing (after Phase E pages
+  are fully wired + this contract is proven).
+
 P2.5 — ARC-WALLET (parallel track — IN PROGRESS)
-------------------------------------------------
+-----------------------------------------------
   DECISION (2026-08-12): ArcWallet builds against @arcevo/facet-sdk NOW,
   in parallel — do NOT wait for MVP to ship to prod.
   - SDK verified RN-safe: zero npm deps, single ESM bundle, no
