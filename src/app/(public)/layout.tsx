@@ -125,7 +125,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             Link: (props: React.ComponentProps<typeof Link>) => <Link {...props} />,
             isActive: (href: string) => pathname === href.split("#")[0],
           }}
-          showThemeToggle
           mobileMenu={
             <div className="flex flex-col gap-1 p-2">
               {LINKS.map((l) => (
