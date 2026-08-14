@@ -55,3 +55,6 @@ ArcevoCirqle_Design_Standards_Manual_v1.0..txt
 # agent state
 .agent/logs.txt
 .agent/*.txt.tmp
+
+# local e2e harness
+/scratch-e2e/
