@@ -1,15 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LandingLayout } from "@arcevo/facet-layout";
-import { Badge, Button, Icon } from "@arcevo/facet-components";
+import { Badge, Button, Footer, Icon, Navbar } from "@arcevo/facet-components";
 import { TypewriterText } from "@/components/ui/typewriter-text";
 
+const LINKS = [
+  { href: "/home#features", label: "Features" },
+  { href: "/home#sectors", label: "Sectors" },
+  { href: "/home#audience", label: "Who it's for" },
+  { href: "/feedback", label: "Feedback" },
+];
+
 /**
- * Public site shell - shared hero, nav, and footer around LandingLayout.
- * Used by /home (landing), /feedback, and future public pages.
+ * Public site shell - facet Navbar (pill) + Footer around LandingLayout,
+ * with the glassmorphism hero.
  */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   return (
     <LandingLayout
       hero={
@@ -92,40 +102,62 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         </div>
       }
       nav={
-        <nav className="flex items-center gap-6 px-6 py-4">
-          <Link href="/home" className="flex items-center gap-2">
-            <Icon name="shield" className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-foreground">ArcID</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-4 text-sm text-muted-foreground">
-            <Link href="/home#features" className="hover:text-foreground">Features</Link>
-            <Link href="/home#sectors" className="hover:text-foreground">Sectors</Link>
-            <Link href="/feedback" className="hover:text-foreground">Feedback</Link>
-          </div>
-          <div className="ml-auto flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/register">Get started</Link>
-            </Button>
-          </div>
-        </nav>
+        <Navbar
+          variant="pill"
+          brand={
+            <Link href="/home" className="flex items-center gap-2">
+              <Icon name="shield" className="h-6 w-6 text-primary" />
+              <span className="font-semibold text-foreground">ArcID</span>
+            </Link>
+          }
+          links={LINKS.map((l) => ({
+            href: l.href,
+            label: l.label,
+            active: pathname === l.href.split("#")[0],
+          }))}
+          router={{
+            Link: (props: React.ComponentProps<typeof Link>) => <Link {...props} />,
+            isActive: (href: string) => pathname === href.split("#")[0],
+          }}
+          actions={
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/login">Sign in</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/register">Get started</Link>
+              </Button>
+            </div>
+          }
+        />
       }
       footer={
-        <footer className="border-t py-8 px-6">
-          <div className="mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Icon name="shield" className="h-5 w-5" />
-              <span>ArcID - Sovereign Identity Engine</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <Link href="/home#features" className="hover:text-foreground">Features</Link>
-              <Link href="/home#sectors" className="hover:text-foreground">Sectors</Link>
-              <Link href="/feedback" className="hover:text-foreground">Feedback</Link>
-            </div>
-          </div>
-        </footer>
+        <Footer
+          brand={{
+            name: "ArcID",
+            logo: <Icon name="shield" className="h-5 w-5" />,
+            tagline: "Sovereign Identity Engine",
+          }}
+          columns={[
+            {
+              title: "Product",
+              links: [
+                { label: "Features", href: "/home#features" },
+                { label: "Sectors", href: "/home#sectors" },
+                { label: "Who it's for", href: "/home#audience" },
+              ],
+            },
+            {
+              title: "Company",
+              links: [{ label: "Feedback", href: "/feedback" }],
+            },
+          ]}
+          bottomLinks={[
+            { label: "Features", href: "/home#features" },
+            { label: "Sectors", href: "/home#sectors" },
+            { label: "Feedback", href: "/feedback" },
+          ]}
+        />
       }
     >
       {children}
