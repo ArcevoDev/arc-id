@@ -58,9 +58,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               className="text-gradient"
               phrases={[
                 "Verified once, trusted everywhere.",
-                "A key that opens every door.",
-                "Your story, told in credentials.",
-                "Sovereign across every sector.",
+                "A key to every door.",
+                "Your story, in credentials.",
+                "Sovereign in every sector.",
               ]}
             />
           </h1>
@@ -115,10 +115,37 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             label: l.label,
             active: pathname === l.href.split("#")[0],
           }))}
+          onNavigate={(href) => {
+            // Anchor links scroll in-page on the home route; real routes navigate.
+            if (href.startsWith("#") && pathname === "/home") {
+              document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth" });
+            }
+          }}
           router={{
             Link: (props: React.ComponentProps<typeof Link>) => <Link {...props} />,
             isActive: (href: string) => pathname === href.split("#")[0],
           }}
+          showThemeToggle
+          mobileMenu={
+            <div className="flex flex-col gap-1 p-2">
+              {LINKS.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {l.label}
+                </Link>
+              ))}
+              <div className="my-1 h-px bg-border" />
+              <Link href="/login" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-foreground">
+                Sign in
+              </Link>
+              <Link href="/register" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-foreground">
+                Get started
+              </Link>
+            </div>
+          }
           actions={
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm" asChild>
