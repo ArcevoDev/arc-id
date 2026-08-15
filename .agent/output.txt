@@ -364,6 +364,13 @@ P2.9 — FACET PKG FULL UTILIZATION (SESSION 4, 2026-08-15)
       DONE (2026-08-15). [importance HIGH · effort M]
   GATE: pnpm test (340) PASS, tsc --noEmit PASS, next build in flight
   (2026-08-15, session 4).
+  GATE RE-RUN (2026-08-15, session 4 resumed): the interrupted `next build`
+  was actually FAILING on a prerender error that the interruption hid:
+  useSearchParams() without a Suspense boundary on /mfa and
+  /reset-password (missing-suspense-with-csr-bailout). Fixed both by
+  moving the hook into a Suspense-wrapped child component. Re-verified:
+  pnpm test 62/340 PASS, tsc --noEmit PASS, next build PASS (32 routes
+  prerendered static). Committed as a904b0e.
 
 _Keep this file current. Every session that closes an item or discovers
 a new one updates output.txt AND logs.txt in the same session._
