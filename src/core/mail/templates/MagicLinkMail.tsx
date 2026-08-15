@@ -29,7 +29,7 @@ export const MagicLinkMail = ({ loginUrl, name, ip }: MagicLinkMailProps) => (
     </MailSecurityNotice>
 
     <MailText variant="small">
-      If you didn't request this sign-in link, your account is still secure —
+      If you didn't request this sign-in link, your account is still secure -
       simply ignore this email.
     </MailText>
 

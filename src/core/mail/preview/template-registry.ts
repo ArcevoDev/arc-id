@@ -77,7 +77,7 @@ export const TEMPLATE_REGISTRY: Record<string, React.ReactElement> = {
   }),
   "account-suspended": React.createElement(AccountSuspendedMail, {
     name: "Alex",
-    reason: "Violation of terms of service — section 4.2",
+    reason: "Violation of terms of service - section 4.2",
   }),
   "tenant-invite": React.createElement(TenantInviteMail, {
     inviteeEmail: "alex@example.com",

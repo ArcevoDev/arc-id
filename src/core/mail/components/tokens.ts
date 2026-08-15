@@ -1,6 +1,6 @@
 /**
  * ArcID mail design tokens.
- * Shared across all components — change here, changes everywhere.
+ * Shared across all components - change here, changes everywhere.
  */
 export const tokens = {
   color: {

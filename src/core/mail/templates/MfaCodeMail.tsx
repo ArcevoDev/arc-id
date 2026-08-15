@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Section, Text } from "@react-email/components";
+import { EmailSection, EmailText } from "@arcevo/facet-emails";
 import { MailLayout } from "../components/MailLayout";
 import { MailText } from "../components/MailText";
 import { tokens as t } from "../components/tokens";
@@ -7,7 +7,7 @@ import { tokens as t } from "../components/tokens";
 export interface MfaCodeMailProps {
   code: string;
   name?: string;
-  /** Seconds until expiry — default 600 (10 min) */
+  /** Seconds until expiry - default 600 (10 min) */
   ttlSec?: number;
 }
 
@@ -23,7 +23,7 @@ export const MfaCodeMail = ({ code, name, ttlSec = 600 }: MfaCodeMailProps) => {
       </MailText>
 
       {/* Big code display */}
-      <Section
+      <EmailSection
         style={{
           backgroundColor: t.color.bgMuted,
           border: `1px solid ${t.color.border}`,
@@ -33,7 +33,7 @@ export const MfaCodeMail = ({ code, name, ttlSec = 600 }: MfaCodeMailProps) => {
           marginBottom: t.space.lg,
         }}
       >
-        <Text
+        <EmailText
           style={{
             fontFamily: t.font.mono,
             fontSize: "36px",
@@ -41,11 +41,12 @@ export const MfaCodeMail = ({ code, name, ttlSec = 600 }: MfaCodeMailProps) => {
             letterSpacing: "0.3em",
             color: t.color.text,
             margin: 0,
+            textAlign: "center",
           }}
         >
           {code}
-        </Text>
-      </Section>
+        </EmailText>
+      </EmailSection>
 
       <MailText variant="small">
         This code expires in <strong>{minutes} minutes</strong> and can only be

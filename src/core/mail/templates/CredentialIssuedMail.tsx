@@ -1,5 +1,10 @@
 import * as React from "react";
-import { Section, Row, Column, Text } from "@react-email/components";
+import {
+  EmailSection,
+  EmailRow,
+  EmailColumn,
+  EmailText,
+} from "@arcevo/facet-emails";
 import { MailLayout } from "../components/MailLayout";
 import { MailButton } from "../components/MailButton";
 import { MailText } from "../components/MailText";
@@ -35,7 +40,7 @@ export const CredentialIssuedMail = ({
     </MailText>
 
     {/* Credential detail card */}
-    <Section
+    <EmailSection
       style={{
         backgroundColor: t.color.bgMuted,
         border: `1px solid ${t.color.border}`,
@@ -44,9 +49,9 @@ export const CredentialIssuedMail = ({
         marginBottom: t.space.lg,
       }}
     >
-      <Row style={{ marginBottom: t.space.sm }}>
-        <Column style={{ width: "40%" }}>
-          <Text
+      <EmailRow style={{ marginBottom: t.space.sm }}>
+        <EmailColumn style={{ width: "40%" }}>
+          <EmailText
             style={{
               color: t.color.textMuted,
               fontSize: t.font.sizeSm,
@@ -54,10 +59,10 @@ export const CredentialIssuedMail = ({
             }}
           >
             Type
-          </Text>
-        </Column>
-        <Column>
-          <Text
+          </EmailText>
+        </EmailColumn>
+        <EmailColumn>
+          <EmailText
             style={{
               color: t.color.text,
               fontSize: t.font.sizeSm,
@@ -66,12 +71,12 @@ export const CredentialIssuedMail = ({
             }}
           >
             {credentialType}
-          </Text>
-        </Column>
-      </Row>
-      <Row style={{ marginBottom: t.space.sm }}>
-        <Column style={{ width: "40%" }}>
-          <Text
+          </EmailText>
+        </EmailColumn>
+      </EmailRow>
+      <EmailRow style={{ marginBottom: t.space.sm }}>
+        <EmailColumn style={{ width: "40%" }}>
+          <EmailText
             style={{
               color: t.color.textMuted,
               fontSize: t.font.sizeSm,
@@ -79,10 +84,10 @@ export const CredentialIssuedMail = ({
             }}
           >
             Issuer
-          </Text>
-        </Column>
-        <Column>
-          <Text
+          </EmailText>
+        </EmailColumn>
+        <EmailColumn>
+          <EmailText
             style={{
               color: t.color.text,
               fontSize: t.font.sizeSm,
@@ -91,12 +96,12 @@ export const CredentialIssuedMail = ({
             }}
           >
             {issuerName}
-          </Text>
-        </Column>
-      </Row>
-      <Row style={{ marginBottom: t.space.sm }}>
-        <Column style={{ width: "40%" }}>
-          <Text
+          </EmailText>
+        </EmailColumn>
+      </EmailRow>
+      <EmailRow style={{ marginBottom: t.space.sm }}>
+        <EmailColumn style={{ width: "40%" }}>
+          <EmailText
             style={{
               color: t.color.textMuted,
               fontSize: t.font.sizeSm,
@@ -104,22 +109,22 @@ export const CredentialIssuedMail = ({
             }}
           >
             Issued
-          </Text>
-        </Column>
-        <Column>
-          <Text
+          </EmailText>
+        </EmailColumn>
+        <EmailColumn>
+          <EmailText
             style={{ color: t.color.text, fontSize: t.font.sizeSm, margin: 0 }}
           >
             {new Date(issuedAt).toLocaleDateString("en-US", {
               dateStyle: "long",
             })}
-          </Text>
-        </Column>
-      </Row>
+          </EmailText>
+        </EmailColumn>
+      </EmailRow>
       {expiresAt && (
-        <Row>
-          <Column style={{ width: "40%" }}>
-            <Text
+        <EmailRow>
+          <EmailColumn style={{ width: "40%" }}>
+            <EmailText
               style={{
                 color: t.color.textMuted,
                 fontSize: t.font.sizeSm,
@@ -127,10 +132,10 @@ export const CredentialIssuedMail = ({
               }}
             >
               Expires
-            </Text>
-          </Column>
-          <Column>
-            <Text
+            </EmailText>
+          </EmailColumn>
+          <EmailColumn>
+            <EmailText
               style={{
                 color: t.color.text,
                 fontSize: t.font.sizeSm,
@@ -140,11 +145,11 @@ export const CredentialIssuedMail = ({
               {new Date(expiresAt).toLocaleDateString("en-US", {
                 dateStyle: "long",
               })}
-            </Text>
-          </Column>
-        </Row>
+            </EmailText>
+          </EmailColumn>
+        </EmailRow>
       )}
-    </Section>
+    </EmailSection>
 
     {walletUrl && <MailButton href={walletUrl}>View in Wallet</MailButton>}
 

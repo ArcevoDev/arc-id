@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Hr } from "@react-email/components";
-import { tokens as t } from "./tokens";
+import { EmailDivider } from "@arcevo/facet-emails";
 
 interface MailDividerProps {
   mt?: string;
@@ -8,7 +7,7 @@ interface MailDividerProps {
 }
 
 export const MailDivider = ({ mt = "24px", mb = "24px" }: MailDividerProps) => (
-  <Hr
-    style={{ borderColor: t.color.border, marginTop: mt, marginBottom: mb }}
-  />
+  <EmailDivider />
 );
+
+export default MailDivider;

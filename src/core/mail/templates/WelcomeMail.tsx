@@ -11,12 +11,12 @@ export interface WelcomeMailProps {
 
 export const WelcomeMail = ({ name, dashboardUrl }: WelcomeMailProps) => (
   <MailLayout
-    previewText="Welcome to ArcID — your identity is now active"
+    previewText="Welcome to ArcID - your identity is now active"
     heading={`Welcome${name ? `, ${name}` : ""}!`}
   >
     <MailText>
       Your ArcID account is now verified and active. ArcID is your sovereign
-      identity layer — secure authentication, multi-tenant access control, and
+      identity layer - secure authentication, multi-tenant access control, and
       verifiable credentials, all in one place.
     </MailText>
 

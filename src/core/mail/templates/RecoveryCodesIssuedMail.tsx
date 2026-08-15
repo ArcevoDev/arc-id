@@ -15,7 +15,7 @@ export const RecoveryCodesIssuedMail = ({
   name,
 }: RecoveryCodesIssuedMailProps) => (
   <MailLayout
-    previewText="Your ArcID MFA recovery codes — save these now"
+    previewText="Your ArcID MFA recovery codes - save these now"
     heading="Save Your Recovery Codes"
   >
     <MailText>
