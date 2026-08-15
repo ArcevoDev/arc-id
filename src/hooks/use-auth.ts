@@ -94,8 +94,8 @@ export function useAuth() {
   const authenticateMagicLink = useCallback(async (token: string) => {
     const result = await auth.authenticateMagicLink(token);
     if (result.data?.accessToken) {
-      const { identity, accessToken, refreshToken, sessionId } = result.data;
-      useAuthStore.getState().setAuth(identity, accessToken, refreshToken ?? "", sessionId);
+      const { identity, accessToken, refreshToken } = result.data;
+      useAuthStore.getState().setAuth(identity, accessToken, refreshToken ?? "");
       arcIdClient.setAccessToken(accessToken);
       persistSession(identity, accessToken, refreshToken ?? "");
     }

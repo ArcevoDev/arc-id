@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@arcevo/facet-components";
 import { useAuth } from "@/hooks/use-auth";
 import { useSessions } from "@/hooks/use-sessions";
-import { Icon } from "@arcevo/facet-components";
+import { Icon } from "@/components/ui/icon";
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();

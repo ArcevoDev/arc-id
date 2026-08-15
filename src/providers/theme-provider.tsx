@@ -6,7 +6,7 @@ export { ThemeToggle, useTheme } from "@arcevo/facet-components/theme";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
-    <FacetThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <FacetThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem>
       {children}
     </FacetThemeProvider>
   );

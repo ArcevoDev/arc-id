@@ -9,26 +9,26 @@ importers:
   .:
     dependencies:
       '@arcevo/facet-auth':
-        specifier: 1.1.1
-        version: 1.1.1(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+        specifier: 1.1.5
+        version: 1.1.5(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
       '@arcevo/facet-cli':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.5.0
+        version: 0.5.0(react@19.2.4)
       '@arcevo/facet-components':
-        specifier: 1.3.0
-        version: 1.3.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: 1.6.0
+        version: 1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@arcevo/facet-docs':
-        specifier: 1.3.0
-        version: 1.3.0(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react-router-dom@7.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+        specifier: 1.4.2
+        version: 1.4.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react-router-dom@7.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
       '@arcevo/facet-layout':
-        specifier: 1.2.0
-        version: 1.2.0(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+        specifier: 1.3.2
+        version: 1.3.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
       '@arcevo/facet-sdk':
-        specifier: 1.0.1
-        version: 1.0.1
-      '@arcevo/facet-tokens':
         specifier: 1.1.0
         version: 1.1.0
+      '@arcevo/facet-tokens':
+        specifier: 1.1.1
+        version: 1.1.1
       '@fastify/cookie':
         specifier: ^11.1.2
         version: 11.1.2
@@ -214,46 +214,46 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@arcevo/facet-auth@1.1.1':
-    resolution: {integrity: sha512-uaK97TVtX3K/lLMcC5NHk5Je1o7ow0FklwtA+Mp1QrJ5uRLdfbHCTgGmYBYOPmqfHMl4pbp7uT7vsdURmhMoyg==}
+  '@arcevo/facet-auth@1.1.5':
+    resolution: {integrity: sha512-Ht6+roLduHIpTNLRPaLFG0FxXw6w3SYCud1prQV0bS5zOMZmP+4++iI36P1MSMfGEemnQzD6n/ZgZ0CF17JXPw==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19
       react-dom: ^19
 
-  '@arcevo/facet-cli@0.3.0':
-    resolution: {integrity: sha512-befgDUWs3a7oJb3iXdjmu7KKSbCnGV3AnmmXcMrcHJDs9jKhS9LEHZiOHkJAjhcALOfOdS8giW2HF8jAY1D54w==}
+  '@arcevo/facet-cli@0.5.0':
+    resolution: {integrity: sha512-L1arfaB5ZAPAlUN3bFc2ByACxKOZryFJ0kvVE+AWKl3mMH6m+UPRXgCm8cS/i/DUpMM4lFki4w0H8bZsZMnXLQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@arcevo/facet-components@1.3.0':
-    resolution: {integrity: sha512-UkQHVq5p9Iue28s5RE3u1AjV9NVP2W7tGiZx/2qUeJfrI1CAoCZKz1j4pz8LEbbBpkJJYZmy8zT4VnuOVW0a8A==}
+  '@arcevo/facet-components@1.6.0':
+    resolution: {integrity: sha512-+XzsSyukb123r2hakQy6UXHFMyWbFwmyDhj7DV8m5dEEJ6pC7ccwGOKVGrSfnQatPUIttSKGZKydUdeWgD7i4Q==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19
       react-dom: ^19
 
-  '@arcevo/facet-docs@1.3.0':
-    resolution: {integrity: sha512-+A7tIiGEk7UXp3LB9DVUBLWKkvvDyQCuMSTUFb8M8u5ZwngSjRUV4CGBBvrIha5W12cJMi8fP0g8m7cO6lnt6w==}
+  '@arcevo/facet-docs@1.4.2':
+    resolution: {integrity: sha512-lkBFl5IN3b3NuVvdiF4znMuSdQUw8Rt365AB8EwU0jGJktrtBGmUfRsXG/0P2lBLzFkDKRlY6GAPQC9Nl85H+A==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19
       react-dom: ^19
       react-router-dom: ^7.1.1
 
-  '@arcevo/facet-layout@1.2.0':
-    resolution: {integrity: sha512-AzDwUKQsObt/qzH9dw7g/mTx7xbX/IViS9ZDAceGsMplSZ9IJKpwQy4ZCDnfY4AjL35b77y4ziicNTrIXO3+9Q==}
+  '@arcevo/facet-layout@1.3.2':
+    resolution: {integrity: sha512-kuc2OrcX2dcRVTxqbQJPqqpVFqzeDKOyIa+WsI7ds8whoa7dZJofLYd0c/C3MhUDTZH44HCgswDZDc+DmjMsEA==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19
       react-dom: ^19
 
-  '@arcevo/facet-sdk@1.0.1':
-    resolution: {integrity: sha512-+5j1EPK/r2vzqTObxtBkVwY2x7G59Xs/q3JDhNA74Mlqy1KWWpSIqF+qMp4PYFKWIzsbBluX5pU1O8mrLAre2g==}
+  '@arcevo/facet-sdk@1.1.0':
+    resolution: {integrity: sha512-oKKeGnQEiNrcnRK4JutzG6qye6lPiJNV7nTvtWX4A3Aykgb1VMzxrncZmhWJEfWaDUkh1DDZpIWvGMvizpha7Q==}
     engines: {node: '>=20'}
 
-  '@arcevo/facet-tokens@1.1.0':
-    resolution: {integrity: sha512-NXk944/hZmIO+Z11svpxMDJF17plCOCeRjoSdNZ0Ep2QS3F+LxGFHu1iOovakgzA60Z/gnGhopZYBlRuzH4zcQ==}
+  '@arcevo/facet-tokens@1.1.1':
+    resolution: {integrity: sha512-MupS66Mb8ZKdSrj04msPiIVB/wWf/HsdpmT0AkCvsk22aizVbY0V2u8vltZPjwYQ0kY4tagIUNazM2XPraqBhA==}
     engines: {node: '>=20'}
 
   '@babel/code-frame@7.29.7':
@@ -2938,6 +2938,7 @@ packages:
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abstract-logging@2.0.1:
     resolution: {integrity: sha512-2BjRTZxTPvheOvGbBslFSYOUkr+SjPtOnrLP33f+VIWLzezQpZcqVg7ja3L4dBXmzzgwT+a029jRx5PCi3JuiA==}
@@ -5910,10 +5911,10 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@arcevo/facet-auth@1.1.1(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
+  '@arcevo/facet-auth@1.1.5(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
     dependencies:
-      '@arcevo/facet-components': 1.3.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@arcevo/facet-sdk': 1.0.1
+      '@arcevo/facet-components': 1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@arcevo/facet-sdk': 1.1.0
       '@hookform/resolvers': 5.7.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-hook-form@7.85.0(react@19.2.4))(valibot@1.4.2(typescript@5.9.3))(zod@4.4.3)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
@@ -5946,14 +5947,17 @@ snapshots:
       - vest
       - yup
 
-  '@arcevo/facet-cli@0.3.0':
+  '@arcevo/facet-cli@0.5.0(react@19.2.4)':
     dependencies:
       commander: 12.1.0
+      lucide-react: 1.31.0(react@19.2.4)
       prompts: 2.4.2
+    transitivePeerDependencies:
+      - react
 
-  '@arcevo/facet-components@1.3.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@arcevo/facet-components@1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
-      '@arcevo/facet-tokens': 1.1.0
+      '@arcevo/facet-tokens': 1.1.1
       '@radix-ui/react-accordion': 1.2.20(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-alert-dialog': 1.1.23(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-avatar': 1.2.6(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -5994,13 +5998,13 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
 
-  '@arcevo/facet-docs@1.3.0(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react-router-dom@7.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
+  '@arcevo/facet-docs@1.4.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react-router-dom@7.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
     dependencies:
-      '@arcevo/facet-auth': 1.1.1(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
-      '@arcevo/facet-components': 1.3.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@arcevo/facet-layout': 1.2.0(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
-      '@arcevo/facet-sdk': 1.0.1
-      '@arcevo/facet-tokens': 1.1.0
+      '@arcevo/facet-auth': 1.1.5(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+      '@arcevo/facet-components': 1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@arcevo/facet-layout': 1.3.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+      '@arcevo/facet-sdk': 1.1.0
+      '@arcevo/facet-tokens': 1.1.1
       lucide-react: 1.31.0(react@19.2.4)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
@@ -6032,10 +6036,10 @@ snapshots:
       - vest
       - yup
 
-  '@arcevo/facet-layout@1.2.0(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
+  '@arcevo/facet-layout@1.3.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
     dependencies:
-      '@arcevo/facet-auth': 1.1.1(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
-      '@arcevo/facet-components': 1.3.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@arcevo/facet-auth': 1.1.5(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+      '@arcevo/facet-components': 1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
     transitivePeerDependencies:
@@ -6065,9 +6069,9 @@ snapshots:
       - vest
       - yup
 
-  '@arcevo/facet-sdk@1.0.1': {}
+  '@arcevo/facet-sdk@1.1.0': {}
 
-  '@arcevo/facet-tokens@1.1.0':
+  '@arcevo/facet-tokens@1.1.1':
     dependencies:
       tw-animate-css: 1.4.0
 

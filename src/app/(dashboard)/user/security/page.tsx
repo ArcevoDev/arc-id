@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Icon } from "@arcevo/facet-components";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@arcevo/facet-components";
+import { Icon } from "@/components/ui/icon";
 
 const SECURITY_SECTIONS = [
   {

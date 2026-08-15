@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LandingLayout } from "@arcevo/facet-layout";
-import { Badge, Button, Footer, Icon, Navbar } from "@arcevo/facet-components";
+import { Badge, Button, Footer, Navbar } from "@arcevo/facet-components";
+import { Icon } from "@/components/ui/icon";
 import { TypewriterText } from "@/components/ui/typewriter-text";
 
 const LINKS = [
@@ -157,6 +158,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               </Button>
             </div>
           }
+          showThemeToggle
         />
       }
       footer={

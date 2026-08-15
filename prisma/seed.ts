@@ -226,6 +226,34 @@ async function main() {
   }
   console.log(`✅ ADMIN role → ${permissionRecords.length} permissions`);
 
+  // ── 3d. MEMBER role → self-service read permissions ───────────────────────
+  // MEMBER is the default role for new registrations. Self-service dashboard
+  // pages (OAuth app list, webhook delivery events) need read access to the
+  // tenant's own resources; create/delete stay ADMIN-gated.
+  const seedMemberRole = await prisma.role.findUniqueOrThrow({
+    where: { tenantId_name: { tenantId: SYSTEM_TENANT_ID, name: "MEMBER" } },
+  });
+
+  const memberPermissions = permissionRecords.filter((p) =>
+    ["client:read", "webhook:read:events"].includes(p.action),
+  );
+
+  for (const perm of memberPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: seedMemberRole.id,
+          permissionId: perm.id,
+        },
+      },
+      update: {},
+      create: { roleId: seedMemberRole.id, permissionId: perm.id },
+    });
+  }
+  console.log(
+    `✅ MEMBER role → ${memberPermissions.length} self-service read permissions`,
+  );
+
   // ── 4. Tenant Policy ──────────────────────────────────────────────────────
   await prisma.tenantPolicy.upsert({
     where: { tenantId: SYSTEM_TENANT_ID },

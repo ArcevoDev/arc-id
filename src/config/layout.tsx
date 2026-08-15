@@ -1,4 +1,4 @@
-import { Icon, type LucideIconName } from "@arcevo/facet-components";
+import { Icon } from "@/components/ui/icon";
 import type { LayoutConfig, NavSection } from "@arcevo/facet-layout";
 import { navConfig } from "@/config/nav";
 
@@ -15,12 +15,12 @@ export function buildLayoutConfig(): LayoutConfig {
     items: section.items.map((item) => ({
       href: item.href,
       label: item.label,
-      icon: <Icon name={item.icon as LucideIconName} className="h-4 w-4" />,
+      icon: <Icon name={item.icon} className="h-4 w-4" />,
       requiredPermission: item.requiredPermission,
       children: item.children?.map((child) => ({
         href: child.href,
         label: child.label,
-        icon: <Icon name={child.icon as LucideIconName} className="h-4 w-4" />,
+        icon: <Icon name={child.icon} className="h-4 w-4" />,
         requiredPermission: child.requiredPermission,
       })),
     })),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { useSessions } from "@/hooks/use-sessions";
 import { Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@arcevo/facet-components";
 import type { Session } from "@arcevo/facet-sdk";
@@ -26,8 +26,9 @@ export default function SessionsPage() {
     setRevokingId(sessionId);
     const result = await revoke(sessionId);
     setRevokingId(null);
-    if (result.data) {
+    if (!result.error) {
       setSessions((prev) => prev?.filter((s) => s.id !== sessionId) ?? null);
+      setError(null);
     } else {
       setError(result.error?.message ?? "Failed to revoke session");
     }

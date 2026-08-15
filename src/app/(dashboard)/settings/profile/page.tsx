@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { useAuthStore } from "@/store/auth.store";
 import { useProfile } from "@/hooks/use-profile";
+import { clearPersistedSession } from "@/sdk";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@arcevo/facet-components";
 
 export default function ProfilePage() {
@@ -42,7 +43,8 @@ export default function ProfilePage() {
     setError(null);
     const result = await deleteAccount();
     setSaving(false);
-    if (result.data) {
+    if (!result.error) {
+      clearPersistedSession();
       router.replace("/login");
     } else {
       setError(result.error?.message ?? "Failed to delete account");

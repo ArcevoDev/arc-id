@@ -37,7 +37,7 @@ Business logic lives in **Flows** (`src/modules/<domain>/flows/`), never in rout
 
 ## Status
 
-Pre-release. Versioning follows `0.1.0` (current — backend complete: all Phase 0–4 shipped, 62 files / 340 tests) → `0.2.0` (frontend consumed from facet, ArcWallet integration end-to-end) → `1.0.0` (stable production with integration tests, secret scanning, migration rollback testing). Breaking changes should be expected at this stage.
+Pre-release. Versioning follows `0.1.0` (current — backend complete: all Phase 0–4 shipped, frontend on facet packages: SDK/tokens/components/auth/layout migrated; 62 files / 340 tests) → `0.2.0` (frontend consumed from facet, ArcWallet integration end-to-end) → `1.0.0` (stable production with integration tests, secret scanning, migration rollback testing). Breaking changes should be expected at this stage.
 
 ## Getting started
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { useAuditLog } from "@/hooks/use-audit-log";
 import { Badge, Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@arcevo/facet-components";
 import type { AuditLogEntry } from "@arcevo/facet-sdk";

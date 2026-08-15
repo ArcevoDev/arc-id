@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Icon } from "@arcevo/facet-components";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@arcevo/facet-components";
+import { Icon } from "@/components/ui/icon";
 import { useTenant } from "@/hooks/use-tenant";
 
 export default function OrganizationOverviewPage() {

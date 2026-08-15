@@ -1,8 +1,14 @@
 "use client";
 
-import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ForgotPasswordForm } from "@arcevo/facet-auth";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
+  const { forgotPassword } = useAuth();
+
   return (
     <div className="space-y-4">
       <div className="text-center">
@@ -11,9 +17,24 @@ export default function ForgotPasswordPage() {
           Enter your email and we&apos;ll send you a reset link
         </p>
       </div>
-      <ForgotPasswordForm />
+
+      <ForgotPasswordForm
+        validate
+        onSubmit={async (email) => {
+          const result = await forgotPassword(email);
+          if (result.error) {
+            return result.error.message ?? "Failed to send reset link";
+          }
+          router.push("/login");
+          return null;
+        }}
+        onBack={() => router.push("/login")}
+      />
+
       <p className="text-center text-sm text-muted-foreground">
-        <a href="/login" className="text-primary hover:underline">Back to sign in</a>
+        <Link href="/login" className="text-primary hover:underline">
+          Back to sign in
+        </Link>
       </p>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { useWebhooks } from "@/hooks/use-webhooks";
 import { Badge, Button, Card, CardContent, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@arcevo/facet-components";
 import type { WebhookEndpoint } from "@arcevo/facet-sdk";
@@ -41,8 +41,9 @@ export default function WebhooksPage() {
 
   const handleRemove = async (id: string) => {
     const result = await remove(id);
-    if (result.data) {
+    if (!result.error) {
       setEndpoints((prev) => prev?.filter((w) => w.id !== id) ?? null);
+      setError(null);
     } else {
       setError(result.error?.message ?? "Failed to delete webhook");
     }

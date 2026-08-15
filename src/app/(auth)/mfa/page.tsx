@@ -3,10 +3,20 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MfaDialog } from "@arcevo/facet-auth";
-import { Icon } from "@arcevo/facet-components";
+import { Icon } from "@/components/ui/icon";
 import { arcIdClient } from "@/sdk";
+import { resolvePostAuthRoute } from "@/hooks/use-post-auth-redirect";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function MfaPage() {
+  return (
+    <Suspense fallback={null}>
+      <MfaContent />
+    </Suspense>
+  );
+}
+
+function MfaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") ?? "";
@@ -21,16 +31,14 @@ export default function MfaPage() {
           Enter the code from your authenticator app
         </p>
       </div>
-      <Suspense fallback={null}>
-        <MfaDialog
-          open={open}
-          onOpenChange={setOpen}
-          client={arcIdClient}
-          sessionId={sessionId}
-          onComplete={() => router.push("/dashboard")}
-          onCancel={() => router.push("/login")}
-        />
-      </Suspense>
+      <MfaDialog
+        open={open}
+        onOpenChange={setOpen}
+        client={arcIdClient}
+        sessionId={sessionId}
+        onComplete={() => router.push(resolvePostAuthRoute(useAuthStore.getState().user))}
+        onCancel={() => router.push("/login")}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { useCredentials } from "@/hooks/use-credentials";
 import { Badge, Button, Card, CardContent, Input, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@arcevo/facet-components";
 import type { Credential } from "@arcevo/facet-sdk";
@@ -27,8 +27,9 @@ export default function CredentialsPage() {
 
   const handleRevoke = async (credentialId: string) => {
     const result = await revoke(credentialId);
-    if (result.data) {
+    if (!result.error) {
       setCredentials((prev) => prev?.filter((c) => c.id !== credentialId) ?? null);
+      setError(null);
     } else {
       setError(result.error?.message ?? "Failed to revoke credential");
     }

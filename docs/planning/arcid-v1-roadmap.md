@@ -1,7 +1,7 @@
-# ArcID v1 Roadmap — Updated 2026-08-12
+# ArcID v1 Roadmap — Updated 2026-08-14
 
 > Backend complete (0.1.0 equivalent). All Phase 0–4 shipped. **62 files / 340 tests / 0 code failures on `pnpm test` (all passing). Typecheck clean.**
-> Next work: facet migration Phases 4–6 (auth forms → layout → purge) → CLI/SDK packages.
+> Next work: P2.75 SDK/store/hook contract verification (facet-store + facet-react extraction basis) → CLI/SDK packages → ArcWallet Phase 4 integration. Facet migration Phases 0–5 done; Phase 6 purge is partial (forgot/reset forms remain in use).
 
 ---
 

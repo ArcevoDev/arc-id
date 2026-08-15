@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { usePasskeys } from "@/hooks/use-passkeys";
 import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@arcevo/facet-components";
 import type { Passkey } from "@arcevo/facet-sdk";
@@ -23,8 +23,9 @@ export default function PasskeysPage() {
 
   const handleDeregister = async (passkeyId: string) => {
     const result = await deregister(passkeyId);
-    if (result.data) {
+    if (!result.error) {
       setPasskeys((prev) => prev?.filter((p) => p.id !== passkeyId) ?? null);
+      setError(null);
     } else {
       setError(result.error?.message ?? "Failed to deregister passkey");
     }

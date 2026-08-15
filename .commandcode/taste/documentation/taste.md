@@ -1,5 +1,5 @@
 # Documentation
-- Maintain and update `output.txt` with todos, processes, and the next prompt after each session. Confidence: 0.75
+- Maintain and update `output.txt` with todos, processes, and the next prompt after each session — the user explicitly expects progress to be logged as work completes ("always log whats done", reiterated across sessions). Confidence: 0.9
 - Structure milestone/todo trackers (`.agent/output.txt`) as priority tiers (P0/P1/P2/…) with per-item weight tags for importance (HIGH/MED/LOW) and effort (S/M/L) — the user explicitly requested this organization ("milestones/todos by priority, importance, and effort/solidity"). Confidence: 0.75
 - Append new analysis to existing output files rather than overwriting them — preserve prior content and insert new material below it; but when the user explicitly asks to overwrite (or the new content supersedes prior audit sections), replace the file wholesale and mark it as superseding. Confidence: 0.70
 - When asked whether a dependency/package is ready to integrate, write to `.agent/output.txt` an evidence-based go/no-go verdict plus a phased execution plan ordered by risk with validation steps. Confidence: 0.65
@@ -14,3 +14,5 @@
 - Read files under `.agent/` directory to understand current test suite and build state before making changes. Confidence: 0.80
 - For test flows: run once, fix if it fails, run again. If it fails or hangs a second time stop immediately and tell the user to run it manually. Never have more than one test-running shell command in flight at a time. Confidence: 0.75
 - If a terminal command fails or times out after 2-3 retries, stop and let the user run it manually instead of continuing to retry. Confidence: 0.75
+- If a background typecheck (redirected to a file) exits non-zero with empty output, re-run it in the foreground with a long timeout — on this machine the background redirect can silently swallow tsc's error output, and the foreground run is what surfaces the real errors. Confidence: 0.6
+- During a production-grade audit, verify CI workflows against declared repo tooling versions (e.g., `pnpm/action-setup` pins vs `package.json` `packageManager`) and against documented-but-unwired checks (e.g., a `scan:secrets` script that docs say exists but CI never runs) — fix the drift and wire the missing checks. Confidence: 0.7

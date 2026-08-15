@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { useMfa } from "@/hooks/use-mfa";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from "@arcevo/facet-components";
 
@@ -44,7 +44,7 @@ export default function MfaPage() {
     setError(null);
     const result = await disable();
     setLoading(false);
-    if (result.data) {
+    if (!result.error) {
       setQrCode(null);
       setSecret(null);
       setRecoveryCodes(null);

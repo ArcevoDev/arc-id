@@ -3,11 +3,15 @@
 > **Target**: Replace arc-id's in-repo shadcn/ui components, auth UI, and SDK
 > client with the published `@arcevo/facet-*` packages.
 >
-> **Status (2026-08-12)**: Phases 0–3 DONE. `@arcevo/facet-sdk@1.0.1`
-> verified complete against arc-id's registered routes (2026-08-04);
-> `@arcevo/facet-tokens/tokens.css` wired (Phase 2); `src/components/ui/`
-> deleted and all consumers on `@arcevo/facet-components@1.3.0` (Phase 3).
-> Phases 4–6 (auth forms, layout, purge) are the remaining work queue.
+> **Status (2026-08-14)**: Phases 0–5 DONE. `@arcevo/facet-sdk@1.1.0`
+> verified complete against arc-id's registered routes; `@arcevo/facet-tokens`
+> wired (Phase 2); `src/components/ui/` deleted and all consumers on
+> `@arcevo/facet-components@1.5.0` (Phase 3); auth pages on `@arcevo/facet-auth@1.1.4`
+> via `ArcProvider` + `zustandTokenStorage` bridge (Phase 4, commit `d6f6707`);
+> layouts on `@arcevo/facet-layout@1.3.1` (Phase 5, `AuthLayout`/`ConsoleLayout`).
+> Phase 6 (purge) partially done — `src/components/ui/` and the in-repo
+> login/register/mfa forms are gone; `forgot-password-form`/`reset-password-form`
+> remain and work.
 > All six facet packages are published to npm and pinned in package.json.
 > See `docs/planning/arcid-v1-roadmap.md` for overall project state.
 
@@ -21,7 +25,7 @@ a single source of truth:
 | Duplicated in arc-id | Replaced by | Files affected |
 |---|---|---|
 | ~~`src/components/ui/*` (shadcn components)~~ | ✅ `@arcevo/facet-components` — **done (2026-08-12)** | ~25 files, all migrated, dir deleted |
-| `src/components/auth/*` (LoginForm, RegisterForm, etc.) | `@arcevo/facet-auth` | ~6 files — Phase 4 (pending) |
+| ~~`src/components/auth/*` (LoginForm, RegisterForm, etc.)~~ | ✅ `@arcevo/facet-auth` — **done (2026-08-14)** | login/register/mfa pages on `SignIn`/`SignUp`/`MfaDialog`; `login-form`/`register-form`/`mfa-form` deleted; forgot/reset forms still in-repo |
 | ~~`src/sdk/*` (client + 10 domain SDKs)~~ | ✅ `@arcevo/facet-sdk` — **done (2026-08-05)** | ~13 files, dir reduced to `index.ts` |
 
 **What arc-id keeps**: layout components (`src/components/layout/`), pages
@@ -32,13 +36,13 @@ providers, and CSS custom utilities.
 
 | Package | Version |
 |---|---|
-| `@arcevo/facet-sdk` | 1.0.1 |
-| `@arcevo/facet-components` | 1.3.0 |
-| `@arcevo/facet-auth` | 1.1.1 |
-| `@arcevo/facet-layout` | 1.2.0 |
+| `@arcevo/facet-sdk` | 1.1.0 |
+| `@arcevo/facet-components` | 1.5.0 |
+| `@arcevo/facet-auth` | 1.1.4 |
+| `@arcevo/facet-layout` | 1.3.1 |
 | `@arcevo/facet-tokens` | 1.1.0 |
-| `@arcevo/facet-cli` | 0.3.0 (installed — basis for `packages/cli` work) |
-| `@arcevo/facet-docs` | 1.3.0 (installed — docs scaffold basis) |
+| `@arcevo/facet-cli` | 0.4.0 (installed — basis for `packages/cli` work) |
+| `@arcevo/facet-docs` | 1.4.1 (installed — docs scaffold basis) |
 
 ---
 
@@ -154,54 +158,42 @@ is removed and no `@/components/ui/` imports remain.
 
 ---
 
-### Phase 4 — Replace `src/components/auth/` with `@arcevo/facet-auth`
+### Phase 4 — Replace `src/components/auth/` with `@arcevo/facet-auth` — ✅ DONE (2026-08-14, commit `d6f6707`)
 
-This is the most significant behavioral change. arc-id's auth components are
-simple inline forms. facet-auth's use a state machine.
+This was the most significant behavioral change. arc-id's auth components were
+simple inline forms; facet-auth's use a state machine.
 
-arc-id old → facet new mapping:
+arc-id old → facet new mapping (as actually shipped):
 
 | Old | New | Notes |
 |---|---|---|
-| `<LoginForm />` | `<SignIn config={eduPreset} />` | SignIn wraps method selection, MFA, passkey into one state machine |
+| `<LoginForm />` | `<SignIn />` | Wired with `onOAuth` → `socialAuthUrl(provider)` and `onSuccess` → `usePostAuthRedirect` |
 | `<RegisterForm />` | `<SignUp />` | Direct replacement — same fields |
-| `<MfaForm />` | `<MfaDialog />` | MfaDialog includes setup + confirm + recovery in one component |
-| `<ForgotPasswordForm />` | `<ForgotPasswordForm />` | Also importable standalone from `@arcevo/facet-auth` |
-| `auth/useAuth()` | `@arcevo/facet-auth`'s `useAuth()` | Returns provider-backed actions instead of Zustand-backed |
+| `<MfaForm />` | `<MfaDialog />` | `src/app/(auth)/mfa/page.tsx` passes `client={arcIdClient}` + `sessionId` from the URL |
+| `<ForgotPasswordForm />` | `<ForgotPasswordForm />` | Still in-repo; facet-auth also exports one (kept because the page works) |
+| `auth/useAuth()` | `@arcevo/facet-auth`'s `useAuth()` | Provider-backed actions |
 
-**Critical architectural difference** — arc-id's auth is driven by Zustand
-stores (`useAuthStore`). facet-auth's is driven by React context
-(`ArcProvider`). You can run both side-by-side during migration:
+**How the unification was done**: `src/providers/facet-auth-bridge.ts` exports
+`zustandTokenStorage: TokenStorage` — an adapter that routes facet-auth's
+persistence through `useAuthStore`, keeping the Zustand store the single source
+of truth. `Providers` (in `src/providers/index.tsx`) wraps the app in
+`<ArcProvider client={arcIdClient} storage={zustandTokenStorage} …>` and keeps
+`user` in sync via `onSessionRestore`/`onAuthChange`. The old `src/components/auth/`
+`login-form`/`register-form`/`mfa-form` were deleted; `forgot-password-form`/
+`reset-password-form` remain and are still used by their pages.
 
-```tsx
-// During transition — ArcProvider manages UI state, Zustand persists tokens
-<ArcProvider client={arcIdClient}>
-  <OldAuthProvider>  {/* keep your Zustand hydration */}
-    <App />
-  </OldAuthProvider>
-</ArcProvider>
-```
-
-The `ArcProvider` from @arcevo/facet-auth stores tokens via `TokenStorage`
-(defaults to localStorage). arc-id's `useAuthStore` reads from localStorage
-in its `AuthProvider`. They'll stay in sync as long as both read/write the
-same localStorage keys.
-
-**To fully unify**: make arc-id's `useAuthStore` the single source of truth
-and pass a custom `TokenStorage` to ArcProvider that writes to the Zustand
-store instead of localStorage.
-
-**MFA verification**: confirm facet-auth's MfaDialog is wired to the real
-`authSdk.verifyMfa()` flow (the old placeholder stub must be resolved) before
-cutting over.
+**MFA wiring**: `MfaDialog` is connected to the real `authSdk.verifyMfa()` flow
+via `arcIdClient`; on complete it routes through `resolvePostAuthRoute` (a
+tenant/admin user → `/dashboard`, otherwise → `/wallet`).
 
 ---
 
-### Phase 5 — Layout
+### Phase 5 — Layout — ✅ DONE (2026-08-13, commit `646fed1`)
 
-Adopt `@arcevo/facet-layout` shells (ConsoleLayout/AuthLayout) or keep
-arc-id's layout wrapper initially and migrate incrementally. The layout
-package is framework-agnostic (slot-based, no routing dependency).
+Route groups consume `@arcevo/facet-layout`'s `AuthLayout` (the `(auth)` group)
+and `ConsoleLayout` (the `(dashboard)` group). In-repo
+`app-layout`/`console-layout`/`sidebar`/`topbar`/`tenant-switcher` were deleted;
+`page-header` re-exports facet's.
 
 ---
 
@@ -215,12 +207,17 @@ git rm -r src/components/auth/
 # src/sdk/ — keep the client/orchestration, remove the individual .sdk.ts files
 ```
 
+**Current state**: `src/components/ui/` and the in-repo `login-form`/
+`register-form`/`mfa-form` are deleted. `src/components/auth/` still holds
+`forgot-password-form.tsx` + `reset-password-form.tsx`, which are used by
+their pages — delete them only when those pages move to `@arcevo/facet-auth`.
+
 ---
 
 ## Rolling back
 
 Each phase is a separate commit. If a phase breaks tests, `git revert` that
-phase's commit. The old files aren't deleted until Phase 6.
+phase's commit.
 
 ---
 
@@ -236,7 +233,7 @@ phase's commit. The old files aren't deleted until Phase 6.
 
 ---
 
-_Guide updated 2026-08-12 — Phases 0–3 done (SDK + CSS tokens + components).
-Phase 4 (auth forms) is the next work item. All six facet packages pinned
-at their latest verified versions (sdk 1.0.1, components 1.3.0, auth 1.1.1,
-layout 1.2.0, tokens 1.1.0, cli 0.3.0, docs 1.3.0)._
+_Guide updated 2026-08-14 — Phases 0–5 done (SDK + tokens + components + auth
+forms + layout). Phase 6 purge is partial: `ui/` + login/register/mfa forms
+gone; forgot/reset forms remain in-repo. Pins: sdk 1.1.0, components 1.5.0,
+auth 1.1.4, layout 1.3.1, tokens 1.1.0, cli 0.4.0, docs 1.4.1._

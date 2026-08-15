@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { useOAuth } from "@/hooks/use-oauth";
 import { Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@arcevo/facet-components";
 
@@ -31,8 +31,9 @@ export default function OAuthTokensPage() {
 
   const handleRevoke = async (tokenId: string) => {
     const result = await revokeToken(tokenId);
-    if (result.data) {
+    if (!result.error) {
       setTokens((prev) => prev?.filter((t) => t.id !== tokenId) ?? null);
+      setError(null);
     } else {
       setError(result.error?.message ?? "Failed to revoke token");
     }

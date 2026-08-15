@@ -1,34 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader } from "@arcevo/facet-layout";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@arcevo/facet-components";
-import { useAuthStore } from "@/store/auth.store";
-import { billing } from "@/sdk";
-import type { Subscription } from "@arcevo/facet-sdk";
-
-const PLAN_STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive"> = {
-  ACTIVE: "success",
-  TRIAL: "default",
-  PAST_DUE: "warning",
-  CANCELED: "destructive",
-};
+import { useBilling, PLAN_STATUS_VARIANT } from "@/hooks/use-billing";
 
 export default function BillingPage() {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    if (!accessToken) return;
-    const result = await billing.getSubscription();
-    if (result.data) setSubscription(result.data);
-    else setError(result.error?.message ?? "Failed to load subscription");
-  }, [accessToken]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const { subscription, error, load } = useBilling();
 
   return (
     <div className="space-y-6">

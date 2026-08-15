@@ -82,20 +82,24 @@ shipped. See `CLAUDE.md` for the full verified status table. Open work:
   SDK directly instead of through hooks — pragmatically acceptable).
   **Tenant list route (`GET /tenants`) + tenant switcher wired (2026-07-28).**
 - **Facet migration (`docs/migration/facet-migration-guide.md`)** — ✅
-  **Phases 1–3 done in working tree.** Phase 1: SDK migrated to the
-  published **`@arcevo/facet-sdk@1.0.1`** — `src/sdk/index.ts` is a thin
+  **Phases 1–5 done.** Phase 1: SDK migrated to the published
+  **`@arcevo/facet-sdk@1.1.0`** — `src/sdk/index.ts` is a thin
   singleton wiring that owns the `ArcIdClient` + 401 auto-refresh (wired
   to the Zustand auth store) and re-exports the facet domain SDKs; the
   old in-repo factory-pattern `src/sdk/*.sdk.ts` files are deleted.
   Phase 2: `@arcevo/facet-tokens/tokens.css` imported before
   `globals.css` in `layout.tsx`; `:root` token block removed from
   globals.css. Phase 3: `src/components/ui/*` deleted and all consumers
-  switched to **`@arcevo/facet-components@1.3.0`** (icons use the
+  switched to **`@arcevo/facet-components@1.5.0`** (icons use the
   package's native `<Icon name="…" />` registry — no local icon registry).
-  **Phases 4–6 not yet started** — `src/components/auth/` (5 forms) and
-  `src/components/layout/` are still in-repo and imported by pages.
-  All six facet packages pinned: sdk 1.0.1, components 1.3.0, auth 1.1.1,
-  layout 1.2.0, tokens 1.1.0, cli 0.3.0, docs 1.3.0 (cli/docs installed
+  Phase 4: auth pages on **`@arcevo/facet-auth@1.1.4`** via `ArcProvider` +
+  `zustandTokenStorage` bridge (commit `d6f6707`); in-repo
+  `login-form`/`register-form`/`mfa-form` deleted.
+  Phase 5: layouts on **`@arcevo/facet-layout@1.3.1`** (`AuthLayout` +
+  `ConsoleLayout`). Phase 6 purge is partial — `src/components/auth/`
+  still holds `forgot-password-form`/`reset-password-form` (in use).
+  All six facet packages pinned: sdk 1.1.0, components 1.5.0, auth 1.1.4,
+  layout 1.3.1, tokens 1.1.0, cli 0.4.0, docs 1.4.1 (cli/docs installed
   as the basis for the upcoming `packages/cli` work).
 - **Phase 3 — Security hardening** — ✅ **Closed (2026-07-28).** Cross-tenant HTTP integration test added (3 tests, fastify.inject, passes). SSRF call-site gaps (4/4 closed: idp.route OIDC discovery + token endpoint, webhook test-ping, SAML entryPoint). CSRF review complete — only OAuth state cookies in social.route.ts, all `sameSite: "lax"` + `httpOnly` + `secure`. Redis-backed distributed revocation done — `AccessToken.sessionId` column + migration + `DELETE /sessions/:id` revokes bound access tokens + blocks JTIs in Redis (full kill chain).
 - **Phase 4 — Observability** — ✅ **Shipped (2026-07-28).** Correlation IDs through `FlowContext.requestId` → audit log metadata. `@fastify-metrics` at `GET /metrics`. Pino structured logs carry traceId on every flow init/ok/fail.

@@ -43,7 +43,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.5.1
+          version: 11.21.0
 
       - uses: actions/setup-node@v4
         with:
@@ -64,6 +64,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Scan for secrets / PII
+        run: pnpm scan:secrets
 
       - name: Test
         run: pnpm test

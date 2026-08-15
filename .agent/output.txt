@@ -173,7 +173,7 @@ P2.75 — SDK / STORE / HOOK CONTRACT VERIFICATION (2026-08-14)
 -------------------------------------------------------------
   What this is: prove the arc-id server <-> @arcevo/facet-sdk <-> store
   <-> hook chain has NO hidden gaps before extracting facet-store /
-  facet-react into published packages. arc-id consumes the SDK like a
+  facet-react-hooks into published packages. arc-id consumes the SDK like a
   third party even though it is first-party.
 
   DONE this session:
@@ -214,7 +214,7 @@ P2.75 — SDK / STORE / HOOK CONTRACT VERIFICATION (2026-08-14)
       at 1. E2E skips those on FREE. Verify against a PRO instance.
   [ ] SDK create() fix (returns Tenant) needs an SDK test + changeset.
 
-  WHEN DONE: extract @arcevo/facet-store + @arcevo/facet-react per
+  WHEN DONE: extract @arcevo/facet-store + @arcevo/facet-react-hooks per
   client-core-architecture-analysis.md sequencing (after Phase E pages
   are fully wired + this contract is proven).
 
@@ -285,6 +285,85 @@ GAPS / OPEN ITEMS (tracked)
 - .agent/tc.txt, typecheck-direct.txt, typecheck-migration.txt are
   stale scratch outputs — deleted this session.
 - Session resumption: .agent/logs.txt carries the session id at the top.
+
+P2.9 — FACET PKG FULL UTILIZATION (SESSION 4, 2026-08-15)
+---------------------------------------------------------
+  What this is: newest @arcevo/facet-* (sdk 1.1.0, components 1.6.0,
+  auth 1.1.5, layout 1.3.2, tokens 1.1.1) published to npm ~a few hours
+  before this session. package.json already pins the exact latest for
+  all six — deps verified against `pnpm view` (all match). The audit
+  found the repo is ~95% on facet already; what remains is targeted
+  cleanup to "fully utilize" the packages. ThemeProvider is already a
+  root ancestor, so Navbar showThemeToggle + ConsoleLayout themeToggle
+  will "work perfectly" as-is.
+
+  AUDIT FINDINGS (2026-08-15):
+  - Navbar (facet-components) has showThemeToggle prop (index.d.ts:764,
+    renders ThemeToggle at index.js:2652). ConsoleLayout + Topbar
+    (facet-layout) have themeToggle prop (index.d.ts:352/245/87). Root
+    providers/index.tsx already wraps FacetThemeProvider (attribute="class",
+    defaultTheme="dark", enableSystem). -> Just flip the props on.
+  - facet-tokens 1.1.1 ships tokens.css (.glass/.glass-card/.frost/
+    .text-gradient/.glow-indigo/.border-glow) + tailwind.css (@theme
+    tokens + @utility border-glow). Local globals.css duplicates the
+    whole @theme inline block + glass/glow-indigo/text-gradient/border-glow
+    utilities (lines 15-85, 128-156).
+  - facet-layout PageHeader is re-exported through a shim
+    (src/components/layout/page-header.tsx) consumed by 15 dashboard pages.
+  - Billing: (dashboard)/billing/page.tsx + organization/billing/page.tsx
+    both import { billing } from "@/sdk" directly in-page (rule 6 violation)
+    and duplicate PLAN_STATUS_VARIANT + load logic. No useBilling hook exists.
+  - Dead code: src/hooks/use-mobile.ts, use-pagination.ts, use-step-up.ts,
+    use-api-keys.ts (stub), src/store/ui.store.ts + src/hooks/use-ui.ts,
+    src/lib/format.ts, src/types/domain.types.ts (all never imported).
+  - Redundant stores: credentials.store.ts / audit.store.ts / webhooks.store.ts
+    write state pages never read (pages keep local useState).
+  - Kept as-is (no facet equivalent): typewriter-text.tsx (hero animation),
+    use-auth.ts (adds verifyEmail/magic-link beyond facet useAuth),
+    zustand bridge + providers, sdk/index.ts singleton, config/nav+layout,
+    (dashboard)/organization + user sub-nav layouts.
+
+  TODOS:
+  [x] Theme toggles: Navbar showThemeToggle (public layout) +
+      ConsoleLayout themeToggle (dashboard layout) — props only,
+      ThemeProvider already at root. Verify SSR-safe. DONE (2026-08-15).
+      [importance HIGH · effort S]
+  [x] globals.css: import @arcevo/facet-tokens/tailwind.css, delete
+      duplicated @theme inline block + @utility glass/glow-indigo/
+      text-gradient/border-glow; keep next/font overrides + base layer.
+      DONE (2026-08-15). NOTE: theme-provider switched attribute="class"
+      -> attribute="data-theme" so facet-tokens' [data-theme] token
+      overrides actually fire (light mode now works for real). No dark:
+      variants in use — the app is dark-first via :root.
+      [importance HIGH · effort M]
+  [x] PageHeader shim: 15 dashboard imports pointed at @arcevo/facet-layout
+      directly, shim deleted. DONE (2026-08-15).
+      [importance LOW · effort S]
+  [x] useBilling hook: src/hooks/use-billing.ts wraps billing.getSubscription()
+      + PLAN_STATUS_VARIANT; both billing pages consume it — last
+      raw-SDK-in-page calls gone. DONE (2026-08-15). [importance MED · effort M]
+  [x] Dead-code sweep: deleted use-mobile/use-pagination/use-step-up/
+      use-ui + ui.store + lib/format.ts + types/domain.types.ts.
+      use-api-keys KEPT (stub consumed by the api-keys page).
+      DONE (2026-08-15). [importance LOW · effort S]
+  [x] Store cleanup: credentials/audit/webhooks hooks de-stored (kept
+      method API), the 3 redundant stores deleted. DONE (2026-08-15).
+      [importance LOW · effort M]
+  [x] Icon registry (tree-shaken): ran `facet icons generate` ->
+      src/components/ui/icons.generated.tsx (53 base icons). Added a local
+      Icon shim (src/components/ui/icon.tsx) delegating to the generated
+      registry, and switched ALL app Icon name= call sites (8 files +
+      config/layout.tsx) from the full-map facet Icon to the shim.
+      The generator scans only `icon=`/`name=` prop syntax, so the nav/
+      landing `icon: "…"` object values were completed by hand
+      (chart-column, building-2, monitor, key, globe, code, send,
+      activity, graduation-cap, heart-pulse, landmark, smartphone,
+      briefcase, badge-check, scan-search). verify-email switched
+      check-circle-2 -> circle-check (legacy lucide name). Sidebar
+      nav now renders from the tree-shaken set — no full 1700-icon map.
+      DONE (2026-08-15). [importance HIGH · effort M]
+  GATE: pnpm test (340) PASS, tsc --noEmit PASS, next build in flight
+  (2026-08-15, session 4).
 
 _Keep this file current. Every session that closes an item or discovers
 a new one updates output.txt AND logs.txt in the same session._

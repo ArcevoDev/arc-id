@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCredentials } from "@/hooks/use-credentials";
 import { useAuthStore } from "@/store/auth.store";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Icon } from "@arcevo/facet-components";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@arcevo/facet-components";
+import { Icon } from "@/components/ui/icon";
 import type { Credential } from "@arcevo/facet-sdk";
 
 /**
@@ -12,10 +14,21 @@ import type { Credential } from "@arcevo/facet-sdk";
  * shows the holder's credentials and a path to their profile/security.
  */
 export default function WalletPage() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { list } = useCredentials();
   const [credentials, setCredentials] = useState<Credential[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Auth guard: once session hydration settles, send unauthenticated
+  // visitors to the login page.
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   const load = useCallback(async () => {
     const result = await list();
@@ -24,8 +37,8 @@ export default function WalletPage() {
   }, [list]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (isAuthenticated) load();
+  }, [isAuthenticated, load]);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">

@@ -23,6 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       activeTenant={activeTenant}
       onTenantSwitch={(id) => switchTenant(id)}
       router={router}
+      themeToggle
     >
       {children}
     </ConsoleLayout>
