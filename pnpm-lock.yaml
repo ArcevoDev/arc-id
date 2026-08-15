@@ -9,20 +9,23 @@ importers:
   .:
     dependencies:
       '@arcevo/facet-auth':
-        specifier: 1.1.5
-        version: 1.1.5(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+        specifier: 1.1.6
+        version: 1.1.6(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
       '@arcevo/facet-cli':
-        specifier: ^0.5.0
-        version: 0.5.0(react@19.2.4)
+        specifier: ^0.7.0
+        version: 0.7.0(react@19.2.4)
       '@arcevo/facet-components':
-        specifier: 1.6.0
-        version: 1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: 1.7.0
+        version: 1.7.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@arcevo/facet-docs':
-        specifier: 1.4.2
-        version: 1.4.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react-router-dom@7.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+        specifier: 1.4.3
+        version: 1.4.3(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react-router-dom@7.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+      '@arcevo/facet-emails':
+        specifier: ^1.1.0
+        version: 1.1.0(react@19.2.4)
       '@arcevo/facet-layout':
-        specifier: 1.3.2
-        version: 1.3.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+        specifier: 1.3.3
+        version: 1.3.3(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
       '@arcevo/facet-sdk':
         specifier: 1.1.0
         version: 1.1.0
@@ -62,9 +65,6 @@ importers:
       '@prisma/client':
         specifier: ^7.9.1
         version: 7.9.1(prisma@7.9.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(typescript@5.9.3)
-      '@react-email/components':
-        specifier: ^1.0.12
-        version: 1.0.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@sd-jwt/sd-jwt-vc':
         specifier: ^0.20.0
         version: 0.20.0
@@ -214,35 +214,44 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@arcevo/facet-auth@1.1.5':
-    resolution: {integrity: sha512-Ht6+roLduHIpTNLRPaLFG0FxXw6w3SYCud1prQV0bS5zOMZmP+4++iI36P1MSMfGEemnQzD6n/ZgZ0CF17JXPw==}
+  '@arcevo/facet-auth@1.1.6':
+    resolution: {integrity: sha512-dHExjrnlg29HT4pGCgIV10fqv/6y8Q5hP9fcu+KPVW4mdgG2ir5GSFfkFIkLq9D/a8yih9+KaLHluMdLHYrPDA==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19
       react-dom: ^19
 
-  '@arcevo/facet-cli@0.5.0':
-    resolution: {integrity: sha512-L1arfaB5ZAPAlUN3bFc2ByACxKOZryFJ0kvVE+AWKl3mMH6m+UPRXgCm8cS/i/DUpMM4lFki4w0H8bZsZMnXLQ==}
+  '@arcevo/facet-cli@0.7.0':
+    resolution: {integrity: sha512-Ux1OjlBzqPoqASo4xMzCYySPfq1DuwQ1CFC28m+RPRBAZ1inV3eIz2DvAWBHAkzrQhqiFyG5x7XFukCU4mErrw==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@arcevo/facet-components@1.6.0':
-    resolution: {integrity: sha512-+XzsSyukb123r2hakQy6UXHFMyWbFwmyDhj7DV8m5dEEJ6pC7ccwGOKVGrSfnQatPUIttSKGZKydUdeWgD7i4Q==}
+  '@arcevo/facet-components@1.7.0':
+    resolution: {integrity: sha512-swIjvYvKFgODKyIfVt6kibGfCXFU9O0WnStCtGK8Tissh0w3XgQcoC/egNVvpx2Sqyjnm5tN+8xvL29GLZt3Hw==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19
       react-dom: ^19
 
-  '@arcevo/facet-docs@1.4.2':
-    resolution: {integrity: sha512-lkBFl5IN3b3NuVvdiF4znMuSdQUw8Rt365AB8EwU0jGJktrtBGmUfRsXG/0P2lBLzFkDKRlY6GAPQC9Nl85H+A==}
+  '@arcevo/facet-docs@1.4.3':
+    resolution: {integrity: sha512-cRjZNZgn/MKZz/EwNM+Filjcw5j7z6VOMlrntTvu8KbjBqTWWjexssZDoU6sFggToj8YmrPJtQRMSSZjobo/gQ==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19
       react-dom: ^19
       react-router-dom: ^7.1.1
 
-  '@arcevo/facet-layout@1.3.2':
-    resolution: {integrity: sha512-kuc2OrcX2dcRVTxqbQJPqqpVFqzeDKOyIa+WsI7ds8whoa7dZJofLYd0c/C3MhUDTZH44HCgswDZDc+DmjMsEA==}
+  '@arcevo/facet-emails@1.1.0':
+    resolution: {integrity: sha512-i/nXz2u7KCij9DZzdlV7Rd+bybRFHoH2322yFrJQrkz3eWL3RltqPnGkOmGqMTWKl3Hd6JERLItWXFWG2zlvlQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      react: '>=18'
+    peerDependenciesMeta:
+      react:
+        optional: true
+
+  '@arcevo/facet-layout@1.3.3':
+    resolution: {integrity: sha512-WKH7DzlqXuv6ujFfeP1Oi49Mpuox3nE6D9o/CwAGBPlf8fpS6V1BCepQuZmfhoWGArAMm6yobsPcdJ17M2jOJA==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^19
@@ -2020,191 +2029,12 @@ packages:
   '@radix-ui/rect@1.1.3':
     resolution: {integrity: sha512-JtyZR+mqgBibTo8xea3B6ZRmzZiM/YeVBtUkas6zMuXjAlfIFIW2FgqeM9eLyvEaYX66vr6DJMK+4U6LV0KhNw==}
 
-  '@react-email/body@0.3.0':
-    resolution: {integrity: sha512-uGo0BOOzjbMUo3lu+BIDWayvn5o6Xyfmnlla5VGf05n8gHMvO1ll7U4FtzWe3hxMLwt53pmc4iE0M+B5slG+Ug==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/button@0.2.1':
-    resolution: {integrity: sha512-qXyj7RZLE7POy9BMKSoqQ00tOXThjOZSUnI2Yu9i29IHngPlmrNayIWBoVKtElES7OWwypUcpiajwi1mUWx6/A==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/code-block@0.2.1':
-    resolution: {integrity: sha512-M3B7JpVH4ytgn83/ujRR1k1DQHvTeABiDM61OvAbjLRPhC/5KLHU5KkzIbbuGIrjWwxAbL1kSQzU8MhLEtSxyw==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/code-inline@0.0.6':
-    resolution: {integrity: sha512-jfhebvv3dVsp3OdPgKXnk8+e2pBiDVZejDOBFzBa/IblrAJ9cQDkN6rBD5IyEg8hTOxwbw3iaI/yZFmDmIguIA==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/column@0.0.14':
-    resolution: {integrity: sha512-f+W+Bk2AjNO77zynE33rHuQhyqVICx4RYtGX9NKsGUg0wWjdGP0qAuIkhx9Rnmk4/hFMo1fUrtYNqca9fwJdHg==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/components@1.0.12':
-    resolution: {integrity: sha512-tH18JhPDWgE+3jnYkzyB6ZrZdfNnEsFe4PwmuXmlOw4NGIysP8wPY5aXZg++pTG9qUabXg1nzX/FGHGkObH8xQ==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/container@0.0.16':
-    resolution: {integrity: sha512-QWBB56RkkU0AJ9h+qy33gfT5iuZknPC7Un/IjZv9B0QmMIK+WWacc0cH6y2SV5Cv/b99hU94fjEMOOO4enpkbQ==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/font@0.0.10':
-    resolution: {integrity: sha512-0urVSgCmQIfx5r7Xc586miBnQUVnGp3OTYUm8m5pwtQRdTRO5XrTtEfNJ3JhYhSOruV0nD8fd+dXtKXobum6tA==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/head@0.0.13':
-    resolution: {integrity: sha512-AJg6le/08Gz4tm+6MtKXqtNNyKHzmooOCdmtqmWxD7FxoAdU1eVcizhtQ0gcnVaY6ethEyE/hnEzQxt1zu5Kog==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/heading@0.0.16':
-    resolution: {integrity: sha512-jmsKnQm1ykpBzw4hCYHwBkt5pW2jScXffPeEH5ZRF5tZeF5b1pvlFTO9han7C0pCkZYo1kEvWiRtx69yfCIwuw==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/hr@0.0.12':
-    resolution: {integrity: sha512-TwmOmBDibavUQpXBxpmZYi2Iks/yeZOzFYh+di9EltMSnEabH8dMZXrl+pxNXzCgZ2XE8HY7VmUL65Lenfu5PA==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/html@0.0.12':
-    resolution: {integrity: sha512-KTShZesan+UsreU7PDUV90afrZwU5TLwYlALuCSU0OT+/U8lULNNbAUekg+tGwCnOfIKYtpDPKkAMRdYlqUznw==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/img@0.0.12':
-    resolution: {integrity: sha512-sRCpEARNVTf3FQhZOC+JTvu5r6ubiYWkT0ucYXg8ctkyi4G8QG+jgYPiNUqVeTLA2STOfmPM/nrk1nb84y6CPQ==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/link@0.0.13':
-    resolution: {integrity: sha512-lkWc/NjOcefRZMkQoSDDbuKBEBDES9aXnFEOuPH845wD3TxPwh+QTf0fStuzjoRLUZWpHnio4z7qGGRYusn/sw==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/markdown@0.0.18':
-    resolution: {integrity: sha512-gSuYK5fsMbGk87jDebqQ6fa2fKcWlkf2Dkva8kMONqLgGCq8/0d+ZQYMEJsdidIeBo3kmsnHZPrwdFB4HgjUXg==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/preview@0.0.14':
-    resolution: {integrity: sha512-aYK8q0IPkBXyMsbpMXgxazwHxYJxTrXrV95GFuu2HbEiIToMwSyUgb8HDFYwPqqfV03/jbwqlsXmFxsOd+VNaw==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/render@2.0.6':
-    resolution: {integrity: sha512-xOzaYkH3jLZKqN5MqrTXYnmqBYUnZSVbkxdb5PGGmDcK6sKDVMliaDiSwfXajRC9JtSHTcGc2tmGLHWuCgVpog==}
-    engines: {node: '>=20.0.0'}
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-      react-dom: ^18.0 || ^19.0 || ^19.0.0-rc
-
   '@react-email/render@2.1.0':
     resolution: {integrity: sha512-F+zE3O6d6sW6Aj2UjvZAA17R7tJKM7kcq2mgV6k4HCT8jeLLFaVP2txMtH1lgqYFRMZ0Gxsd37q2PRyiXLXXxA==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       react: ^18.0 || ^19.0 || ^19.0.0-rc
       react-dom: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/row@0.0.13':
-    resolution: {integrity: sha512-bYnOac40vIKCId7IkwuLAAsa3fKfSfqCvv6epJKmPE0JBuu5qI4FHFCl9o9dVpIIS08s/ub+Y/txoMt0dYziGw==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/section@0.0.17':
-    resolution: {integrity: sha512-qNl65ye3W0Rd5udhdORzTV9ezjb+GFqQQSae03NDzXtmJq6sqVXNWNiVolAjvJNypim+zGXmv6J9TcV5aNtE/w==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-
-  '@react-email/tailwind@2.0.7':
-    resolution: {integrity: sha512-kGw80weVFXikcnCXbigTGXGWQ0MRCSYNCudcdkWxebkWYd0FG6/NPoN3V1p/u68/4+NxZwYPVi2fhnp0x23HdA==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      '@react-email/body': '>=0'
-      '@react-email/button': '>=0'
-      '@react-email/code-block': '>=0'
-      '@react-email/code-inline': '>=0'
-      '@react-email/container': '>=0'
-      '@react-email/heading': '>=0'
-      '@react-email/hr': '>=0'
-      '@react-email/img': '>=0'
-      '@react-email/link': '>=0'
-      '@react-email/preview': '>=0'
-      '@react-email/text': '>=0'
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
-    peerDependenciesMeta:
-      '@react-email/body':
-        optional: true
-      '@react-email/button':
-        optional: true
-      '@react-email/code-block':
-        optional: true
-      '@react-email/code-inline':
-        optional: true
-      '@react-email/container':
-        optional: true
-      '@react-email/heading':
-        optional: true
-      '@react-email/hr':
-        optional: true
-      '@react-email/img':
-        optional: true
-      '@react-email/link':
-        optional: true
-      '@react-email/preview':
-        optional: true
-
-  '@react-email/text@0.1.6':
-    resolution: {integrity: sha512-TYqkioRS45wTR5il3dYk/SbUjjEdhSwh9BtRNB99qNH1pXAwA45H7rAuxehiu8iJQJH0IyIr+6n62gBz9ezmsw==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
 
   '@rolldown/binding-android-arm64@1.1.5':
     resolution: {integrity: sha512-lZg8fqIv2v7FF237bwMgzGZEJvGL79/s5knJ/i6FmsGF4XXlzccZ4jb+TrFIxtSSxFtIpdsgrPZeMk1I9AFcyQ==}
@@ -5911,9 +5741,9 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@arcevo/facet-auth@1.1.5(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
+  '@arcevo/facet-auth@1.1.6(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
     dependencies:
-      '@arcevo/facet-components': 1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@arcevo/facet-components': 1.7.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@arcevo/facet-sdk': 1.1.0
       '@hookform/resolvers': 5.7.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-hook-form@7.85.0(react@19.2.4))(valibot@1.4.2(typescript@5.9.3))(zod@4.4.3)
       react: 19.2.4
@@ -5947,7 +5777,7 @@ snapshots:
       - vest
       - yup
 
-  '@arcevo/facet-cli@0.5.0(react@19.2.4)':
+  '@arcevo/facet-cli@0.7.0(react@19.2.4)':
     dependencies:
       commander: 12.1.0
       lucide-react: 1.31.0(react@19.2.4)
@@ -5955,7 +5785,7 @@ snapshots:
     transitivePeerDependencies:
       - react
 
-  '@arcevo/facet-components@1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@arcevo/facet-components@1.7.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@arcevo/facet-tokens': 1.1.1
       '@radix-ui/react-accordion': 1.2.20(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -5998,11 +5828,11 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
 
-  '@arcevo/facet-docs@1.4.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react-router-dom@7.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
+  '@arcevo/facet-docs@1.4.3(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react-router-dom@7.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
     dependencies:
-      '@arcevo/facet-auth': 1.1.5(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
-      '@arcevo/facet-components': 1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@arcevo/facet-layout': 1.3.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+      '@arcevo/facet-auth': 1.1.6(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+      '@arcevo/facet-components': 1.7.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@arcevo/facet-layout': 1.3.3(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
       '@arcevo/facet-sdk': 1.1.0
       '@arcevo/facet-tokens': 1.1.1
       lucide-react: 1.31.0(react@19.2.4)
@@ -6036,10 +5866,14 @@ snapshots:
       - vest
       - yup
 
-  '@arcevo/facet-layout@1.3.2(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
+  '@arcevo/facet-emails@1.1.0(react@19.2.4)':
+    optionalDependencies:
+      react: 19.2.4
+
+  '@arcevo/facet-layout@1.3.3(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))':
     dependencies:
-      '@arcevo/facet-auth': 1.1.5(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
-      '@arcevo/facet-components': 1.6.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@arcevo/facet-auth': 1.1.6(@standard-schema/spec@1.1.0)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(valibot@1.4.2(typescript@5.9.3))
+      '@arcevo/facet-components': 1.7.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
     transitivePeerDependencies:
@@ -7764,101 +7598,6 @@ snapshots:
 
   '@radix-ui/rect@1.1.3': {}
 
-  '@react-email/body@0.3.0(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/button@0.2.1(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/code-block@0.2.1(react@19.2.4)':
-    dependencies:
-      prismjs: 1.30.0
-      react: 19.2.4
-
-  '@react-email/code-inline@0.0.6(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/column@0.0.14(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/components@1.0.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
-    dependencies:
-      '@react-email/body': 0.3.0(react@19.2.4)
-      '@react-email/button': 0.2.1(react@19.2.4)
-      '@react-email/code-block': 0.2.1(react@19.2.4)
-      '@react-email/code-inline': 0.0.6(react@19.2.4)
-      '@react-email/column': 0.0.14(react@19.2.4)
-      '@react-email/container': 0.0.16(react@19.2.4)
-      '@react-email/font': 0.0.10(react@19.2.4)
-      '@react-email/head': 0.0.13(react@19.2.4)
-      '@react-email/heading': 0.0.16(react@19.2.4)
-      '@react-email/hr': 0.0.12(react@19.2.4)
-      '@react-email/html': 0.0.12(react@19.2.4)
-      '@react-email/img': 0.0.12(react@19.2.4)
-      '@react-email/link': 0.0.13(react@19.2.4)
-      '@react-email/markdown': 0.0.18(react@19.2.4)
-      '@react-email/preview': 0.0.14(react@19.2.4)
-      '@react-email/render': 2.0.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@react-email/row': 0.0.13(react@19.2.4)
-      '@react-email/section': 0.0.17(react@19.2.4)
-      '@react-email/tailwind': 2.0.7(@react-email/body@0.3.0(react@19.2.4))(@react-email/button@0.2.1(react@19.2.4))(@react-email/code-block@0.2.1(react@19.2.4))(@react-email/code-inline@0.0.6(react@19.2.4))(@react-email/container@0.0.16(react@19.2.4))(@react-email/heading@0.0.16(react@19.2.4))(@react-email/hr@0.0.12(react@19.2.4))(@react-email/img@0.0.12(react@19.2.4))(@react-email/link@0.0.13(react@19.2.4))(@react-email/preview@0.0.14(react@19.2.4))(@react-email/text@0.1.6(react@19.2.4))(react@19.2.4)
-      '@react-email/text': 0.1.6(react@19.2.4)
-      react: 19.2.4
-    transitivePeerDependencies:
-      - react-dom
-
-  '@react-email/container@0.0.16(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/font@0.0.10(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/head@0.0.13(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/heading@0.0.16(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/hr@0.0.12(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/html@0.0.12(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/img@0.0.12(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/link@0.0.13(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/markdown@0.0.18(react@19.2.4)':
-    dependencies:
-      marked: 15.0.12
-      react: 19.2.4
-
-  '@react-email/preview@0.0.14(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/render@2.0.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
-    dependencies:
-      html-to-text: 9.0.5
-      prettier: 3.9.6
-      react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
-
   '@react-email/render@2.1.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
       entities: 4.5.0
@@ -7867,35 +7606,6 @@ snapshots:
       prettier: 3.9.6
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
-
-  '@react-email/row@0.0.13(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/section@0.0.17(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
-
-  '@react-email/tailwind@2.0.7(@react-email/body@0.3.0(react@19.2.4))(@react-email/button@0.2.1(react@19.2.4))(@react-email/code-block@0.2.1(react@19.2.4))(@react-email/code-inline@0.0.6(react@19.2.4))(@react-email/container@0.0.16(react@19.2.4))(@react-email/heading@0.0.16(react@19.2.4))(@react-email/hr@0.0.12(react@19.2.4))(@react-email/img@0.0.12(react@19.2.4))(@react-email/link@0.0.13(react@19.2.4))(@react-email/preview@0.0.14(react@19.2.4))(@react-email/text@0.1.6(react@19.2.4))(react@19.2.4)':
-    dependencies:
-      '@react-email/text': 0.1.6(react@19.2.4)
-      react: 19.2.4
-      tailwindcss: 4.3.3
-    optionalDependencies:
-      '@react-email/body': 0.3.0(react@19.2.4)
-      '@react-email/button': 0.2.1(react@19.2.4)
-      '@react-email/code-block': 0.2.1(react@19.2.4)
-      '@react-email/code-inline': 0.0.6(react@19.2.4)
-      '@react-email/container': 0.0.16(react@19.2.4)
-      '@react-email/heading': 0.0.16(react@19.2.4)
-      '@react-email/hr': 0.0.12(react@19.2.4)
-      '@react-email/img': 0.0.12(react@19.2.4)
-      '@react-email/link': 0.0.13(react@19.2.4)
-      '@react-email/preview': 0.0.14(react@19.2.4)
-
-  '@react-email/text@0.1.6(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
 
   '@rolldown/binding-android-arm64@1.1.5':
     optional: true

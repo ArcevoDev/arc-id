@@ -8,10 +8,11 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 minimumReleaseAgeExclude:
-  - '@arcevo/facet-cli@0.2.0 || 0.3.0 || 0.3.1 || 0.4.0 || 0.5.0'
-  - '@arcevo/facet-auth@1.1.1 || 1.1.3 || 1.1.4 || 1.1.5'
-  - '@arcevo/facet-components@1.3.0 || 1.5.0 || 1.6.0'
-  - '@arcevo/facet-docs@1.3.0 || 1.4.0 || 1.4.1 || 1.4.2'
-  - '@arcevo/facet-layout@1.2.0 || 1.3.0 || 1.3.1 || 1.3.2'
+  - '@arcevo/facet-cli@0.2.0 || 0.3.0 || 0.3.1 || 0.4.0 || 0.5.0 || 0.6.0 || 0.7.0'
+  - '@arcevo/facet-auth@1.1.1 || 1.1.3 || 1.1.4 || 1.1.5 || 1.1.6'
+  - '@arcevo/facet-components@1.3.0 || 1.5.0 || 1.6.0 || 1.7.0'
+  - '@arcevo/facet-docs@1.3.0 || 1.4.0 || 1.4.1 || 1.4.2 || 1.4.3'
+  - '@arcevo/facet-layout@1.2.0 || 1.3.0 || 1.3.1 || 1.3.2 || 1.3.3'
   - '@arcevo/facet-sdk@1.1.0'
   - '@arcevo/facet-tokens@1.1.1'
+  - '@arcevo/facet-emails@1.1.0'
