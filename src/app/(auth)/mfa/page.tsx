@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MfaDialog } from "@arcevo/facet-auth";
 import { Icon } from "@/components/ui/icon";
-import { arcIdClient } from "@/sdk";
+import { useArcIdClient } from "@/hooks/use-arc-id-client";
 import { resolvePostAuthRoute } from "@/hooks/use-post-auth-redirect";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -21,6 +21,7 @@ function MfaContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") ?? "";
   const [open, setOpen] = useState(Boolean(sessionId));
+  const client = useArcIdClient();
 
   return (
     <div className="space-y-4">
@@ -34,7 +35,7 @@ function MfaContent() {
       <MfaDialog
         open={open}
         onOpenChange={setOpen}
-        client={arcIdClient}
+        client={client}
         sessionId={sessionId}
         onComplete={() => router.push(resolvePostAuthRoute(useAuthStore.getState().user))}
         onCancel={() => router.push("/login")}

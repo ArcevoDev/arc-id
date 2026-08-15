@@ -102,6 +102,13 @@ export function useAuth() {
     return result;
   }, []);
 
+  /** Drop the persisted session on disk (delete-account / hard logout). */
+  const clearSession = useCallback(() => {
+    arcIdClient.setAccessToken(null);
+    useAuthStore.getState().clearAuth();
+    clearPersistedSession();
+  }, []);
+
   return {
     user,
     isAuthenticated,
@@ -117,6 +124,7 @@ export function useAuth() {
     refreshAuth,
     requestMagicLink,
     authenticateMagicLink,
+    clearSession,
   };
 }
 

@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { PageHeader } from "@arcevo/facet-layout";
 import { useAuthStore } from "@/store/auth.store";
 import { useProfile } from "@/hooks/use-profile";
-import { clearPersistedSession } from "@/sdk";
+import { useAuth } from "@/hooks/use-auth";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@arcevo/facet-components";
 
 export default function ProfilePage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { updateProfile, deleteAccount } = useProfile();
+  const { clearSession } = useAuth();
   const [name, setName] = useState("");
   const [email] = useState(user?.email ?? "");
   const [saving, setSaving] = useState(false);
@@ -44,7 +45,7 @@ export default function ProfilePage() {
     const result = await deleteAccount();
     setSaving(false);
     if (!result.error) {
-      clearPersistedSession();
+      clearSession();
       router.replace("/login");
     } else {
       setError(result.error?.message ?? "Failed to delete account");
