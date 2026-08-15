@@ -36,36 +36,36 @@ export default function DashboardPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
           <CardContent className="p-5 space-y-2">
             <p className="text-xs text-muted-foreground">Plan</p>
-            <p className="text-2xl font-semibold">{'\u2014'}</p>
+            <p className="text-2xl font-semibold">-</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
           <CardContent className="p-5 space-y-2">
             <p className="text-xs text-muted-foreground">Active sessions</p>
             <p className="text-2xl font-semibold">
-              {sessionCount !== null ? sessionCount : '\u2014'}
+              {sessionCount !== null ? sessionCount : "-"}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
           <CardContent className="p-5 space-y-2">
             <p className="text-xs text-muted-foreground">Recent events</p>
-            <p className="text-2xl font-semibold">{'\u2014'}</p>
+            <p className="text-2xl font-semibold">-</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
           <CardContent className="p-5 space-y-2">
             <p className="text-xs text-muted-foreground">Workspace</p>
-            <p className="text-2xl font-semibold">{'\u2014'}</p>
+            <p className="text-2xl font-semibold">-</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <Icon name="scroll-text" className="h-4 w-4 text-primary" /> Recent Activity
@@ -75,7 +75,7 @@ export default function DashboardPage() {
             <p className="text-sm text-muted-foreground">Activity feed loading...</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <Icon name="shield-check" className="h-4 w-4 text-primary" /> Active Sessions
