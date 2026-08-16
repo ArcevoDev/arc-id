@@ -3,6 +3,7 @@ See [documentation/taste.md](documentation/taste.md)
 # Testing
 - When fixing mock-db.ts for a flow test: check the actual flow file for ALL models/entities it reads, not just the one that surfaced in the first error. Confidence: 0.70
 - Fix test failures caused by missing Zod defaults by adding the defaulted fields explicitly to test input objects, not by loosening the flow's type signature. Confidence: 0.70
+- When verifying generated/render output (emails, HTML, snapshots), assert on the presence of the actual expected content, not just non-empty length or a passing exit code — a check that only verifies output length can falsely pass while body content is silently dropped (the mail-render check passed at >200 chars even though the email body never rendered). Confidence: 0.70
 
 # Taste (Continuously Learned by [CommandCode][cmd])
 

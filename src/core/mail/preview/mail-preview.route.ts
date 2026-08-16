@@ -84,7 +84,8 @@ export async function mailPreviewRoute(fastify: FastifyInstance) {
 
       const html = await compileMailTemplate(element);
 
-      // Inject a dev toolbar at the top of the preview
+      // Inject a dev toolbar at the top of the preview.
+      // Replace the opening <body> tag with the toolbar + original body.
       const toolbar = `
         <div style="
           position:fixed;top:0;left:0;right:0;
@@ -103,7 +104,7 @@ export async function mailPreviewRoute(fastify: FastifyInstance) {
 
       return reply
         .type("text/html")
-        .send(html.replace("<body", `<body`) + toolbar);
+        .send(html.replace(/<body[^>]*>/, (match) => `${match}${toolbar}`));
     },
   );
 }

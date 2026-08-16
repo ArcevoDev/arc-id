@@ -52,9 +52,12 @@ next-env.d.ts
 # design standards
 ArcevoCirqle_Design_Standards_Manual_v1.0..txt
 
-# agent state
-.agent/logs.txt
-.agent/*-tmp.txt
+# agent state / scratch artifacts
+.agent/
 
 # local e2e harness
 /scratch-e2e/
+
+# arc-id generated codebase snapshot (tooling output — regenerate via gen-snapshot.js)
+arcid_codebase_snapshot.txt
+repo_structure.txt

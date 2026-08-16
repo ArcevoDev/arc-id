@@ -7,7 +7,7 @@
 // 3. Maintained proper SDJwtVcInstance API usages.
 
 import { SDJwtVcInstance } from "@sd-jwt/sd-jwt-vc";
-import type { Signer, Verifier, Hasher, SaltGenerator } from "@sd-jwt/types";
+import type { Signer, Verifier, Hasher, SaltGenerator } from "@sd-jwt/core";
 import { createHash, randomBytes } from "crypto";
 import { importPKCS8, importSPKI } from "jose";
 

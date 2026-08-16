@@ -1,15 +1,17 @@
-import * as React from "react";
+﻿import * as React from "react";
 import {
   EmailSection,
   EmailRow,
   EmailColumn,
   EmailText,
 } from "@arcevo/facet-emails";
-import { MailLayout } from "../components/MailLayout";
-import { MailButton } from "../components/MailButton";
-import { MailText } from "../components/MailText";
-import { MailDivider } from "../components/MailDivider";
-import { tokens as t } from "../components/tokens";
+import {
+  MailLayout,
+  MailButton,
+  MailText,
+  MailDivider,
+  tokens as t,
+} from "../components";
 
 export interface CredentialIssuedMailProps {
   holderName?: string;
@@ -31,12 +33,15 @@ export const CredentialIssuedMail = ({
   walletUrl,
 }: CredentialIssuedMailProps) => (
   <MailLayout
-    previewText={`A new Verifiable Credential has been issued to you by ${issuerName}`}
-    heading="Credential Issued"
+    previewText={`A new credential was issued to you by ${issuerName} - it's now in your wallet`}
+    heading="A Credential, Yours"
+    eyebrow="Verifiable Credential"
   >
     <MailText>
-      Hi {holderName ? holderName : "there"}, a new Verifiable Credential has
-      been issued to your ArcID identity by <strong>{issuerName}</strong>.
+      {holderName ? `Hello ${holderName},` : "Hello,"} a new Verifiable
+      Credential has been issued to your ArcID identity by{" "}
+      <strong>{issuerName}</strong>. It now lives in your wallet - portable,
+      tamper-evident, and ready to present whenever you choose.
     </MailText>
 
     {/* Credential detail card */}
@@ -49,31 +54,17 @@ export const CredentialIssuedMail = ({
         marginBottom: t.space.lg,
       }}
     >
-      <EmailRow style={{ marginBottom: t.space.sm }}>
-        <EmailColumn style={{ width: "40%" }}>
-          <EmailText
-            style={{
-              color: t.color.textMuted,
-              fontSize: t.font.sizeSm,
-              margin: 0,
-            }}
-          >
-            Type
-          </EmailText>
-        </EmailColumn>
-        <EmailColumn>
-          <EmailText
-            style={{
-              color: t.color.text,
-              fontSize: t.font.sizeSm,
-              fontWeight: "600",
-              margin: 0,
-            }}
-          >
-            {credentialType}
-          </EmailText>
-        </EmailColumn>
-      </EmailRow>
+      <EmailText
+        style={{
+          color: t.color.text,
+          fontSize: t.font.sizeLg,
+          fontWeight: "700",
+          margin: 0,
+          marginBottom: t.space.md,
+        }}
+      >
+        {credentialType}
+      </EmailText>
       <EmailRow style={{ marginBottom: t.space.sm }}>
         <EmailColumn style={{ width: "40%" }}>
           <EmailText
@@ -151,11 +142,25 @@ export const CredentialIssuedMail = ({
       )}
     </EmailSection>
 
-    {walletUrl && <MailButton href={walletUrl}>View in Wallet</MailButton>}
+    {walletUrl && <MailButton href={walletUrl}>View in Your Wallet</MailButton>}
+
+    <MailText variant="small">
+      What makes this different from a paper certificate? This credential is
+      cryptographically signed by {issuerName} and tied to your identity - so
+      you can present it anywhere it's trusted without showing the underlying
+      documents, and without anyone tracking where you show it.
+    </MailText>
 
     <MailDivider />
 
-    <MailText variant="muted">Credential ID: {credentialId}</MailText>
+    <MailText variant="muted" mb="4px">
+      Credential ID
+    </MailText>
+    <MailText variant="small" mb="0">
+      <span style={{ fontFamily: t.font.mono, wordBreak: "break-all" }}>
+        {credentialId}
+      </span>
+    </MailText>
   </MailLayout>
 );
 

@@ -1,9 +1,11 @@
 import * as React from "react";
-import { EmailLayout } from "@arcevo/facet-emails";
+import { EmailLayout, EmailText } from "@arcevo/facet-emails";
 
 interface MailLayoutProps {
   previewText: string;
   heading: string;
+  /** Optional eyebrow label above the heading (e.g. "SECURITY ALERT"). */
+  eyebrow?: string;
   children: React.ReactNode;
   /** Optional footer note - defaults to standard ArcID footer */
   footerNote?: string;
@@ -18,6 +20,7 @@ interface MailLayoutProps {
 export const MailLayout = ({
   previewText,
   heading,
+  eyebrow,
   children,
   footerNote,
 }: MailLayoutProps) => (
@@ -27,10 +30,24 @@ export const MailLayout = ({
     brandName="ArcID"
     footerNote={
       footerNote ??
-      "This message was sent by ArcID, the sovereign identity engine."
+      "This message was sent by ArcID, the sovereign identity engine. You are receiving it because this address is connected to an ArcID account."
     }
     footerMeta={`© ${new Date().getFullYear()} ArcID. All rights reserved.`}
   >
+    {eyebrow ? (
+      <div
+        style={{
+          fontSize: "11px",
+          fontWeight: 600,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "#6b7280",
+          marginBottom: "8px",
+        }}
+      >
+        {eyebrow}
+      </div>
+    ) : null}
     {children}
   </EmailLayout>
 );

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { SignUp } from "@arcevo/facet-auth";
 
 export default function RegisterPage() {
@@ -12,13 +11,6 @@ export default function RegisterPage() {
       </div>
 
       <SignUp />
-
-      <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
-        <Link href="/login" className="text-primary hover:underline">
-          Sign in
-        </Link>
-      </p>
     </div>
   );
 }

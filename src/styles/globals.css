@@ -1,10 +1,11 @@
 /* src/styles/globals.css */
 /*
  * FONT FIX:
- * --font-sans was set to var(--font-sans) — a self-reference resolving to
- * nothing. Now maps to --font-inter which is set by next/font on <html>.
- * --font-mono maps to --font-mono from JetBrains Mono next/font variable.
- * --font-heading now maps to Montserrat (loaded by next/font via --font-heading).
+ * Fonts are resolved through facet-tokens CSS variables, which default to
+ * branded family names ("Inter", "Montserrat", "JetBrains Mono"). Those
+ * names only render when the font is installed locally (self-hosted or
+ * OS-installed) - so we layer robust system stacks underneath them here.
+ * No next/font/google downloads, no network dependency, no build wedge.
  */
 
 @import "tailwindcss";
@@ -12,18 +13,20 @@
  * utility classes (@theme) and ships the .glass/.glow-indigo/... classes
  * in tokens.css (imported first in src/app/layout.tsx). tailwind.css also
  * pulls in tw-animate-css and the [data-theme="dark"] variant used by the
- * facet ThemeProvider. */
+ * facet ThemeProvider. (Resolved via webpack alias in next.config.ts.) */
 @import "@arcevo/facet-tokens/tailwind.css";
 
-/* ── next/font overrides ────────────────────────────────────────────────────
- * facet-tokens' @theme maps --font-sans/--font-mono/--font-heading to the
- * CSS fallback stacks (Inter/Montserrat/JetBrains Mono from the package).
- * We re-point them at the next/font variables set on <html> so the
- * self-hosted fonts win (keeps the original FONT FIX behaviour). */
+/* ── Font stack resolution ────────────────────────────────────────────────────
+ * facet-tokens' @theme maps --font-sans/--font-mono/--font-heading to branded
+ * names. We override them with stacks that prefer the branded font when it's
+ * installed and fall back to universally-available system fonts otherwise. */
 @theme inline {
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-mono);
-  --font-heading: var(--font-heading);
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-heading: "Montserrat", "Inter", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code",
+    "SF Mono", Consolas, "Roboto Mono", monospace;
 }
 
 /* ── Base layer ────────────────────────────────────────────────────────────── */

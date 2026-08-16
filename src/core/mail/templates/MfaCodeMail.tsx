@@ -1,8 +1,6 @@
-import * as React from "react";
-import { EmailSection, EmailText } from "@arcevo/facet-emails";
-import { MailLayout } from "../components/MailLayout";
-import { MailText } from "../components/MailText";
-import { tokens as t } from "../components/tokens";
+﻿import * as React from "react";
+import { EmailSection, EmailText, EmailDivider } from "@arcevo/facet-emails";
+import { MailLayout, MailText, tokens as t } from "../components";
 
 export interface MfaCodeMailProps {
   code: string;
@@ -15,11 +13,14 @@ export const MfaCodeMail = ({ code, name, ttlSec = 600 }: MfaCodeMailProps) => {
   const minutes = Math.round(ttlSec / 60);
   return (
     <MailLayout
-      previewText={`Your ArcID verification code: ${code}`}
+      previewText={`Your ArcID verification code is ${code} - valid for ${minutes} minutes`}
       heading="Verification Code"
+      eyebrow="Two-factor authentication"
     >
       <MailText>
-        Hi {name ? name : "there"}, use the code below to complete your sign-in.
+        {name ? `Hello ${name},` : "Hello,"} a sign-in to your ArcID account is
+        waiting on one last proof: the code below. It's the second lock on your
+        door - the one only you hold.
       </MailText>
 
       {/* Big code display */}
@@ -50,7 +51,14 @@ export const MfaCodeMail = ({ code, name, ttlSec = 600 }: MfaCodeMailProps) => {
 
       <MailText variant="small">
         This code expires in <strong>{minutes} minutes</strong> and can only be
-        used once. Never share this code with anyone.
+        used once.
+      </MailText>
+
+      <EmailDivider />
+
+      <MailText variant="muted">
+        ArcID will never ask you for this code by phone, chat, or email. If
+        someone does, they are not us - end the conversation.
       </MailText>
     </MailLayout>
   );

@@ -1,9 +1,11 @@
-import * as React from "react";
-import { MailLayout } from "../components/MailLayout";
-import { MailButton } from "../components/MailButton";
-import { MailText } from "../components/MailText";
-import { MailSecurityNotice } from "../components/MailSecurityNotice";
-import { MailLinkFallback } from "../components/MailLinkFallback";
+﻿import * as React from "react";
+import {
+  MailLayout,
+  MailButton,
+  MailText,
+  MailSecurityNotice,
+  MailLinkFallback,
+} from "../components";
 
 export interface MagicLinkMailProps {
   loginUrl: string;
@@ -13,24 +15,26 @@ export interface MagicLinkMailProps {
 
 export const MagicLinkMail = ({ loginUrl, name, ip }: MagicLinkMailProps) => (
   <MailLayout
-    previewText="Your secure sign-in link for ArcID"
+    previewText="Your one-tap sign-in link for ArcID - valid for 15 minutes"
     heading="Secure Sign-In Link"
+    eyebrow="Passwordless access"
   >
     <MailText>
-      Hi {name ? name : "there"}, we received a passwordless sign-in request for
-      your ArcID account. Click the button below to authenticate.
+      {name ? `Hello ${name},` : "Hello,"} a passwordless sign-in was just
+      requested for your ArcID account. No passwords, no friction - just a
+      single, secure link that knows it's you.
     </MailText>
 
     <MailButton href={loginUrl}>Sign In to ArcID</MailButton>
 
-    <MailSecurityNotice variant="warning">
-      🔒 This link expires in 15 minutes and can only be used once.
-      {ip ? ` Request originated from IP: ${ip}` : ""}
+    <MailSecurityNotice variant="warning" ip={ip}>
+      ðŸ”’ This link expires in <strong>15 minutes</strong> and can only be used
+      once. Never forward it - anyone with this link can access your account.
     </MailSecurityNotice>
 
     <MailText variant="small">
-      If you didn't request this sign-in link, your account is still secure -
-      simply ignore this email.
+      Didn't request this link? Your account remains secure - simply ignore
+      this email and the link will expire on its own.
     </MailText>
 
     <MailLinkFallback href={loginUrl} />

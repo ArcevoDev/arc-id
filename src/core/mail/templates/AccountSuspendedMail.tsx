@@ -1,7 +1,10 @@
-import * as React from "react";
-import { MailLayout } from "../components/MailLayout";
-import { MailText } from "../components/MailText";
-import { MailSecurityNotice } from "../components/MailSecurityNotice";
+﻿import * as React from "react";
+import {
+  MailLayout,
+  MailText,
+  MailSecurityNotice,
+  MailDivider,
+} from "../components";
 
 export interface AccountSuspendedMailProps {
   name?: string;
@@ -15,24 +18,32 @@ export const AccountSuspendedMail = ({
   <MailLayout
     previewText="Your ArcID account has been suspended"
     heading="Account Suspended"
-    footerNote="This is an automated security notice from ArcID."
+    eyebrow="Important notice"
+    footerNote="This is an automated notice from ArcID."
   >
     <MailText>
-      Hi {name ? name : "there"}, your ArcID account has been suspended.
+      {name ? `Hello ${name},` : "Hello,"} your ArcID account has been
+      suspended. While it is suspended, you won't be able to sign in or use
+      ArcID-integrated services.
     </MailText>
 
     {reason && (
-      <MailSecurityNotice variant="danger">Reason: {reason}</MailSecurityNotice>
+      <MailSecurityNotice variant="danger">
+        <strong>Reason:</strong> {reason}
+      </MailSecurityNotice>
     )}
 
+    <MailDivider />
+
     <MailText>
-      If you believe this is an error or would like to appeal, please contact
-      our support team. Include your account email in your message.
+      If you believe this was a mistake, or if you'd like to appeal, our
+      support team can help - include the email address on this account and
+      we'll review it promptly.
     </MailText>
 
-    <MailText variant="small">
-      While suspended, you will not be able to sign in or access
-      ArcID-integrated services.
+    <MailText variant="muted">
+      Suspensions are reversible. We'd rather get you back inside with the
+      right access than keep you out by mistake.
     </MailText>
   </MailLayout>
 );

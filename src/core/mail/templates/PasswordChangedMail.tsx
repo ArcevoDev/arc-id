@@ -1,8 +1,10 @@
-import * as React from "react";
-import { MailLayout } from "../components/MailLayout";
-import { MailText } from "../components/MailText";
-import { MailSecurityNotice } from "../components/MailSecurityNotice";
-import { MailDivider } from "../components/MailDivider";
+﻿import * as React from "react";
+import {
+  MailLayout,
+  MailText,
+  MailSecurityNotice,
+  MailDivider,
+} from "../components";
 
 export interface PasswordChangedMailProps {
   name?: string;
@@ -16,12 +18,13 @@ export const PasswordChangedMail = ({
   changedAt,
 }: PasswordChangedMailProps) => (
   <MailLayout
-    previewText="Your ArcID password has been changed"
+    previewText="Your ArcID password was changed - review the details"
     heading="Password Changed"
+    eyebrow="Account security"
   >
     <MailText>
-      Hi {name ? name : "there"}, your ArcID account password was successfully
-      changed on{" "}
+      {name ? `Hello ${name},` : "Hello,"} the password for your ArcID account
+      was successfully changed on{" "}
       {new Date(changedAt).toLocaleString("en-US", {
         dateStyle: "long",
         timeStyle: "short",
@@ -29,17 +32,22 @@ export const PasswordChangedMail = ({
       .
     </MailText>
 
-    <MailSecurityNotice variant="danger">
-      🚨 If you did not make this change, your account may be compromised.
-      Please reset your password immediately and contact support.
-      {ip ? ` Change originated from IP: ${ip}` : ""}
+    <MailSecurityNotice variant="danger" ip={ip}>
+      ðŸš¨ If this was you, nothing more to do. If you did not make this change,
+      your account may be at risk - reset your password immediately and contact
+      support.
     </MailSecurityNotice>
 
     <MailDivider />
 
     <MailText variant="small">
-      All active sessions have been revoked as a security precaution. You will
-      need to sign in again on all devices.
+      As a precaution, all active sessions were revoked when the password
+      changed. You'll need to sign in again on every device.
+    </MailText>
+
+    <MailText variant="muted">
+      A strong, unique password is a good lock. A passkey is a better one -
+      consider switching to passwordless sign-in from your security settings.
     </MailText>
   </MailLayout>
 );

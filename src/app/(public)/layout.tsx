@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LandingLayout } from "@arcevo/facet-layout";
-import { Badge, Button, Footer, Navbar } from "@arcevo/facet-components";
+import { Aurora, Badge, Beams, Button, Card, Footer, Navbar, Spotlight } from "@arcevo/facet-components";
 import { Icon } from "@/components/ui/icon";
 import { TypewriterText } from "@/components/ui/typewriter-text";
 
@@ -24,7 +24,14 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <LandingLayout
       hero={
-        <div className="relative flex flex-col items-center text-center px-6 py-20">
+        <section className="relative overflow-hidden">
+          <Aurora
+            className="absolute inset-0 -z-20"
+            opacity={0.6}
+            colors={["#6366f1", "#a855f7", "#06b6d4", "#6366f1"]}
+          />
+          <Beams count={3} className="absolute inset-0 -z-10" color="rgba(129,140,248,0.3)" />
+          <Spotlight className="relative flex flex-col items-center text-center px-6 py-20">
           {/* Tech grid background (fades toward the edges) */}
           <div
             aria-hidden="true"
@@ -94,15 +101,16 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               { value: "Multi-tenant", label: "By design" },
               { value: "Passkey", label: "Native auth" },
             ].map((stat) => (
-              <div key={stat.label} className="glass rounded-xl px-4 py-6 text-center">
+              <Card key={stat.label} variant="glow" className="rounded-xl px-4 py-6 text-center">
                 <div className="text-lg font-bold text-foreground">{stat.value}</div>
                 <div className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
                   {stat.label}
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
-        </div>
+          </Spotlight>
+        </section>
       }
       nav={
         <Navbar

@@ -1,8 +1,10 @@
-import * as React from "react";
-import { MailLayout } from "../components/MailLayout";
-import { MailText } from "../components/MailText";
-import { MailSecurityNotice } from "../components/MailSecurityNotice";
-import { MailButton } from "../components/MailButton";
+﻿import * as React from "react";
+import {
+  MailLayout,
+  MailText,
+  MailSecurityNotice,
+  MailButton,
+} from "../components";
 
 export interface MfaDisabledAlertMailProps {
   name?: string;
@@ -18,12 +20,13 @@ export const MfaDisabledAlertMail = ({
   changedAt,
 }: MfaDisabledAlertMailProps) => (
   <MailLayout
-    previewText="⚠️ Two-factor authentication was disabled on your ArcID account"
+    previewText="Two-factor authentication was disabled on your ArcID account"
     heading="MFA Disabled"
+    eyebrow="Security alert"
   >
     <MailText>
-      Hi {name ? name : "there"}, two-factor authentication was disabled on your
-      ArcID account on{" "}
+      {name ? `Hello ${name},` : "Hello,"} two-factor authentication was
+      disabled on your ArcID account on{" "}
       {new Date(changedAt).toLocaleString("en-US", {
         dateStyle: "long",
         timeStyle: "short",
@@ -31,10 +34,10 @@ export const MfaDisabledAlertMail = ({
       .
     </MailText>
 
-    <MailSecurityNotice variant="danger">
-      🚨 If you did not disable MFA, your account may be compromised.
-      {ip ? ` This action originated from IP: ${ip}.` : ""} Reset your password
-      immediately.
+    <MailSecurityNotice variant="danger" ip={ip}>
+      ðŸš¨ If that was you, all good. If it wasn't, this is the most important
+      email you'll read today: someone may have taken control of your account.
+      Reset your password immediately.
     </MailSecurityNotice>
 
     <MailButton href={resetUrl} variant="danger">
@@ -42,8 +45,9 @@ export const MfaDisabledAlertMail = ({
     </MailButton>
 
     <MailText variant="small">
-      If you intentionally disabled MFA, no further action is required. We
-      recommend re-enabling it for maximum security.
+      Removed the second lock by accident? Re-enabling MFA takes about a minute
+      in your security settings - and we'll send you a fresh set of recovery
+      codes when you do.
     </MailText>
   </MailLayout>
 );

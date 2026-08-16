@@ -1,12 +1,12 @@
-# ArcID / Facet Client-Core Architecture — Canonical Conventions
+# ArcID / Facet Client-Core Architecture - Canonical Conventions
 
 > Purpose: the single source of truth for how the ArcID client core
 > (SDK, stores, hooks, CLI) is packaged, named, and consumed across
 > arc-id, arc-wallet, and any future integrator. This replaces the
 > earlier split-vs-stay analysis with a definitive, framework-agnostic
-> convention set.
+> convention set, reconciled with what is actually shipped.
 
-Date: 2026-08-13 (rewritten)
+Date: 2026-08-15 (rewritten)
 
 ---
 
@@ -20,20 +20,18 @@ line, no cross-repo coordination, apps stay thin.
 ```
 facet monorepo (single versioning + publish)
 ├─ @arcevo/facet-sdk        headless client (pure fetch, zero UI)
-├─ @arcevo/facet-store      framework-agnostic stores (zustand) + injectable persistence
-├─ @arcevo/facet-react      the use-* hooks (React only, thin over store/SDK)
-├─ @arcevo/facet-cli        the CLI (facet pkg / doctor / update / up / clean / prep)
-├─ @arcevo/facet-components UI kit (React + Radix)
+├─ @arcevo/facet-store      framework-agnostic stores (zustand) + injectable persistence [PLANNED]
+├─ @arcevo/facet-cli        the CLI (docs/emails init, add, icons, pkg/doctor/update/up)
+├─ @arcevo/facet-components UI kit (React + Radix, incl. animation family)
 ├─ @arcevo/facet-layout     shells (Console/Auth/Landing)
-├─ @arcevo/facet-auth       auth UI + presets
+├─ @arcevo/facet-auth       auth UI + presets (copy-flexible forms)
+├─ @arcevo/facet-emails     framework-agnostic email templates + preview server
 ├─ @arcevo/facet-tokens     design tokens
 └─ @arcevo/facet-docs       installable docs engine
 ```
 
-Branding: "beacon" is the PRODUCT line (the identity client integrators
-adopt). It is shipped from the facet packages — the package names stay
-`@arcevo/facet-*` unless a future product decision renames the scope.
-Naming direction is a product decision, not an architecture one.
+Branding: the product line name is a product decision, not an
+architecture one. Package names stay `@arcevo/facet-*`.
 
 ## 2. Dependency direction (non-negotiable)
 
@@ -46,10 +44,9 @@ page → component → hook (use-*) → store (facet-store) → SDK (facet-sdk) 
 - `facet-sdk` imports nothing from the other facet packages (pure fetch,
   zero UI, zero React).
 - `facet-store` depends only on `facet-sdk` + an injectable persistence
-  adapter. No React.
-- `facet-react` depends on `facet-store` + `facet-sdk` + React. No UI.
-- Components/layout/auth depend on the layers below (hooks/store/sdk)
-  only through props or thin wrappers — never by reaching into internals.
+  adapter. No React. Export store *creators*, not singletons.
+- Components/layout/auth depend on the layers below only through props,
+  slots, and config - never by reaching into internals.
 - Apps (arc-id, arc-wallet) are thin: they wire the singleton once and
   consume published packages. No in-repo store/hooks duplication.
 
@@ -65,8 +62,7 @@ architecture convention:
 - Every integrator constructs the client the same way and hands it to
   the store/hooks. There is no per-app reimplementation.
 - The store keeps ONE canonical session shape (from `facet-sdk` types),
-  so claims (aal, preferred_username, memberships, wallet DID) resolve
-  consistently across tenants and projects.
+  so claims resolve consistently across tenants and projects.
 - Persistence is an injected adapter (localStorage for web,
   expo-secure-store for RN) so arc-wallet stops re-implementing
   auth-store.
@@ -76,19 +72,30 @@ architecture convention:
 - **SDK**: pure fetch, dependency-free, typed domain classes
   (`AuthSdk`, `TenantSdk`, `VcSdk`, `OAuthSdk`, `PasskeySdk`, `IdpSdk`,
   ...). Works in browser, Node, edge. No React.
-- **Store**: zustand stores extracted from arc-id (`auth.store`,
-  `tenant.store`, `ui.store`). Framework-agnostic. Token persistence via
-  adapter interface. React 18/19 agnostic.
-- **Hooks**: the 13 use-* hooks take the client as input (or read a
-  default singleton) and return `{ data, error }` shapes. React only.
-- **CLI**: `facet pkg / doctor / update / up / clean / prep` —
-  commands must EXECUTE real tasks, never silently assume. A registry
-  hiccup is surfaced (warn, non-zero exit), never reported as
-  "up to date".
+- **Store** (planned): zustand stores extracted from arc-id
+  (`auth.store`, `tenant.store`). Framework-agnostic. Token persistence
+  via an injected adapter interface. React agnostic. The stores are
+  PURE today (auth imports only `create` + the `User` type; tenant
+  imports only `create`) - fully extractable as-is.
+- **Hooks**: stay in the consumer for now. The 13 use-* hooks import
+  `@/sdk` (the app wiring singleton) + `@/store/*` - app-specific glue
+  (base URL, localStorage keys, 401 refresh). They are NOT extractable
+  until a dependency-inversion refactor makes the client injectable.
+  Web/mobile devs own their hooks; the store is the shared agnostic
+  layer.
+- **CLI**: `facet docs init` / `docs scan` / `emails init` / `add` /
+  `icons generate` / `pkg` / `doctor` / `update` / `up` / `clean` /
+  `scripts` / `prep`. Commands EXECUTE real tasks, never silently
+  assume. `facet update` auto-applies (confirm prompt, `-y` skips).
+  Packages are discovered dynamically from the npm `@arcevo` scope, so
+  new packages appear without a CLI release.
 - **UI**: components/layout/auth are domain-customizable (fintech/med/
   edu/enterprise presets), never hardcoded. Every surface accepts
-  overrides (children, slots, config) rather than baking in copy or
-  colors.
+  overrides (children, slots, config, and a `copy` prop on forms) rather
+  than baking in copy or colors.
+- **Emails**: `@arcevo/facet-emails` renders template trees (React or
+  plain) to HTML/text with zero runtime deps; brand tokens via the
+  renderer options; dev preview server on port 3888.
 
 ## 5. The wiring point convention
 
@@ -99,21 +106,26 @@ Each app keeps ONE wiring file (arc-id's `src/sdk/index.ts` pattern):
 3. Export the client singleton.
 4. Everything else imports from the published packages.
 
-This keeps the "page → hook → store → SDK → API" chain intact and makes
-the app trivially portable to any backend shape.
+This keeps the chain intact and makes the app trivially portable to any
+backend shape. The 401 auto-refresh re-entrancy guard lives here.
 
 ## 6. Sequencing (what unlocks what)
 
-1. Finish arc-id page wiring (Phase E) + wallet polish (do NOT extract
-   while pages are mid-rewrite — extraction is mechanical, rewriting
-   pages twice is not).
-2. Extract `@arcevo/facet-store` (auth/tenant/ui stores + persistence
-   adapter) from arc-id.
-3. Extract `@arcevo/facet-react` (the 13 hooks) from arc-id.
-4. Migrate arc-wallet to consume both (kills its duplicate auth-store).
-5. Wire the CLI to real `arcid` commands (init/doctor/migrate/setup
-   surface, per arcid-cli-design.md).
-6. Rebrand the client story as beacon for integrators/docs.
+1. Finish arc-id page wiring + wallet polish (do NOT extract while pages
+   are mid-rewrite - extraction is mechanical, rewriting pages twice is
+   not).
+2. Confirm the SDK contract with a live e2e (register -> login ->
+   session restore -> MFA) against the running API.
+3. Extract `@arcevo/facet-store` (auth/tenant stores + persistence
+   adapter) from arc-id. Migrate arc-id `src/store/*` to thin re-exports
+   from the package; update `src/sdk/index.ts` to pass localStorage
+   storage + keys.
+4. Decide on `@arcevo/facet-react` (the hooks) separately, only after a
+   dependency-inversion refactor makes the client injectable. Until
+   then, hooks stay in-app.
+5. Migrate arc-wallet to consume the store (kills its duplicate
+   auth-store).
+6. Rebrand the client story as the product line for integrators/docs.
 
 ## 7. Risks (honest)
 
@@ -123,12 +135,18 @@ the app trivially portable to any backend shape.
 - Versioning: new packages start at 0.x until consumed by both apps.
 - The strict chain has pragmatic exceptions today (some pages import
   SDK directly). Those are acceptable, tracked, and should shrink.
+- Hooks extraction is blocked on the injectable-client refactor; do not
+  cut-and-paste the singleton wiring into a package.
 
 ## 8. Decisions (recorded)
 
 - One monorepo (facet) owns the client core + UI. No second repo.
-- "beacon" is a product brand, not a package scope.
+- The product line name is a product decision, not a package scope.
 - The SDK singleton stays in the app wiring file (convention 5), not a
-  package default export — keeps the app in control of env/token wiring.
-- CLI v1 surface: init/doctor/migrate/setup, grown from what
-  arcid-cli-design.md specifies.
+  package default export - keeps the app in control of env/token wiring.
+- `@arcevo/facet-store` exports store creators + takes an injected
+  storage adapter; no hardcoded localStorage keys or URLs in the
+  package.
+- Hooks stay in-app until the injectable-client refactor; web/mobile
+  devs own their hooks.
+- CLI v1 surface: docs/emails init, add, icons, pkg/doctor/update/up.

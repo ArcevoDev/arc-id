@@ -1,18 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import {
-  Aurora,
-  Beams,
-  Spotlight,
-  SparkleButton,
-  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CountUpText,
+  GlowCard,
+  GradientText,
+  MagneticButton,
   Marquee,
+  ScrollReveal,
+  ShimmerText,
+  TiltCard,
 } from "@arcevo/facet-components";
 import { Icon } from "@/components/ui/icon";
 
@@ -85,128 +86,145 @@ const AUDIENCE = [
   },
 ];
 
+function SectionHeading({
+  children,
+  accent,
+  sub,
+}: {
+  children: string;
+  accent?: boolean;
+  sub?: string;
+}) {
+  return (
+    <div className="text-center space-y-2">
+      <h2 className="font-heading text-3xl font-bold text-foreground">
+        {accent ? <GradientText text={children} /> : children}
+      </h2>
+      {sub && <p className="text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="space-y-20 py-16">
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <Aurora
-          className="absolute inset-0 -z-20"
-          opacity={0.6}
-          colors={["#6366f1", "#a855f7", "#06b6d4", "#6366f1"]}
-        />
-        <Beams count={3} className="absolute inset-0 -z-10" color="rgba(129,140,248,0.3)" />
-        <Spotlight className="relative flex flex-col items-center text-center">
-          <div className="mx-auto max-w-3xl px-6 py-20">
-            <h1 className="text-gradient font-heading text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Identity, handed back to its owner
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-              ArcID is the sovereign identity engine: passkey-native auth, OAuth2/OIDC,
-              and verifiable credentials - one trust layer for every sector.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <SparkleButton
-                label="Begin your journey"
-                onClick={() => (window.location.href = "/register")}
-                className="h-11 px-8"
-              />
-              <Button variant="glass" size="lg" asChild>
-                <Link href="/login" className="inline-flex items-center gap-2 whitespace-nowrap">
-                  Sign in
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </Spotlight>
-      </section>
-
       {/* Features */}
       <section id="features" className="mx-auto max-w-6xl px-6 space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="font-heading text-3xl font-bold text-foreground">Crafted for the identity stack</h2>
-          <p className="text-muted-foreground">Everything a modern IAM needs, nothing you don&apos;t.</p>
-        </div>
+        <ScrollReveal>
+          <SectionHeading accent sub="Everything a modern IAM needs, nothing you don&apos;t.">
+            Crafted for the identity stack
+          </SectionHeading>
+        </ScrollReveal>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FEATURES.map((f) => (
-            <Card
-              key={f.title}
-              className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-            >
-              <CardHeader>
-                <Icon name={f.icon} className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">{f.title}</CardTitle>
-                <CardDescription>{f.description}</CardDescription>
-              </CardHeader>
-            </Card>
+          {FEATURES.map((f, i) => (
+            <ScrollReveal key={f.title} delay={i * 60}>
+              <GlowCard className="h-full">
+                <CardHeader>
+                  <Icon name={f.icon} className="h-8 w-8 text-primary mb-2" />
+                  <CardTitle className="text-lg">{f.title}</CardTitle>
+                  <CardDescription>{f.description}</CardDescription>
+                </CardHeader>
+              </GlowCard>
+            </ScrollReveal>
           ))}
         </div>
       </section>
 
       {/* Sectors */}
       <section id="sectors" className="mx-auto max-w-6xl px-6 space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="font-heading text-3xl font-bold text-foreground">One key, every sector</h2>
-          <p className="text-muted-foreground">
-            A single canonical identity that verifies across every door you walk through.
-          </p>
-        </div>
-        <Marquee items={SECTORS.map((s) => (
-          <Card
-            key={s.name}
-            className="w-56 shrink-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-          >
-            <CardContent className="flex flex-col items-center gap-3 py-8">
-              <Icon name={s.icon} className="h-8 w-8 text-primary" />
-              <span className="font-medium text-foreground">{s.name}</span>
-            </CardContent>
-          </Card>
-        ))} />
+        <ScrollReveal>
+          <SectionHeading accent sub="A single canonical identity that verifies across every door you walk through.">
+            One key, every sector
+          </SectionHeading>
+        </ScrollReveal>
+        <ScrollReveal>
+          <Marquee items={SECTORS.map((s) => (
+            <Card
+              key={s.name}
+              className="w-56 shrink-0"
+            >
+              <CardContent className="flex flex-col items-center gap-3 py-8">
+                <Icon name={s.icon} className="h-8 w-8 text-primary" />
+                <span className="font-medium text-foreground">{s.name}</span>
+              </CardContent>
+            </Card>
+          ))} />
+        </ScrollReveal>
       </section>
 
       {/* Who it's for */}
       <section id="audience" className="mx-auto max-w-6xl px-6 space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="font-heading text-3xl font-bold text-foreground">A stage for three actors</h2>
-          <p className="text-muted-foreground">One trust layer, three ways to step into it.</p>
-        </div>
+        <ScrollReveal>
+          <SectionHeading accent sub="One trust layer, three ways to step into it.">
+            A stage for three actors
+          </SectionHeading>
+        </ScrollReveal>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {AUDIENCE.map((role) => (
-            <Card
-              key={role.title}
-              className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-            >
-              <CardHeader>
-                <Icon name={role.icon} className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">{role.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {role.lines.map((line, i) => (
-                  <CardDescription key={i}>{line}</CardDescription>
-                ))}
-              </CardContent>
-            </Card>
+          {AUDIENCE.map((role, i) => (
+            <ScrollReveal key={role.title} delay={i * 80}>
+              <TiltCard maxTilt={6} className="h-full">
+                <CardHeader>
+                  <Icon name={role.icon} className="h-8 w-8 text-primary mb-2" />
+                  <CardTitle className="text-lg">{role.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {role.lines.map((line, i) => (
+                    <CardDescription key={i}>{line}</CardDescription>
+                  ))}
+                </CardContent>
+              </TiltCard>
+            </ScrollReveal>
           ))}
         </div>
       </section>
 
       {/* CTA */}
       <section className="mx-auto max-w-4xl px-6">
-        <Card className="text-center py-12">
-          <CardContent className="space-y-6">
-            <h2 className="font-heading text-3xl font-bold text-foreground">
-              Ready to hand identity back to its owner?
-            </h2>
-            <p className="text-muted-foreground">
-              Spin up a tenant, issue your first credential, and integrate the SDK - all today.
-            </p>
-            <SparkleButton
-              label="Begin your journey"
-              onClick={() => (window.location.href = "/register")}
-              className="h-11 px-8"
-            />
-          </CardContent>
-        </Card>
+        <ScrollReveal>
+          <Card className="text-center py-12">
+            <CardContent className="space-y-6">
+              <h2 className="font-heading text-3xl font-bold text-foreground">
+                <ShimmerText text="Ready to hand identity back to its owner?" />
+              </h2>
+              <p className="text-muted-foreground">
+                Spin up a tenant, issue your first credential, and integrate the SDK - all today.
+              </p>
+              <MagneticButton
+                strength={14}
+                onClick={() => (window.location.href = "/register")}
+                className="h-11 px-8 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90"
+              >
+                Begin your journey
+              </MagneticButton>
+            </CardContent>
+          </Card>
+        </ScrollReveal>
+      </section>
+
+      {/* Trust strip */}
+      <section className="mx-auto max-w-6xl px-6">
+        <ScrollReveal>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {[
+              { value: 400, suffix: "+", label: "API endpoints" },
+              { value: 62, suffix: "", label: "Test files" },
+              { value: 340, suffix: "", label: "Tests passing" },
+              { value: 100, suffix: "%", label: "Sovereign by design" },
+            ].map((s) => (
+              <Card key={s.label} className="text-center py-6">
+                <CardContent className="space-y-1">
+                  <div className="text-2xl font-bold text-foreground">
+                    <CountUpText to={s.value} duration={1400} separator />
+                    {s.suffix}
+                  </div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {s.label}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </ScrollReveal>
       </section>
     </div>
   );

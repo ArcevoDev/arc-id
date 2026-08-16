@@ -7,7 +7,7 @@
 - When the git index is corrupt (zeroed bytes), rebuild it from HEAD by backing up the corrupt index, deleting it, and running `git reset` — never touch working-tree files in the process. Confidence: 0.8
 - Do not stage, commit, revert, or sweep away uncommitted working-tree changes during recovery — treat them as in-progress work and preserve them until the user confirms. Confidence: 0.85
 - For detailed multi-line commit messages, write the message to a scratch file (e.g., `.agent/commit-message.txt`) and commit with `git commit -F`, then delete the scratch file — avoids shell-quoting pain on Windows and keeps a reviewable message body with scoped bullet points. Confidence: 0.7
-- The user prefers to push to remote from their own terminal ("i will push from another terminal, independently"); the assistant should keep committing locally and not push, and not wait on the user's push to continue work (close the session with "let me know if you want it pushed" and list open items). Confidence: 0.9
+- The user prefers to push to remote from their own terminal ("i will push from another terminal, independently"; re-affirmed this session with "leave pushing to me... lets close out all opened tasks and e2e todos" — the agent keeps committing locally and moves on to the next task without pushing). Confidence: 0.95
 older files rather than committing them. Confidence: 0.6
 - The user prefers to push to remote from their own terminal ("i will push from another terminal, independently"); the assistant should keep committing locally and not push, and not wait on the user's push to continue work. Confidence: 0.8
 
