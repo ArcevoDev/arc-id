@@ -19,6 +19,7 @@ import { z } from "zod";
 import { jwtVerify, createRemoteJWKSet } from "jose";
 import { ApiError } from "@/core/errors";
 import { auditService } from "@/modules/audit/services/audit.service";
+import { assertSafeUrl } from "@/lib/url-safety";
 import {
   CreateConnectionSchema,
   UpdateConnectionSchema,
@@ -468,6 +469,7 @@ export async function idpRoute(fastify: FastifyInstance) {
       // ── 2. Exchange authorization code for tokens ──────────────────────────
       const callbackUrl = `${config.base.apiUrl}/api/v1/idp/oidc/${tenantSlug}/callback`;
 
+      assertSafeUrl(discovery.token_endpoint);
       const tokenResp = await fetch(discovery.token_endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -493,6 +495,7 @@ export async function idpRoute(fastify: FastifyInstance) {
       // createRemoteJWKSet fetches and caches the IdP's public keys.
       // jwtVerify validates: signature, iss, aud, exp, nbf.
       // This is the critical fix — without this, a forged token is accepted.
+      await assertSafeUrl(discovery.jwks_uri);
       const JWKS = createRemoteJWKSet(new URL(discovery.jwks_uri));
 
       let claims: Record<string, unknown>;

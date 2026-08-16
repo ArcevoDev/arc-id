@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(pnpm:*)",
+      "Shell(dir /b C:\\Users\\HP\\Desktop\\ArcevoDev\\arc-id 2>nul || echo \"DIRECTORY_NOT_FOUND\")",
+      "Shell(dir /s /b C:\\Users\\HP\\Desktop\\ArcevoDev\\arc-id\\docs\\*.md 2>nul)",
+      "Shell(dir /s /b C:\\Users\\HP\\Desktop\\ArcevoDev\\arc-id\\.agent\\* 2>nul)",
+      "Shell(dir /b C:\\Users\\HP\\Desktop\\ArcevoDev\\ 2>nul | findstr /i \"arc\")",
+      "Shell(cd /d C:\\Users\\HP\\Desktop\\ArcevoDev\\arc-wallet && dir /b /a-d 2>nul && echo --- && type README.md 2>nul || echo \"NO README\")",
+      "Shell(cd /d C:\\Users\\HP\\Desktop\\ArcevoDev\\arcbase && dir /b /a-d 2>nul && echo --- && type README.md 2>nul || echo \"NO README\")",
+      "Shell(cd /d C:\\Users\\HP\\Desktop\\ArcevoDev\\arc-ui\\packages\\auth\\src && wc -l *.tsx *.ts 2>nul || for %f in (*.tsx *.ts) do @find /c /v \"\" \"%f\")",
+      "Shell(rmdir /q C:\\Users\\HP\\Desktop\\ArcevoDev\\arc-ui\\packages\\auth\\src\\presets 2>nul && echo \"Done\")",
+      "powershell",
+      "Shell(tsc:*)",
+      "Shell(....node_modules.bintsc:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

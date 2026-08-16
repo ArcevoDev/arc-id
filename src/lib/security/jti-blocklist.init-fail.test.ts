@@ -1,9 +1,10 @@
 // src/lib/security/jti-blocklist.init-fail.test.ts
 //
 // Tests the Redis-init-failure path: when @upstash/redis constructor throws,
-// getRedis() caches the failure and all functions no-op to the DB fallback.
+// getRedis() returns null and the in-memory Map fallback is used.
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { clearMemStore } from "./jti-blocklist";
 
 vi.mock("@/core/config", () => ({
   config: {
@@ -27,29 +28,34 @@ vi.mock("@upstash/redis", () => ({
   },
 }));
 
-describe("jti-blocklist (Redis init fails)", () => {
-  let blockJti: any, isJtiBlocked: any;
+describe("jti-blocklist (Redis init fails → in-memory fallback)", () => {
+  let blockJti: any, isJtiBlocked: any, unblockJti: any;
 
   beforeEach(async () => {
     vi.resetModules();
+    clearMemStore();
     const mod = await import("./jti-blocklist");
     blockJti = mod.blockJti;
     isJtiBlocked = mod.isJtiBlocked;
+    unblockJti = mod.unblockJti;
   });
 
-  it("falls through to DB fallback when Redis init fails on block", async () => {
+  it("blockJti writes to in-memory store when Redis fails", async () => {
     await expect(blockJti("init-fail-jti")).resolves.toBeUndefined();
+    const result = await isJtiBlocked("init-fail-jti");
+    expect(result).toBe(true);
   });
 
-  it("falls through to DB fallback when Redis init fails on check", async () => {
+  it("isJtiBlocked falls through to in-memory check", async () => {
     const result = await isJtiBlocked("init-fail-jti");
     expect(result).toBe(false);
   });
 
-  it("caches the init failure so subsequent calls don't retry", async () => {
-    await blockJti("first-call");
-    await blockJti("second-call");
-    // Both calls resolve without error — the init failure is cached
-    expect(true).toBe(true);
+  it("block/unblock lifecycle works via in-memory fallback", async () => {
+    await blockJti("lifecycle-jti", 900);
+    expect(await isJtiBlocked("lifecycle-jti")).toBe(true);
+
+    await unblockJti("lifecycle-jti");
+    expect(await isJtiBlocked("lifecycle-jti")).toBe(false);
   });
 });

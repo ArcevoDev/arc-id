@@ -97,8 +97,10 @@ export const IdentityDtoSchema = z.object({
   emailVerified: z.boolean(),
   name: z.string().nullable(),
   picture: z.string().nullable(),
+  username: z.string().nullable(),
   roles: z.array(z.string()),
   status: z.enum(UserStatus),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
   createdAt: z.coerce.string(),
   updatedAt: z.coerce.string(),
 });

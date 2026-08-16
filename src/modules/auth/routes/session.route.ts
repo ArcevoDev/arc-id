@@ -10,6 +10,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { auditService } from "@/modules/audit/services/audit.service";
+import { blockJti } from "@/lib/security/jti-blocklist";
 
 export async function sessionRoute(fastify: FastifyInstance) {
   // GET /auth/sessions
@@ -42,7 +44,13 @@ export async function sessionRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const sessions = await fastify.db.session.findMany({
-        where: { identityId: req.identity.id, valid: true },
+        where: {
+          identityId: req.identity.id,
+          valid: true,
+          // Don't list sessions that have already expired — the auth guard
+          // treats them as invalid, so they're not actually active.
+          expiresAt: { gt: new Date() },
+        },
         orderBy: { createdAt: "desc" },
       });
       return reply.send({ success: true, data: sessions });
@@ -70,10 +78,33 @@ export async function sessionRoute(fastify: FastifyInstance) {
     async (req, reply) => {
       const { id } = req.params as { id: string };
 
+      // Collect live access tokens before revoking — the auth guard checks
+      // the revokedJti table + Redis, not accessToken.revoked, so every
+      // revoked token must be written to both (blockJti + revokedJti.create
+      // together, per the security invariant).
+      const liveTokens = await fastify.db.accessToken.findMany({
+        where: {
+          sessionId: id,
+          identityId: req.identity.id,
+          revoked: false,
+          jti: { not: null },
+        },
+        select: { jti: true, expiresAt: true },
+      });
+
       // Both operations are owner-scoped via identityId so neither can affect
       // a session belonging to a different user, even if the session ID were
       // somehow known to an attacker.
       await fastify.db.$transaction([
+        // Revoke all access tokens bound to this session
+        fastify.db.accessToken.updateMany({
+          where: {
+            sessionId: id,
+            identityId: req.identity.id,
+            revoked: false,
+          },
+          data: { revoked: true },
+        }),
         // Revoke all refresh tokens issued for this session, scoped to the
         // requesting identity (closes the ownership gap noted in Bug 4).
         fastify.db.refreshToken.updateMany({
@@ -89,7 +120,37 @@ export async function sessionRoute(fastify: FastifyInstance) {
           where: { id, identityId: req.identity.id },
           data: { valid: false },
         }),
+        // Durable DB fallback: record every revoked JTI (auth guard consults
+        // this table when Redis is unavailable).
+        ...liveTokens.map((at) =>
+          fastify.db.revokedJti.create({
+            data: { jti: at.jti!, expiresAt: at.expiresAt },
+          }),
+        ),
       ]);
+
+      // Redis-block any access JTIs belonging to this session
+      for (const at of liveTokens) {
+        if (at.jti) {
+          const remainingTtlSec = Math.max(
+            Math.ceil((at.expiresAt.getTime() - Date.now()) / 1000),
+            1,
+          );
+          void blockJti(at.jti, remainingTtlSec).catch(() => {});
+        }
+      }
+
+      await auditService.log({
+        action: "SESSION_REVOKED",
+        identityId: req.identity.id,
+        ip: req.ip,
+        requestId: req.id,
+        metadata: {
+          sessionId: id,
+          // Consistent key with logout.flow.ts's SESSION_REVOKED entry.
+          accessTokenBlacklisted: liveTokens.length,
+        },
+      });
 
       return reply.send({ success: true });
     },

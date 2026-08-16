@@ -99,7 +99,7 @@ describe("DID route — requirePermission('did:manage')", () => {
     fastify = buildApp(false);
     await fastify.register(tenantDidRoute, { prefix: "/tenants" });
     await fastify.ready();
-  }, 30_000);
+  });
 
   afterAll(async () => {
     await fastify.close();
@@ -129,7 +129,7 @@ describe("DID route — requirePermission('did:manage')", () => {
       fastify = buildApp(true);
       await fastify.register(tenantDidRoute, { prefix: "/tenants" });
       await fastify.ready();
-    }, 30_000);
+    });
 
     it("POST /tenants/:tenantId/did returns 201 when no DID exists", async () => {
       mockDb.decentralizedIdentifier.findUnique.mockResolvedValue(null);

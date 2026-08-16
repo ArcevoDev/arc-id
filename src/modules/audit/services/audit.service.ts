@@ -10,12 +10,17 @@ export interface LogParams {
   ip?: string;
   userAgent?: string;
   metadata?: Record<string, any>;
+  /** Request/correlation ID — passed through from FlowContext.requestId or FastifyRequest.id */
+  requestId?: string;
 }
 
 export const auditService = {
   async log(params: LogParams, txClient?: any): Promise<void> {
     const client = txClient || globalDb;
     try {
+      const meta = { ...(params.metadata || {}) };
+      if (params.requestId) meta.requestId = params.requestId;
+
       await client.auditLog.create({
         data: {
           actionId: params.action,
@@ -23,7 +28,7 @@ export const auditService = {
           tenantId: params.tenantId,
           ip: params.ip,
           userAgent: params.userAgent,
-          metadata: params.metadata || {},
+          metadata: meta,
         },
       });
     } catch (error) {

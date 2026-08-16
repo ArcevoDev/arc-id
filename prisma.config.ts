@@ -11,6 +11,19 @@ if (!databaseUrl) {
   );
 }
 
+// Shadow database for `prisma migrate diff --from-migrations` (used by the
+// migration rollback test). Optional — Prisma 7's env() throws when a
+// variable is unset, so read it defensively and only fall back to the
+// process env / sibling-DB derivation when it is genuinely absent.
+let shadowEnv: string | undefined;
+try {
+  shadowEnv = env("SHADOW_DATABASE_URL") || undefined;
+} catch {
+  shadowEnv = undefined;
+}
+const shadowDatabaseUrl =
+  process.env.SHADOW_DATABASE_URL || shadowEnv || databaseUrl.replace(/\/[^/]*\?/, "/arcid_shadow?");
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
@@ -18,5 +31,6 @@ export default defineConfig({
   },
   datasource: {
     url: databaseUrl,
+    shadowDatabaseUrl,
   },
 });

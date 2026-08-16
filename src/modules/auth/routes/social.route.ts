@@ -50,7 +50,9 @@ import { auditService } from "@/modules/audit/services/audit.service";
 // missing env vars surface at startup rather than at first request.
 
 function buildRedirectUri(provider: string) {
-  return `${config.base.apiUrl}/auth/social/${provider}/callback`;
+  // The social routes are mounted under /auth (see auth.plugin.ts prefix),
+  // so the callback is /auth/{provider}/callback, not /auth/social/...
+  return `${config.base.apiUrl}/auth/${provider}/callback`;
 }
 
 function getGoogle() {
@@ -161,32 +163,14 @@ async function handleCallback(
       }
 
       if (!newIdentity) {
-        // Create a new identity — social logins start ACTIVE (email trusted from provider)
-        newIdentity = await tx.identity.create({
-          data: {
-            primaryEmail: profile.email,
-            name: profile.name,
-            picture: profile.picture,
-            status: "ACTIVE",
-            emailVerified: Boolean(profile.email),
-          },
-        });
-
-        // Auto-join SYSTEM tenant as MEMBER
-        const memberRole = await tx.role.findFirst({
-          where: { tenantId: "SYSTEM", name: "MEMBER" },
-          select: { id: true },
-        });
-        if (memberRole) {
-          await tx.tenantMembership.create({
-            data: {
-              identityId: newIdentity.id,
-              tenantId: "SYSTEM",
-              roleId: memberRole.id,
-              status: "ACTIVE",
-            },
-          });
-        }
+        // No account exists for this provider/email — do NOT auto-create.
+        // Existing users can log in via OAuth; brand-new users must register
+        // first (email+password), then link the provider from their account.
+        throw new ApiError(
+          "No ArcID account found for this social login. Please register first, then sign in with GitHub/Google.",
+          404,
+          "SOCIAL_ACCOUNT_NOT_FOUND",
+        );
       }
 
       // Link the provider account

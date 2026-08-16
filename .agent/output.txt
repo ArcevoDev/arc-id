@@ -1,0 +1,376 @@
+================================================================
+  ArcID: SESSION TRACKER & BUILD ROADMAP
+  Updated: 2026-08-14 (SESSION 3 — AUDIT: VOID-RESPONSE BUG FIXES + DOC SYNC)
+  Author: arc-id (Arcevo Ecosystem Identity/IAM Backend)
+================================================================
+
+VERIFIED REPO STATE (2026-08-14)
+-------------------------------
+- Branch: chore (working tree carries the facet migration Phases 1-3 +
+  uncommitted doc sync — see .agent/logs.txt).
+- Version 0.1.0 (package.json). pnpm 11.21.0. ESM-only. Next.js 16.2.6.
+- Test suite: 62 files / 340 tests / 0 failures on `pnpm test`
+  (~4-5 min on Windows; slowest = route-level tests + prisma imports).
+  Typecheck: clean (`tsc --noEmit`). Next build: compiles clean.
+- Backend complete: Phases 0-4 shipped (OAuth2/OIDC, WebAuthn, TOTP MFA,
+  SD-JWT VCs, did:web/did:key, presentation endpoint, multi-tenant
+  policy/RBAC, webhook delivery, observability, Redis revocation).
+- Facet migration: Phases 1-5 DONE. Phase 1 (SDK -> @arcevo/facet-sdk),
+  Phase 2 (CSS tokens -> @arcevo/facet-tokens), Phase 3 (components ->
+  @arcevo/facet-components, native <Icon name="..."/> registry, dead
+  icon-registry.ts + navigation.ts deleted), Phase 4 (auth pages ->
+  @arcevo/facet-auth, commit d6f6707), Phase 5 (layouts ->
+  @arcevo/facet-layout). Phase 6 purge partial (forgot/reset forms remain).
+- Facet packages pinned: sdk 1.1.0, components 1.5.0, auth 1.1.4,
+  layout 1.3.1, tokens 1.1.0, cli 0.4.0 (installed, unused — CLI basis),
+  docs 1.4.1 (installed, unused — docs scaffold basis).
+
+================================================================
+MILESTONES / TODOS — BY PRIORITY
+(weight tags: importance [HIGH/MED/LOW] · effort [S/M/L])
+================================================================
+
+P0 — FACET MIGRATION (finish the UI, per priority/effort)
+----------------------------------------------------------
+  [x] Phase 4 — auth forms: login/register/mfa pages on
+      @arcevo/facet-auth (SignIn/SignUp/MfaDialog), ArcProvider +
+      zustandTokenStorage bridge to the Zustand auth store.
+      DONE (2026-08-14, commit d6f6707). In-repo login/register/mfa
+      forms deleted; forgot/reset forms remain (in use).
+  [x] Phase 5 — layout: (auth) group on AuthLayout, (dashboard) group
+      on ConsoleLayout from @arcevo/facet-layout; in-repo sidebar/
+      topbar/tenant-switcher deleted. DONE (2026-08-13, commit 646fed1).
+  [x] Phase 6 — purge: ALL auth pages now on @arcevo/facet-auth
+      (SignIn/SignUp/MfaDialog/ForgotPasswordForm/ResetPasswordForm).
+      In-repo src/components/auth/ emptied and deleted.
+      DONE (2026-08-14, commits d6f6707 + e402622).
+  [ ] Pages cleanup: routes importing SDK directly (login, register,
+      billing, dashboard) -> route through hooks per the strict chain
+      rule. [importance LOW · effort M]
+
+P0.5 — PAGE WIRING (architectural decision + phased execution)
+-------------------------------------------------------------
+  DECISION NEEDED before wiring pages end-to-end:
+  - Strict chain: page -> component -> hook (use-*.ts) -> Zustand store
+    -> SDK (src/sdk/index.ts) -> API. NO page/component imports the SDK
+    directly. This is the non-negotiable convention (see CLAUDE.md).
+  - Phased execution (per module, verify each phase):
+    Phase A: identity + sessions pages (list, revoke, logout).
+    Phase B: credentials + offers pages (list, accept, present).
+    Phase C: tenants + membership pages (switch, members, policy).
+    Phase D: security pages (mfa, passkeys, audit) + settings.
+    Phase E: developers pages (oauth apps, api keys, webhooks) + billing.
+  - Each phase = one commit, typecheck + tests + build gate.
+  [x] Phase A — identity/sessions wiring. DONE (2026-08-12, commit
+      fcf0b34): security/sessions wired via useSessions (list + revoke +
+      optimistic row removal); identities page + new use-identities hook
+      (search + status/plan/joined table). Typecheck clean, tests pass.
+  [x] Phase B — credentials/offers wiring. DONE (2026-08-12, commit
+      81ffa2d): credentials page lists held credentials + revoke; offer
+      accept tab (paste token -> VcSdk.acceptOffer); verify tab (JWT ->
+      VcSdk.verify). Typecheck clean, credentials + SDK tests pass.
+  [x] Phase C — tenants/membership wiring. DONE (2026-08-13, commit
+      646fed1): tenants page lists organisations with active badge +
+      switch (via useTenant.switchTenant, token scoped to new tenant);
+      members table for the active tenant (useTenant.listMembers).
+  [x] Phase 5 — layout migration. DONE (2026-08-13, commit 646fed1):
+      route groups now consume @arcevo/facet-layout AuthLayout +
+      ConsoleLayout; in-repo app-layout/console-layout/sidebar/topbar/
+      tenant-switcher deleted (AppLayout deprecated in favour of
+      AuthLayout per facet-layout); page-header re-exports facet's.
+  [x] Public site (landing + feedback) — DONE (2026-08-13, commit
+      eae0834): (public)/layout.tsx wraps LandingLayout (hero + nav +
+      footer); home page = features grid + sectors Marquee + CTA;
+      feedback page = working form. All on @arcevo/facet-components.
+  [x] Phase D — security/settings wiring. DONE (2026-08-13, commit
+      9528630): mfa (setup QR/confirm/recovery codes), passkeys (list +
+      deregister), audit (filterable log), profile (edit name via
+      useProfile + delete-account).
+  [x] Phase E — developers/billing wiring. DONE (2026-08-13, commit
+      5e066ce): billing (real subscription), webhooks (list/create/
+      delete), oauth applications (list with PKCE), oauth tokens (list +
+      revoke via use-oauth hook), api-keys (honest not-implemented state).
+  [x] Theme hydration fix + em-dash sweep (2026-08-13, commit 5e066ce):
+      SSR-safe ThemeToggle wrapper; all em/en dashes to hyphens.
+  [x] Clerk-style portals (2026-08-13): /user (profile + security
+      sections) and /organization (overview + members + billing) tabbed
+      shells added; nav redefined (Organization section, Account ->
+      /user). Theme toggle removed from layouts.
+  [x] Landing glassmorphism hero (2026-08-13): tech-grid bg + blur glow +
+      text-gradient headline + glass CTA, matching facet/landing style.
+
+P1 — BACKEND HARDENING / API LAYER (no leaks or gaps)
+-----------------------------------------------------
+  [x] Phase 3 — Security hardening (CLOSED 2026-07-28): cross-tenant
+      isolation (6 tests), SSRF 4/4 call sites, CSRF review,
+      Redis-backed distributed revocation + per-session access-token
+      kill chain. [importance HIGH · effort M]
+  [x] Phase 4 — Observability (SHIPPED 2026-07-28): requestId
+      correlation, @fastify-metrics at /metrics, pino traceId on every
+      flow. [importance HIGH · effort M]
+  [x] Secrets/PII log scan: scripts/scan-secrets.ts wired into CI as a
+      step in ci.yml (2026-08-14). PASS: 440 files scanned, clean.
+      [importance HIGH · effort S]
+  [x] CI pnpm version alignment: actions pin pnpm 11.21.0 to match
+      package.json (2026-08-14). [importance MED · effort S]
+  [ ] Audit-log coverage gaps: 21 flows with audit side effects don't
+      verify the call; ROLE_* + OAUTH_CLIENT_UPDATED enum values unused.
+      [importance MED · effort M]
+  [ ] Migration rollback Tier 2: opt-in via ARC_ID_ROLLBACK_TEST=1, wired
+      into CI with real Postgres + shadow DB. [importance MED · effort M]
+
+P2.8 — FRONTEND AUDIT (SESSION 3, 2026-08-14)
+---------------------------------------------
+  Scope: production-grade pass over the uncommitted P2.75 work + pages.
+
+  BUGS FIXED — void-response success checks (pages treated ApiResponse<void>
+  as failure because they checked result.data instead of !result.error):
+  [x] credentials page revoke — false "Failed to revoke credential"
+      error on success; row not removed.
+  [x] webhooks page delete — false "Failed to delete webhook" on success.
+  [x] sessions page revoke — false "Failed to revoke session" on success.
+  [x] passkeys page deregister — false "Failed to deregister passkey" on
+      success (also missing await on deregister).
+  [x] oauth tokens page revoke — false "Failed to revoke token" on success.
+  [x] mfa page disable — false "Failed to disable MFA" on success.
+  [x] profile page delete-account — false "Failed to delete account" on
+      success (also now clears the persisted session before redirect).
+  [x] mfa page post-auth redirect — now routes through
+      resolvePostAuthRoute() (general user -> /wallet, not /dashboard).
+
+  VERIFIED: pnpm test 340/340, tsc --noEmit clean, scan:secrets clean,
+  all after fixes.
+
+  OPEN (unchanged, tracked under P2.75):
+  [x] OAuth listClients 403 "client:read" — FIXED (2026-08-14): the
+      MEMBER role (default for new registrations) had zero permissions;
+      seed.ts now wires client:read + webhook:read:events (self-service
+      reads) to MEMBER, create/delete stay ADMIN-gated.
+  [ ] Audit list E2E error — investigated: route is requirePlan("PRO");
+      a fresh FREE user gets 402 UPGRADE_REQUIRED by design, not a bug.
+      Verify E2E passes on a PRO-plan identity.
+  [ ] Tenant member/policy routes need a real org tenantId (PRO only).
+  [ ] SDK TenantSdk.create() fix (returns Tenant) needs a test + changeset.
+  [ ] Wallet page (/wallet) has no auth guard — dashboard group relies on
+      page-level 401 handling; consider a shared guard for consistency.
+
+P2 — CLI + SDK PACKAGES (deferred until API contract stable)
+------------------------------------------------------------
+  [ ] packages/cli extraction: design basis exists
+      (docs/planning/arcid-cli-design.md) — init/doctor/migrate/setup,
+      safe-overwrite/revert via .arcid/generated.json, reuses
+      @arcevo/facet-cli core (installed). [importance MED · effort L]
+  [ ] @arcevo/facet-docs integration for hosted docs. [importance LOW · effort M]
+
+P3 — DEFERRED (do not start early)
+----------------------------------
+  [ ] Integration tests vs real Postgres — after facet ships.
+  [ ] LegalConsent — schema-only until a consumer exists.
+  [ ] ExternalIdentifier.verified -> VC issuance — needs design.
+  [ ] BBS+/did:jwk/full OIDC4VCI-OIDC4VP/OPA-Cedar-SCIM-Terraform — v2+.
+
+P2.75 — SDK / STORE / HOOK CONTRACT VERIFICATION (2026-08-14)
+-------------------------------------------------------------
+  What this is: prove the arc-id server <-> @arcevo/facet-sdk <-> store
+  <-> hook chain has NO hidden gaps before extracting facet-store /
+  facet-react-hooks into published packages. arc-id consumes the SDK like a
+  third party even though it is first-party.
+
+  DONE this session:
+  [x] Audit script (facet/scripts/audit-arcid-consumption.cjs): every
+      arc-id ROUTES endpoint has an SDK method; every SDK module is used
+      by the app. No orphaned endpoints.
+  [x] New framework-agnostic Zustand stores built in arc-id:
+      credentials.store.ts, webhooks.store.ts, audit.store.ts
+      (shared state + loading/error; web + wallet portable).
+  [x] Hooks upgraded to hydrate the stores: use-credentials (list/issue/
+      revoke), use-webhooks (list/create/update/remove/test), use-audit-log
+      (paginated list). Method name `list` preserved for consumers.
+  [x] Full E2E (scratch-e2e/e2e-full.mjs) vs live API: auth/identity/
+      tenant/oauth/credentials/webhooks/audit round-trips. 15 pass.
+  [x] SDK fix: TenantSdk.create() returned ApiResponse<void> but the
+      server returns the created tenant — now ApiResponse<Tenant>
+      (consumers could not get the new tenant id). Rebuilt. Committed
+      on facet main (78c49ac).
+
+  DECISION — the `me()` naming (recorded 2026-08-14):
+  - KEEP `me()` in @arcevo/facet-sdk (stable public API since 1.0.x;
+      renaming breaks arc-wallet + external integrators). The SDK
+      abstracts the HTTP surface: me() -> GET /identity/profile is fine.
+  - arc-id hooks rename the APP-FACING name to getProfile()/fetchProfile()
+      while internally calling auth.me(). Hook layer = semantic names;
+      SDK layer = stable client methods.
+
+  OPEN (findings to fix):
+  [x] OAuth listClients 403 "Permission required: client:read" — FIXED
+      (2026-08-14): MEMBER role (default for registrations) now gets
+      client:read + webhook:read:events in seed.ts; create/delete remain
+      ADMIN-gated.
+  [ ] Audit list in E2E returned error — investigated: route is
+      requirePlan("PRO"); fresh FREE user gets 402 by design. Verify on
+      a PRO-plan identity.
+  [ ] Tenant member/policy routes require a real org tenantId (cuid);
+      FREE plan ships only the SYSTEM tenant (id "SYSTEM") + caps create
+      at 1. E2E skips those on FREE. Verify against a PRO instance.
+  [ ] SDK create() fix (returns Tenant) needs an SDK test + changeset.
+
+  WHEN DONE: extract @arcevo/facet-store + @arcevo/facet-react-hooks per
+  client-core-architecture-analysis.md sequencing (after Phase E pages
+  are fully wired + this contract is proven).
+
+P2.5 — ARC-WALLET (parallel track — IN PROGRESS)
+-----------------------------------------------
+  DECISION (2026-08-12): ArcWallet builds against @arcevo/facet-sdk NOW,
+  in parallel — do NOT wait for MVP to ship to prod.
+  - SDK verified RN-safe: zero npm deps, single ESM bundle, no
+    localStorage/window/Buffer/process.env; plain fetch with RequestInit
+    passthrough (fetchInit config + per-call signal for timeouts).
+  - Wallet-facing surface already in SDK: VcSdk.offer/acceptOffer/
+    createVerificationSession/presentForVerification/getStatusList/
+    resolveTenantDidDoc + IdentitySdk.registerWalletDid.
+  - Presentation endpoints (/verify/session, /verify/present) are
+    unauthenticated by design + rate-limited — fine for the QR/deep-link
+    flow (see docs/planning/presentation-envelope-design.md).
+  - Risk if MVP contract shifts: small — base-URL + param change, not a
+    rewire. Gate on prod only for runtime concerns (CORS/TLS/rate-limits).
+  [x] Phase 1 — SDK + auth foundation SHIPPED (2026-08-12, arc-wallet
+      commit c8f0997): facet-sdk+zustand+secure-store installed;
+      ArcIdClient singleton + 401 auto-refresh; auth-store with
+      secure-store persistence + restore; login/register/mfa screens +
+      wallet home (credential list); auth-gated Stack layout. Typecheck
+      clean.
+  [x] Phase 2 — wallet core: credential cards, offer accept (deep link),
+      QR/deep-link presentation via VcSdk.presentForVerification. DONE
+      (2026-08-13, arc-wallet commits e69ee8d + c556132).
+      [importance HIGH · effort L]
+  [x] Phase 3 — wallet DID: registerWalletDid on first launch (Ed25519
+      keypair on device, public JWK only — non-custodial). DONE
+      (2026-08-13, arc-wallet commit 97b9135): /did screen + home
+      first-launch redirect; did:key derived on-device.
+      [importance HIGH · effort M]
+  [x] Theme + landing (2026-08-13, arc-id commit cba2810): facet
+      ThemeProvider/ThemeToggle replace next-themes (dashboard topbar +
+      public nav); landing gains "Who ArcID is for" (Issuers/Holders/
+      Verifiers) section.
+  [ ] Phase 4 — full integration: tenant context, OAuth/webhook mgmt,
+      audit/billing display. [importance MED · effort L]
+  [ ] End-to-end smoke vs arc-id MVP once deployed. [importance HIGH · effort M]
+
+================================================================
+VERIFICATION GATES (last pass 2026-08-12)
+================================================================
+- pnpm test                        PASS 62 files / 340 tests
+- npx tsc --noEmit                 PASS (after facet import fix)
+- npx next build                   PASS (compiles; TS phase clean)
+- pnpm scan:secrets                PASS (exists; not yet in CI)
+
+================================================================
+FACET PACKAGES — ARC-ID PINS (verified against codebase)
+================================================================
+| Package              | Pin      | Used in repo?          |
+|----------------------|----------|------------------------|
+| @arcevo/facet-sdk    | 1.0.1    | yes — src/sdk/index.ts |
+| @arcevo/facet-components | 1.3.0 | yes — pages/layout/forms |
+| @arcevo/facet-tokens | 1.1.0    | yes — layout.tsx       |
+| @arcevo/facet-auth   | 1.1.1    | no — Phase 4 (next)    |
+| @arcevo/facet-layout | 1.2.0    | no — Phase 5 (next)    |
+| @arcevo/facet-cli    | 0.3.0    | no — CLI work basis    |
+| @arcevo/facet-docs   | 1.3.0    | no — docs scaffold     |
+
+================================================================
+GAPS / OPEN ITEMS (tracked)
+================================================================
+- .agent/ is fully gitignored (the whole dir, not just logs) — only
+  committed via -f if we want the tracker in git history.
+- .agent/tc.txt, typecheck-direct.txt, typecheck-migration.txt are
+  stale scratch outputs — deleted this session.
+- Session resumption: .agent/logs.txt carries the session id at the top.
+
+P2.9 — FACET PKG FULL UTILIZATION (SESSION 4, 2026-08-15)
+---------------------------------------------------------
+  What this is: newest @arcevo/facet-* (sdk 1.1.0, components 1.6.0,
+  auth 1.1.5, layout 1.3.2, tokens 1.1.1) published to npm ~a few hours
+  before this session. package.json already pins the exact latest for
+  all six — deps verified against `pnpm view` (all match). The audit
+  found the repo is ~95% on facet already; what remains is targeted
+  cleanup to "fully utilize" the packages. ThemeProvider is already a
+  root ancestor, so Navbar showThemeToggle + ConsoleLayout themeToggle
+  will "work perfectly" as-is.
+
+  AUDIT FINDINGS (2026-08-15):
+  - Navbar (facet-components) has showThemeToggle prop (index.d.ts:764,
+    renders ThemeToggle at index.js:2652). ConsoleLayout + Topbar
+    (facet-layout) have themeToggle prop (index.d.ts:352/245/87). Root
+    providers/index.tsx already wraps FacetThemeProvider (attribute="class",
+    defaultTheme="dark", enableSystem). -> Just flip the props on.
+  - facet-tokens 1.1.1 ships tokens.css (.glass/.glass-card/.frost/
+    .text-gradient/.glow-indigo/.border-glow) + tailwind.css (@theme
+    tokens + @utility border-glow). Local globals.css duplicates the
+    whole @theme inline block + glass/glow-indigo/text-gradient/border-glow
+    utilities (lines 15-85, 128-156).
+  - facet-layout PageHeader is re-exported through a shim
+    (src/components/layout/page-header.tsx) consumed by 15 dashboard pages.
+  - Billing: (dashboard)/billing/page.tsx + organization/billing/page.tsx
+    both import { billing } from "@/sdk" directly in-page (rule 6 violation)
+    and duplicate PLAN_STATUS_VARIANT + load logic. No useBilling hook exists.
+  - Dead code: src/hooks/use-mobile.ts, use-pagination.ts, use-step-up.ts,
+    use-api-keys.ts (stub), src/store/ui.store.ts + src/hooks/use-ui.ts,
+    src/lib/format.ts, src/types/domain.types.ts (all never imported).
+  - Redundant stores: credentials.store.ts / audit.store.ts / webhooks.store.ts
+    write state pages never read (pages keep local useState).
+  - Kept as-is (no facet equivalent): typewriter-text.tsx (hero animation),
+    use-auth.ts (adds verifyEmail/magic-link beyond facet useAuth),
+    zustand bridge + providers, sdk/index.ts singleton, config/nav+layout,
+    (dashboard)/organization + user sub-nav layouts.
+
+  TODOS:
+  [x] Theme toggles: Navbar showThemeToggle (public layout) +
+      ConsoleLayout themeToggle (dashboard layout) — props only,
+      ThemeProvider already at root. Verify SSR-safe. DONE (2026-08-15).
+      [importance HIGH · effort S]
+  [x] globals.css: import @arcevo/facet-tokens/tailwind.css, delete
+      duplicated @theme inline block + @utility glass/glow-indigo/
+      text-gradient/border-glow; keep next/font overrides + base layer.
+      DONE (2026-08-15). NOTE: theme-provider switched attribute="class"
+      -> attribute="data-theme" so facet-tokens' [data-theme] token
+      overrides actually fire (light mode now works for real). No dark:
+      variants in use — the app is dark-first via :root.
+      [importance HIGH · effort M]
+  [x] PageHeader shim: 15 dashboard imports pointed at @arcevo/facet-layout
+      directly, shim deleted. DONE (2026-08-15).
+      [importance LOW · effort S]
+  [x] useBilling hook: src/hooks/use-billing.ts wraps billing.getSubscription()
+      + PLAN_STATUS_VARIANT; both billing pages consume it — last
+      raw-SDK-in-page calls gone. DONE (2026-08-15). [importance MED · effort M]
+  [x] Dead-code sweep: deleted use-mobile/use-pagination/use-step-up/
+      use-ui + ui.store + lib/format.ts + types/domain.types.ts.
+      use-api-keys KEPT (stub consumed by the api-keys page).
+      DONE (2026-08-15). [importance LOW · effort S]
+  [x] Store cleanup: credentials/audit/webhooks hooks de-stored (kept
+      method API), the 3 redundant stores deleted. DONE (2026-08-15).
+      [importance LOW · effort M]
+  [x] Icon registry (tree-shaken): ran `facet icons generate` ->
+      src/components/ui/icons.generated.tsx (53 base icons). Added a local
+      Icon shim (src/components/ui/icon.tsx) delegating to the generated
+      registry, and switched ALL app Icon name= call sites (8 files +
+      config/layout.tsx) from the full-map facet Icon to the shim.
+      The generator scans only `icon=`/`name=` prop syntax, so the nav/
+      landing `icon: "…"` object values were completed by hand
+      (chart-column, building-2, monitor, key, globe, code, send,
+      activity, graduation-cap, heart-pulse, landmark, smartphone,
+      briefcase, badge-check, scan-search). verify-email switched
+      check-circle-2 -> circle-check (legacy lucide name). Sidebar
+      nav now renders from the tree-shaken set — no full 1700-icon map.
+      DONE (2026-08-15). [importance HIGH · effort M]
+  GATE: pnpm test (340) PASS, tsc --noEmit PASS, next build in flight
+  (2026-08-15, session 4).
+  GATE RE-RUN (2026-08-15, session 4 resumed): the interrupted `next build`
+  was actually FAILING on a prerender error that the interruption hid:
+  useSearchParams() without a Suspense boundary on /mfa and
+  /reset-password (missing-suspense-with-csr-bailout). Fixed both by
+  moving the hook into a Suspense-wrapped child component. Re-verified:
+  pnpm test 62/340 PASS, tsc --noEmit PASS, next build PASS (32 routes
+  prerendered static). Committed as a904b0e.
+
+_Keep this file current. Every session that closes an item or discovers
+a new one updates output.txt AND logs.txt in the same session._

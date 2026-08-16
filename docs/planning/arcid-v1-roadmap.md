@@ -1,265 +1,195 @@
-# ArcID v1 Roadmap — Verified Against Codebase
+# ArcID v1 Roadmap — Updated 2026-08-14
 
-Scope note: ArcWallet and ArcVerify are confirmed in-code as first-party
-`Project` rows under the same tenant (referenced directly in
-`onboarding.service.ts` comments and the Swagger description). This means
-v1 does not need spec-perfect OIDC4VCI/OIDC4VP — it needs a clean,
-versioned wallet API that ArcWallet (a React Native app you control) can
-consume via standard OAuth/PKCE against ArcID as a public client, built so
-it can grow toward real OIDC4VCI/VP later without a rewrite. That single
-decision removes the single largest, slowest item from the old roadmap and
-replaces it with something achievable in weeks, not months.
-
-Everything below was checked against the actual snapshot, not assumed from
-file names. Where a prior review (ChatGPT) made a claim, I've noted whether
-it held up.
+> Backend complete (0.1.0 equivalent). All Phase 0–4 shipped. **62 files / 340 tests / 0 code failures on `pnpm test` (all passing). Typecheck clean.**
+> Next work: P2.75 SDK/store/hook contract verification (facet-store + facet-react extraction basis) → CLI/SDK packages → ArcWallet Phase 4 integration. Facet migration Phases 0–5 done; Phase 6 purge is partial (forgot/reset forms remain in use).
 
 ---
 
-## Corrections to the prior review, before the roadmap
+## ✅ Done — all verified against source
 
-These matter because building a roadmap on a wrong map wastes the weeks
-that roadmap claims to save.
+### Phase 0 — Bug fixes (all 7, verified)
 
-**Overstated — Credentials/SSI at "60% complete."** Real and good: W3C VC
-issuance, SD-JWT with correct per-algorithm Web Crypto mapping, bitstring
-status-list revocation, `did:web`, `did:key` (identity-owned wallet DIDs).
-Nonexistent: `did:jwk`, OIDC4VCI, OIDC4VP, BBS+. The protocol-interop layer
-is at 0%, not 60% — but per the scope decision above, v1 doesn't need that
-layer to ship.
+| # | Bug | Fix | Verified by |
+|---|-----|-----|-------------|
+| 1 | Verification algorithm mismatch | `verify-credential.flow.ts` reads `alg` from JWT header via `decodeProtectedHeader()` | `verify-credential.flow.test.ts` (3 tests — ES256, tampered, missing alg) |
+| 2 | Identity-owned DID non-custodial by design | `register-wallet-did.flow.ts` stores only public key; `loadSigningKey` guard is permanent | `docs/planning/presentation-envelope-design.md`, architecture decision |
+| 3 | Status-list index allocation race | Atomic CAS via `updateMany` with retry on conflict, `tx` parameter | `status-list.service.test.ts` (5 tests) |
+| 4 | Federated login account takeover | Both `social.route.ts` + `idp.service.ts` gate auto-link on `emailVerified === true` | `idp.service.test.ts` (3 tests — verified email links, unverified email throws, new identity) |
+| 5 | `ADMIN_PASSWORD` default in seed | Production seed requires env var; defense-in-depth rejects dev default | `prisma/seed.ts` lines 45-63 |
+| 6 | Misnamed migration folder | Renamed to `20260617125316_add_username_set_audit_action` | File system |
+| 7 | Multibase encoding bug | `src/lib/multibase.ts` implements spec-correct base58btc | `did.route.ts`, `register-wallet-did.flow.ts` use it |
 
-**Understated / missed entirely — two real signing/verification bugs.**
-`verify-credential.flow.ts` hardcodes `importSPKI(pem, "ES256")` for
-locally-issued DIDs regardless of the DID's actual `keyType`
-(`Ed25519VerificationKey2020 | X25519KeyAgreementKey2020 | JsonWebKey2020 |
-Multikey` — none of which are ES256). Signing reads the algorithm
-dynamically; verification doesn't. Separately, `signing.service.ts`'s
-`loadSigningKey` only resolves a key via `did.tenantId` — `TenantSigningKey`
-has no `identityId` column, so issuance for an individually-owned DID
-(`identityId` set, `tenantId` null) throws `"No active signing key found"`
-every time. Both are scoped, fixable bugs, not roadmap items — see Phase 0.
+### Phase 1 — OAuth/aal gap (all 4 items, verified)
 
-**Real but mis-scoped — migration hygiene.** Not "too many migrations,
-consolidate into a clean baseline" (risky, unnecessary for 25 migrations
-over 3 weeks of active dev). The actual issue: one migration folder is
-literally named `add_identity_banned_audit_action` but its SQL adds
-`USERNAME_SET` — a copy-pasted folder name. Fix the name for future
-clarity; don't touch applied migration history.
+| # | Item | Status | Evidence |
+|---|------|--------|----------|
+| 1 | `aal` field in `IssueTokensParams`, threaded through session creation + step-up | ✅ Done | `token.service.ts` lines 72, 163, 184; test 88 "includes aal claim in access token JWT" |
+| 2 | `preferred_username` in `id_token` claims | ✅ Done | `token.service.ts` line 183; test assertion line 118 |
+| 3 | `setUsernameFlow` route registered | ✅ Done | `auth.plugin.ts` registers `setUsernameRoute`; `set-username.flow.ts` (audit-logged, TOCTOU-safe) |
+| 4 | Refresh token expiry vs replay kill-chain fixed | ✅ Done | `token-refresh.flow.ts` Step 2b: expired token → clean "please log in again", no kill chain. Revoked → full family kill. 9 tests. |
 
-**Real but mis-scoped — "unused tables."** Checked every model against
-actual usage. `ExternalIdentifier` and `LegalConsent` are schema-only, zero
-usage — genuinely dead for now. `Wallet` is schema-only too, but it's not
-dead, it's _pending_ — exactly what ArcWallet's account-linking will need.
-`AccessDelegation` looked similarly suspicious by name but is fully wired
-(`delegation.route.ts`, registered, working).
+### Phase 2 — ArcWallet-facing API (all 3 items, verified)
+
+| # | Item | Evidence |
+|---|------|----------|
+| 1 | Credential offers | `offer-credential.flow` (8 tests) + `offer.route` (5 tests) = **13 tests** |
+| 2 | Wallet binding + identity-owned did:key | `register-wallet-did.flow.ts` — creates `DecentralizedIdentifier` + `Wallet` in same tx |
+| 3 | Presentation endpoint | `jws-proof` (6) + `verify-session.route` (5) + `verify-present.route` (9) = **20 tests**. Anti-replay: single-use, 5-min TTL, nonce mismatch rejection |
 
 ---
 
-## Phase 0 — Fix what's actually broken (3–5 days)
+## 🟢 Frontend rebuild (Prompt 2)
 
-Not roadmap-scale work — these are bugs sitting in code that otherwise
-works, found by reading the actual signing/verification paths end to end.
+Architecture constraint (non-negotiable):
 
-1. **Verification algorithm mismatch.** ~~`verify-credential.flow.ts` must
-   read the issuer DID's `keyType` (or better, look up the `kid`/algorithm
-   from the credential's JWT header, which `signJwt` already sets) and
-   select the correct `importSPKI`/verification algorithm instead of
-   hardcoding ES256. Until this lands, any credential signed with a
-   non-ES256 key fails to verify through your own endpoint.~~
-   \*\*✅ Done — reads `alg` from JWT header via `decodeProtectedHeader`.
+```
+page → component(s) → hook (use-*.ts) → Zustand store → SDK (src/sdk/index.ts → @arcevo/facet-sdk) → API
+```
 
-2. **Identity-owned DID signing key — permanently non-custodial.** ~~`signing.service.ts`'s
-   `loadSigningKey` needs an `identityId` branch — or rather, the original
-   framing treated this as a gap to be fixed later. But ArcID must never
-   hold a private key capable of signing on behalf of an individual DID.
-   Identity-owned DIDs are now registered via `register-wallet-did.flow.ts`
-   (`POST /identity/wallet/did`), which stores only the public key submitted
-   by ArcWallet. `loadSigningKey`'s guard is permanent-by-design — ArcID
-   signs for tenant-issued DIDs only.~~
+### Completed (2026-07-23, updated 2026-08-12)
 
-3. **Status-list index allocation race.** ~~`allocateIndex`'s read
-   (`issuedCount`) and write (`increment`) are two separate statements —
-   concurrent issuance can hand out the same index twice. Make it a
-   compare-and-swap (`updateMany` guarded on the observed `issuedCount`,
-   retry on conflict), and run the allocation inside the same transaction
-   as the `VerifiableCredential.create` so a crash mid-issuance can't leave
-   an allocated-but-orphaned slot.~~
-   **✅ Done — compare-and-swap via updateMany with retry on conflict; tx parameter for transaction-scoped allocation.**
+| Step | What | Status |
+|------|------|--------|
+| 1 | **SDK layer** (`src/sdk/`) | **Done — migrated to `@arcevo/facet-sdk` (2026-08-05).** `src/sdk/` is now `index.ts` only: an `ArcIdClient` singleton with 401 auto-refresh (wired to the Zustand auth store) re-exporting the facet domain SDK classes (`AuthSdk`, `TenantSdk`, `VcSdk`, `OAuthSdk`, `PasskeySdk`, `IdpSdk`, …). Old factory-pattern `src/sdk/*.sdk.ts` files deleted. Full route coverage lives in the published package — see `docs/migration/facet-migration-guide.md` Phase 1. |
+| 2 | **Zustand stores** (`src/store/`) | **Done.** `auth.store.ts` uses the facet-sdk `User` type (memberships-aware). `auth.store.test.ts` added (5 tests, 2026-08-12). `tenant.store.ts` has `isLoading` state + `setLoading` action. `ui.store.ts` unchanged. |
+| 3 | **Hooks** (`src/hooks/`) | **Done.** Added `use-credentials.ts`, `use-mfa.ts`, `use-webhooks.ts`, `use-api-keys.ts`. `use-tenant.ts` enhanced with `hydrateTenants()` + `switchTenant()`. Existing 11 hooks all correct. |
+| 4 | **Providers** (`src/providers/`) | **Done.** 401 auto-refresh wired in `src/sdk/index.ts`. `AuthProvider` restores session from localStorage on mount AND hydrates tenant store via `GET /tenants`. |
+| 5 | **Layout** (`src/components/layout/`) | **Done.** AppLayout, ConsoleLayout, Sidebar, Topbar, PageHeader all correct. **TenantSwitcher in Topbar** — visible when user has 2+ tenants. |
+| 6 | **UI primitives** | **Done — migrated to `@arcevo/facet-components@1.3.0` (2026-08-12).** `src/components/ui/` deleted; icons use the package's native `<Icon name="…" />` registry. Dead `src/lib/ui/icon-registry.ts` + `navigation.ts` deleted. `@/lib/utils` re-exports facet's `cn`. |
+| 7 | **Pages** (`src/app/`) | **Partial.** All `as any` casts eliminated from admin + credentials pages. API keys page uses `apiKeysSdk`. Pages that import SDK directly (login, register, billing, dashboard) remain per existing pattern — pragmatically acceptable. |
 
-4. **Federated/social login account takeover via email match.** ~~Both
-   `social.route.ts`'s `handleCallback` and `idp.service.ts`'s
-   `federatedLogin` silently link a new federated identity to any existing
-   local account sharing the same email, with no check that the existing
-   account's email is actually verified. Gate the auto-link on
-   `existingIdentity.emailVerified === true`; otherwise fail with a clear
-   "verify your email first, then link this provider from settings" error.
-   Both call sites need the identical fix — patching one leaves the other
-   exploitable.~~
-   **✅ Done — both call sites gate auto-link on `emailVerified === true` or throw ApiError.conflict.**
-
-5. **Seed script's `ADMIN_PASSWORD` default.** ~~`prisma/seed.ts` falls back
-   to a hardcoded, now-public password if the env var isn't set. Make it
-   required (process.exit) when `NODE_ENV === "production"`, mirroring the
-   `superRefine` pattern `env.validator.ts` already uses elsewhere.~~
-   **✅ Done — production seed requires ADMIN_PASSWORD (exit-on-fail with defense-in-depth check against dev default).**
-
-6. **Misnamed migration folder.** ~~Rename
-   `20260617125316_add_identity_banned_audit_action` to something like
-   `20260617125316_add_username_set_audit_action` for future readability.
-   Do not edit the SQL inside it or touch already-applied migrations.~~
-   **✅ Done — folder renamed to `20260617125316_add_username_set_audit_action` (SQL untouched, already-applied migrations not modified).**
-
-7. **Multibase encoding bug in tenant DID provisioning.** ~~`did.route.ts`
-   wrote `publicKeyMultibase` as a bare base64 string with a "z" prefix
-   slapped on, which is not valid multibase ("z" specifically denotes
-   base58-btc per the multibase spec). This would cause any downstream
-   consumer (wallet, verifier) that reads the DID document correctly to
-   reject the key encoding.~~
-   **✅ Fixed — `src/lib/multibase.ts` implements spec-correct base58btc
-   encoding. `did.route.ts` now uses `multibaseEncode()`. The same utility
-   powers did:key construction in `register-wallet-did.flow.ts`.**
-
-None of this blocks anything else below — do it first because it's cheap,
-contained, and some of it (the email-linking bug) is a real security hole
-that matters more once ArcWallet/ArcVerify start exchanging real identity
-data.
+### Remaining gaps (low priority, not blocking)
+- Some pages import SDK modules directly instead of going through hooks (e.g. login, register, billing, dashboard). These work correctly but violate the strict chain rule.
+- `ConfirmActionDialog` / `StepUpDialog` still use `{...{} as any}` prop spreads — need prop alignment fix in those components.
 
 ---
 
-## Phase 1 — Close the OAuth/aal gap for first-party apps (1 week)
+## 🔴 Phase 3 — Security hardening
 
-This is the piece ArcWallet specifically needs and the prior session
-identified but didn't fully scope: `TokenService.issue()`'s
-`IssueTokensParams` interface has **no `aal` field at all** — assurance
-level is tracked correctly server-side on `Session.authLevel` (and enforced
-correctly by `auth-guard.plugin.ts` for step-up-gated routes), but it never
-makes it into the JWT. For ArcWallet to make sensible client-side decisions
-(e.g. "prompt for passkey before allowing a high-value credential request"),
-it needs to see assurance level in its own token.
+**ALL CLOSED — 2026-07-28**
 
-- Add `aal: "aal1" | "aal2"` to `IssueTokensParams`, thread it through both
-  call sites that currently hardcode `authLevel: "aal1"` at session
-  creation (`social.route.ts`, `idp.service.ts`) and the step-up path that
-  already writes `authLevel: "aal2"` to the session.
-- Add `aal` to both `accessTokenPromise` and `idClaims` in
-  `token.service.ts`. Add `preferred_username` to `idClaims` from
-  `identity.username` (the column exists, the migration landed, nothing
-  reads it yet).
-- Wire `setUsernameFlow` to an actual route — it's fully implemented
-  (TOCTOU-safe, audit-logged) but `auth.plugin.ts` never registers it.
-  Add it to the `/auth` route group or `profile.route.ts`, whichever fits
-  your existing settings page better.
-- Fix the refresh-token expiry/replay conflation: `token-refresh.flow.ts`
-  triggers the full reuse-detected kill-chain (revoke entire family,
-  invalidate session) for a token that simply expired naturally, not just
-  for genuine replay. Distinguish "not found" (real attack signal) from
-  "found but expired" (normal, expected) before deciding whether to nuke
-  the session family — a found-but-expired token should just return a
-  clean "token expired, please log in again" without revoking siblings
-  that may still be validly in use elsewhere.
+| Priority | Item | Current state | Status |
+|----------|------|---------------|--------|
+| P1 | Cross-tenant isolation (HTTP + unit) | `cross-tenant-http.test.ts` (3 HTTP tests) + `cross-tenant-isolation.test.ts` (3 flow-level tests). All 6 tests pass. | ✅ **Closed** |
+| P2 | Redis-backed distributed revocation | JTI blocklist (14 tests, 3 files): Redis two-tier + DB fallback + in-memory Map fallback. Introspect route: Redis + DB dual check. **Per-session access token revocation**: `AccessToken.sessionId` column + migration + `DELETE /sessions/:id` revokes bound access tokens + blocks JTIs in Redis. Full kill chain: session → refresh tokens → access tokens. | ✅ **Closed** |
+| P3 | SSRF allowlist (network-layer) | `assertSafeUrl()` (7 tests) — private-IP blocks (RFC1918, loopback, link-local, CGNAT, IPv6) + DNS rebinding + `fetchWithSsrfGuard`. 4 call-site gaps fixed. Zero unguarded outbound HTTP calls. | ✅ **Closed** |
+| P4 | CSRF review | Only cookie-mutating routes are OAuth state cookies — all `sameSite: "lax"`, `httpOnly`, `secure`, 600s TTL, cleared after use. CORS restricted to configured origins. | ✅ **Closed** |
+| P5 | Secrets/PII in logs scan | No automated scan. Needs manual review before production. | ⚠️ **Deferred** |
+
+### SSRF call-site gaps fixed (2026-07-27)
+
+All 4 call-site gaps fixed: `idp.route.ts` (OIDC discovery + token endpoint), `webhook-config.route.ts` (test-ping), `idp.service.ts` (SAML entryPoint). Zero remaining unguarded outbound HTTP calls.
 
 ---
 
-## Phase 2 — ArcWallet-facing API surface (2–3 weeks)
+## 🟢 Phase 4 — Observability (SHIPPED 2026-07-28)
 
-This replaces "OIDC4VCI/VP/BBS+" as a roadmap item with something
-achievable now, designed to not paint you into a corner later.
-
-- **Register ArcWallet as a real OAuth client.** Public client
-  (`public: true`), `requirePkce: true`, scoped to a `Project` row
-  (`category: "wallet"` or similar), redirect URIs pointed at the RN app's
-  custom URI scheme or universal link. This is already fully supported by
-  the schema and `authorize.flow.ts` — no backend work needed, just
-  configuration + seeding the client.
-- **Design (don't yet spec-comply with) a credential-offer shape.** Add a
-  thin endpoint — e.g. `POST /credentials/offers` — that a tenant's backend
-  calls to create a pending, short-lived "offer" row (subject DID or
-  pending-binding token, credential type, claims) that ArcWallet then polls
-  or deep-links into to accept and trigger the existing
-  `issueCredentialFlow`. This gives you the wallet-initiated UX
-  (user taps "Add to Wallet," wallet fetches the offer, wallet confirms)
-  without committing to the full OIDC4VCI grant types yet. Structure the
-  offer payload close enough to the real `credential_offer` shape (issuer,
-  credential_configuration_ids equivalent, grant hint) that migrating to
-  real OIDC4VCI later is a routing change, not a rewrite.
-- **Wallet binding for `Wallet` model.** ~~This table exists, is referenced
-  in billing webhook comments, and is otherwise completely unused. Build
-  the actual link: when ArcWallet first authenticates a user, create a
-  `Wallet` row tying `provider`/`providerWalletId` to the `Identity`, so
-  ArcVerify (or any other consumer) can later ask "does this identity have
-  a linked wallet, and which DID(s) does it control."~~
-  **✅ Done — `register-wallet-did.flow.ts` creates both the
-  `DecentralizedIdentifier` (identity-owned did:key) and the `Wallet` row
-  in the same transaction. `POST /identity/wallet/did` exposes it.**
-
-- **Presentation, not full OIDC4VP.** ArcVerify needs to ask ArcWallet
-  "show me credential X" and get a presentable, verifiable response. You
-  already have `verifyCredentialFlow`, which does real signature + status
-  - expiry checks. Add a presentation endpoint that wraps an existing VC
-    in a lightweight signed envelope (could be as simple as having ArcWallet
-    re-sign a nonce + credential reference with the user's own DID key, which
-    `verifyCredentialFlow` can already validate) rather than building full
-    Presentation Exchange / DIF PE matching now.
+| What | Why | Status |
+|------|-----|--------|
+| Request-correlation IDs through FlowContext + auditService + error responses | Zero tracing before. Can't trace a failed login across hops. | ✅ **Done** — `requestId` in every error response, stored in audit log metadata. `FlowContext.requestId` flows through all audit calls. |
+| P95/error-rate metrics on auth/token paths | These are the paths every other product depends on. No metrics at all. | ✅ **Done** — `@fastify-metrics` at `GET /metrics`. Auto-collects request duration histograms, error rates, request counts per route via Prometheus exposition format. |
+| `fastify-metrics` dependency | One-time install, zero config | ✅ **Added to package.json** — requires `pnpm install` |
 
 ---
 
-## Phase 3 — Security hardening that matters before any external users (2 weeks)
+## 🔵 Deferred — do not start early
 
-Most of ChatGPT's Priority 2/Phase M items are sound but undifferentiated.
-Ranked by what's actually missing versus already handled:
-
-- **Redis-backed distributed revocation** — real gap. `RevokedJti` exists
-  as a table but a JTI blocklist check against Postgres on every request
-  is the wrong access pattern at scale; this is genuinely worth doing
-  before opening up beyond first-party apps.
-- **CSRF on cookie-mutating routes** — check whether any session-cookie
-  state exists yet (most of this API looks bearer-token-based via
-  `Authorization` headers rather than cookies, which would make CSRF much
-  less relevant than ChatGPT assumed — verify which routes, if any, rely on
-  cookies before treating this as urgent).
-- **SSRF on webhook/DID config loaders** — real and worth doing:
-  `IdpConnection`'s `metadataUrl` and webhook `targetUrl` are both
-  user-supplied URLs the server fetches; without an allowlist/private-IP
-  block, this is a classic SSRF vector into your own infra.
-- Distributed locks (BullMQ/Redis) for token refresh and credential
-  issuance — lower priority than ChatGPT suggested, now that Phase 0 fixes
-  the actual race condition in `allocateIndex` directly via compare-and-swap.
-  A distributed lock is the heavier, more general version of the same fix;
-  worth doing eventually, not blocking v1.
+- BBS+ / selective-disclosure-beyond-SD-JWT — SD-JWT VC is correct; revisit only if a consumer needs it
+- `did:jwk` — `did:key` sufficient for wallet DIDs
+- Full OIDC4VCI/OIDC4VP — revisit after ArcWallet is live + external consumers exist
+- OPA/Cedar policy engine, SCIM, Terraform provider — all v2+
+- Identity-scoped signing key — permanently non-custodial by design
+- LegalConsent — schema-only until a concrete consumer (TOS acceptance flow)
+- CLI + SDK packages — after frontend rebuild stabilises API contract. CLI basis is designed: see `docs/planning/arcid-cli-design.md` (command surface, DB/auth detection, safe overwrite/revert, facet-cli core reuse).
+- Integration tests against real Postgres — **P3, after facet ships**. SDK tests (4) run via `fastify.inject()` with mock DB covering the singleton wiring. Existing 340 mock-DB tests give good regression coverage. Real Postgres integration tests via testcontainers or enhanced CI service container deferred until facet consumption stabilises the frontend contract. **Migration rollback guard now exists** (2026-08-12): `prisma/migrations/rollback.test.ts` — Tier 1 static chain checks always run; Tier 2 (live `prisma migrate diff` + `deploy`) is opt-in via `pnpm test:rollback` (`ARC_ID_ROLLBACK_TEST=1`) and wired into CI against the Postgres service with `SHADOW_DATABASE_URL`.
 
 ---
 
-## Phase 4 — Observability (1 week, don't skip)
+## Audit session (2026-07-28) — 6 critical bugs fixed
 
-The one part of the old roadmap that's genuinely still greenfield and
-genuinely needed: there is no tracing, no structured metrics, no
-correlation IDs anywhere in this snapshot. Before ArcWallet and ArcVerify
-both depend on ArcID in production, you need to be able to answer "why did
-this specific login fail" without grepping raw logs. Minimum viable for v1:
-request-correlation IDs threaded through `FlowContext` and into
-`auditService` calls (the audit log already has the right shape to carry
-this), plus basic P95/error-rate metrics on the auth and token-issuance
-paths specifically, since those are the ones every other product depends on.
+### Bugs found & fixed
+
+| # | Severity | Bug | Fix |
+|---|----------|-----|-----|
+| 1 | 🔴 **CRITICAL** | `identity.sdk.ts` corrupted with null bytes — all 4 SDK identity tests crashed | Rewritten from scratch |
+| 2 | 🔴 **CRITICAL** | `billing.schemas.ts` corrupted with null bytes — typecheck failed | Restored from git |
+| 3 | 🔴 **HIGH** | `auth.sdk.ts:logout()` sent empty body, backend requires `{ sessionId }` — every logout returned 400 | Added `sessionId` parameter |
+| 4 | 🔴 **HIGH** | `login.flow.ts` passkey check (`identity.passkeys?.length`) always `false` — `IdentityRepository.findForAuth()` never included `passkeys` in query | Added `passkeys: true` to repository include |
+| 5 | 🟡 **MEDIUM** | `tenant.sdk.ts:list()` calls `GET /tenants` — no backend route exists, always returns 404 | Removed method |
+| 6 | 🟡 **MEDIUM** | `email-verify.flow.test.ts` crashed at import — `auditService.log()` import chain reached real PrismaClient without `$extends` mock | Added `vi.mock` for auditService |
+
+### Suite status: 62 files / 340 tests / 0 failures. Typecheck clean.
+
+### Remaining gaps (low/moderate, no fix needed now)
+- **Login passkey edge case test** — existing test at login.flow.test.ts:223 mocks identity directly bypassing the repository. Now that the repository is fixed, the mock approach masks the fix's verification. New test needed that exercises the full `findForAuth` → `hasPasskey` path.
+- **21 missing audit assertions** — 21 out of 24 flows with audit side effects don't verify the call. Low risk (fire-and-forget `.catch(() => {})`), but weakens regression detection.
+- **SDK completeness** — **Superseded (2026-08-05):** route coverage moved out of the repo into the published `@arcevo/facet-sdk@1.0.1`. `src/sdk/` now only wires the client + singletons. All 123 backend endpoints are covered by the facet-sdk package (verified 2026-08-04 per `docs/migration/facet-migration-guide.md`).
 
 ---
 
-## What to explicitly defer past v1
+## Test coverage — gaps remaining
 
-- BBS+ / selective-disclosure-beyond-SD-JWT — SD-JWT VC is already
-  implemented correctly and is the more practically wallet-compatible
-  format right now; revisit BBS+ if a specific consumer needs it.
-- `did:jwk` — add if a consumer needs JWK-encoded DIDs specifically;
-  `did:key` is already implemented and sufficient for wallet-originated
-  identity-owned DIDs. See `src/lib/multibase.ts` and
-  `src/modules/identity/flows/register-wallet-did.flow.ts` for the
-  multicodec/multibase building blocks.
-- Full OIDC4VCI/OIDC4VP spec compliance — revisit once ArcWallet is live
-  and you have a concrete second wallet (or external consumer) that
-  actually needs standards compliance rather than your own offer-shaped API.
-  The presentation envelope design in `docs/planning/presentation-envelope-design.md`
-  defines the lightweight v1 approach. Build when needed.
-- `tenantId` on `TenantSigningKey` identity-scoped branching — permanently
-  abandoned per the non-custodial architecture decision. See
-  `signing.service.ts`'s `loadSigningKey` guard.
-- OPA/Cedar policy engine, SCIM, Terraform provider, CLI — all real v2+
-  platform features, none block ArcWallet/ArcVerify shipping.
+Every core flow now has a passing test file in `src/modules/*/flows/`. What's genuinely untested are the **services, routes, and webhook delivery path** — these are exercised indirectly by the flow tests but lack their own dedicated test file.
+
+| File (no test file found) | Graded risk | Notes |
+|---------------------------|-------------|-------|
+| `auth/services/mfa.service.ts` | **Medium** — otplib + QRCode wrapper; setup/verify/confirm logic tested via `mfa-setup.flow.test` + `mfa-verify.flow.test` (6+5=11 tests) | No standalone service test |
+| `auth/services/passkey.service.ts` | **Medium** — @simplewebauthn wrapper; register/auth flows tested via `passkey-register.flow.test` + `passkey-authenticate.flow.test` (5+6=11 tests) | No standalone service test |
+| `auth/services/password.service.ts` | **Low** — thin argon2 hash/verify wrapper, tested via `register.flow.test` + `login.flow.test` (6+11=17 tests) | No standalone service test |
+| `auth/services/step-up.service.ts` | **Low** — elevation logic tested via step-up in `mfa-verify.flow.test` and `switch-context.flow.test` | No standalone service test |
+| `credentials/services/signing.service.ts` | **Medium** — SD-JWT signing dispatcher, tested indirectly via `issue-credential.flow.test` (12 tests) | No standalone service test |
+| `credentials/services/did.service.ts` | **Low** — did:web construction/resolution, tested via `did.route.test` (3) + `provision-tenant-did.flow.test` (4) | No standalone service test |
+| `identity/routes/admin.route.ts` | **Medium** — identity status management, SYSTEM-ADMIN gated | No route test |
+| `identity/routes/profile.route.ts` | **Low** — profile read + delete, tested via `update-profile.flow.test` (4) + `delete-account.flow.test` (4) | No route test |
+| `identity/routes/delegation.route.ts` | **Low** — simple CRUD | No route test |
+| `tenant/services/membership.service.ts` | **Low** — membership CRUD, tested via `add-member.flow.test` (2) + `remove-member.flow.test` (5) | No standalone service test |
+| `tenant/services/onboarding.service.ts` | **Low** — tenant onboarding | No service test |
+| `tenant/services/project.service.ts` | **Low** — project CRUD, tested via `create-tenant.flow.test` (7) | No standalone service test |
+| `tenant/services/tenant.service.ts` | **Low** — tenant CRUD, tested via `create-tenant.flow.test` (7) | No standalone service test |
+| `webhooks/routes/webhook.route.ts` | **Low** — inbound webhook ingestion endpoint | No route test; `webhook-config.route.test` covers config only |
+
+**Bottom line:** 14 files uncovered, all low-to-medium risk. No uncovered gap is a prime regression vector — every core flow is protected. The only medium-risk files are `mfa.service`, `passkey.service`, `signing.service`, and `admin.route`, which would benefit from dedicated test files if those modules get refactored.
+
+---
+
+## ✅ Docker deployment — done (workflows rewritten for VPS 2026-07-28)
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Multi-stage build: deps (pnpm install + Prisma generate) → builder (tsup) → runner (`node:22-alpine`, 150MB). Entrypoint auto-runs `prisma migrate deploy`. |
+| `docker-compose.yml` | 4 services: `postgres` (17-alpine), `redis` (7-alpine), `api` (Fastify, port 4000), `workers` (webhook delivery + token cleanup). Health checks on DB + Redis. |
+| `.dockerignore` | Excludes frontend code, docs, git, agent artifacts. ~2MB build context. |
+| `docker-entrypoint.sh` | Runs `prisma migrate deploy` (idempotent) on every container start, then exec's CMD. |
+| `.env.example` | All 40+ env vars documented by category with sensible defaults. |
+| `.github/workflows/ci.yml` | Self-hosted Postgres 17 service container, no external DB dependency. |
+| `.github/workflows/deploy-api.yml` | GHCR push → SSH pull + `docker compose up -d` on target VM. |
+| `.github/workflows/deploy-web.yml` | SSH git pull → `pnpm build:web` → PM2 restart on target VM. |
+
+### Deployment architecture (recommended: Oracle ARM VM)
+
+```
+Oracle Ampere A1 VM (2 OCPU, 12 GB RAM)
+├── Docker Compose
+│   ├── PostgreSQL 17 (container)
+│   ├── Redis 7 (container)
+│   ├── arc-id-api (ghcr.io image)
+│   └── arc-id-workers (same image, different CMD)
+├── PM2 (arcid-web — standalone Next.js)
+└── Caddy/Traefik (reverse proxy, Let's Encrypt TLS)
+```
+
+---
+
+## Version note
+
+`package.json` is `0.1.0`. Milestones:
+
+- `0.1.0` (current) — Backend complete: presentation endpoint, all Phase 0–4, 62 files / 340 tests
+- `0.2.0` — Frontend consumed from facet, ArcWallet integration working end-to-end
+- `1.0.0` — Stable production with real-Postgres integration tests, secret scanning, migration rollback testing
+
+---
+
+_Keep this file current. Any session that closes an item or discovers a new
+one updates this roadmap and CLAUDE.md in the same commit._
+updates this roadmap and CLAUDE.md in the same commit._

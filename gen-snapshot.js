@@ -18,8 +18,10 @@ const IGNORED_ITEMS = new Set([
   "gen-structure.js",
   "pnpm-lock.yaml",
   "tsconfig.tsbuildinfo",
-  // "migrations",
+  "migrations",
   "public",
+  "output.txt",
+  "*.txt",
 
   // ── SECURITY: Never include in snapshots ──────────────────────────────────
   // These files contain secrets, private keys, and credentials.
@@ -35,6 +37,7 @@ const IGNORED_ITEMS = new Set([
   "*.pem", // any PEM files at root level
   "secrets", // common secrets directory name
   ".secrets",
+  ".agent",
 ]);
 
 const EXTENSION_BLACKLIST = new Set([
@@ -136,3 +139,9 @@ fs.writeFileSync(
 console.log(
   "✨ Success! Structure and all contents written to arcid_codebase_snapshot.txt",
 );
+
+// ── Report only — gen-output.js no longer overwrites .agent/output.txt
+// (that file is the manual session tracker; see its header).
+import("./gen-output.js")
+  .then(() => console.log("ℹ️  gen-output.js ran in report-only mode (tracker untouched)"))
+  .catch(() => console.log("⚠️  gen-output.js skipped (report not printed)"));

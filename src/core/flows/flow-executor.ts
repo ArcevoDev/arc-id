@@ -16,10 +16,13 @@ async function withTx<T>(
   fn: (tx: any) => Promise<T>,
   options?: { timeout?: number; maxWait?: number },
 ): Promise<T> {
+  // Default 60s for long-lived orchestration steps on loaded/dev machines;
+  // allow env override (FLOW_TX_TIMEOUT_MS) for fine control.
+  const timeout = options?.timeout ?? Number(process.env.FLOW_TX_TIMEOUT_MS ?? 60_000);
+  const maxWait = options?.maxWait ?? 10_000;
   return (prisma as any).$transaction(fn, {
-    // Increased standard timeout threshold safely to 25 seconds for long-lived orchestration steps
-    timeout: options?.timeout ?? 25_000,
-    maxWait: options?.maxWait ?? 10_000,
+    timeout,
+    maxWait,
   }) as Promise<T>;
 }
 

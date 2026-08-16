@@ -19,6 +19,26 @@ export const createTenantFlow: Flow<z.infer<typeof CreateTenantSchema>> = {
     });
     if (slugTaken) throw ApiError.conflict("This slug is already taken");
 
+    // Plan-based tenant cap enforcement
+    const plan = ctx.plan ?? "FREE";
+    const tenantCaps: Record<string, number> = {
+      FREE: 1,
+      PRO: 5,
+      ENTERPRISE: Infinity,
+    };
+    const cap = tenantCaps[plan] ?? 1;
+    const currentTenantCount = await ctx.db.tenantMembership.count({
+      where: { identityId: ctx.identityId },
+    });
+    if (currentTenantCount >= cap) {
+      const label = cap === 1 ? "tenant" : "tenants";
+      throw new ApiError(
+        `Your ${plan} plan allows up to ${cap} ${label}. Upgrade your plan to create more.`,
+        400,
+        "TENANT_CAP_REACHED",
+      );
+    }
+
     const tenant = await ((ctx.db as any).$transaction(async (tx: any) => {
       const newTenant = await tx.tenant.create({
         data: {

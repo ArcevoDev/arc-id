@@ -15,6 +15,7 @@ import { createHmac, randomUUID } from "crypto";
 import { logger } from "@/lib/logger";
 import { config } from "@/core/config";
 import { fetchWithSsrfGuard } from "@/lib/url-safety";
+import { auditService } from "@/modules/audit/services/audit.service";
 
 // ── Config ─────────────────────────────────────────────────────────────────────
 const BATCH = 20;
@@ -185,6 +186,15 @@ async function deliverBatch(): Promise<number> {
             ? null
             : new Date(Date.now() + withJitter(backoff)),
         });
+
+        if (isFinal) {
+          await auditService.log({
+            action: "WEBHOOK_DELIVERY_FAILED",
+            identityId: event.identityId ?? undefined,
+            tenantId: event.tenantId ?? undefined,
+            metadata: { eventId: event.id, error: err.message, targetUrl: event.targetUrl },
+          }).catch(() => {});
+        }
 
         logger.warn(
           {

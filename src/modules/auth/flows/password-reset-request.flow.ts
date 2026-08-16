@@ -4,6 +4,7 @@ import type { Flow, FlowContext } from "@/core/flows";
 import { PasswordResetRequestSchema } from "../validators/auth.schemas";
 import { EmailTokenService } from "../services/email-token.service";
 import { notificationService } from "@/lib/notifications/notification.service";
+import { auditService } from "@/modules/audit/services/audit.service";
 
 export const passwordResetRequestFlow: Flow<
   z.infer<typeof PasswordResetRequestSchema>,
@@ -22,6 +23,14 @@ export const passwordResetRequestFlow: Flow<
 
     const emailTokenService = new EmailTokenService(ctx.db);
     const token = await emailTokenService.issue(identity.id, "RESET_PASSWORD");
+
+    void auditService
+      .log({
+        action: "PASSWORD_RESET_REQUESTED",
+        identityId: identity.id,
+        ip: ctx.ip,
+      })
+      .catch(() => {});
 
     void notificationService.sendPasswordReset(identity.primaryEmail, token, {
       name: identity.name ?? undefined,

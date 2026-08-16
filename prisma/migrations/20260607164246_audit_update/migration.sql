@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "AuditLogAction" ADD VALUE 'SESSION_ELEVATED';

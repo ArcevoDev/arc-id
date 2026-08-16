@@ -1,0 +1,87 @@
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    container_name: arcid-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: arcevodev
+      POSTGRES_PASSWORD: "@7c3v0d3v"
+      POSTGRES_DB: arcid
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arcevodev -d arcid"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  # ArcID gracefully falls back to in-memory if Redis is unavailable,
+  # so this service is non-critical for basic operation. Recommended for
+  # production: JTI blocklist + challenge store performance.
+  redis:
+    image: redis:7-alpine
+    container_name: arcid-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    mem_limit: 128m
+
+  # ── Fastify HTTP API ────────────────────────────────────────────────────────
+  api:
+    image: ${API_IMAGE:-arcid-api}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: arcid-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # Override DATABASE_URL to point at the compose-managed Postgres.
+      # Uses the Docker network hostname (service name = container DNS name).
+      DATABASE_URL: postgresql://arcevodev:%407c3v0d3v@postgres:5432/arcid?schema=public
+    mem_limit: 512m
+
+  # ── Background Workers ──────────────────────────────────────────────────────
+  workers:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: arcid-workers
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://arcevodev:%407c3v0d3v@postgres:5432/arcid?schema=public
+    command: ["node", "dist/start-workers.js"]
+    mem_limit: 256m
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local

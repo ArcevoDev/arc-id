@@ -1,46 +1,42 @@
-// src/app/(auth)/login/page.tsx
 "use client";
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { AuthCard, LoginForm } from "@/components/arc";
-import { ArcMetadata } from "@/lib/ui/metadata";
-import type { LoginResult } from "@/store/auth.store";
-export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
 
-  const handleResult = (result: LoginResult) => {
-    if (!result.success) {
-      setError(result.error ?? "Invalid email or password.");
-      return;
-    }
-    setError(null);
-    if (result.requiresMfa) {
-      router.push("/mfa");
-      return;
-    }
-    router.replace("/dashboard");
-  };
+import Link from "next/link";
+import { SignIn } from "@arcevo/facet-auth";
+import { usePostAuthRedirect } from "@/hooks/use-post-auth-redirect";
+import { socialAuthUrl } from "@/hooks/use-auth";
+import { useAuthStore } from "@/store/auth.store";
+
+export default function LoginPage() {
+  const redirect = usePostAuthRedirect();
 
   return (
-    <AuthCard
-      title="Sign in"
-      description={ArcMetadata.tagline}
-      error={error}
-      footer={
-        <>
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="text-primary hover:underline font-medium"
-          >
-            Create one
-          </Link>
-        </>
-      }
-    >
-      <LoginForm onResult={handleResult} />
-    </AuthCard>
+    <div className="space-y-4">
+      <div className="text-center">
+        <h1 className="text-xl font-bold text-foreground">Welcome back</h1>
+        <p className="text-sm text-muted-foreground mt-1">Sign in to ArcID</p>
+      </div>
+
+      <SignIn
+        validate
+        onOAuth={(provider) => {
+          // provider is "google" | "github" etc. - redirect to the backend
+          // OAuth URL. The callback returns to this page on error.
+          if (provider === "google" || provider === "github") {
+            window.location.href = socialAuthUrl(provider);
+          }
+        }}
+        onSuccess={() => {
+          // ArcProvider onAuthChange already synced the store - route by
+          // the resolved user's memberships.
+          redirect(useAuthStore.getState().user);
+        }}
+      />
+
+      <p className="text-center text-sm">
+        <Link href="/register" className="text-primary hover:underline">
+          Create an account
+        </Link>
+      </p>
+    </div>
   );
 }

@@ -231,7 +231,7 @@ export async function passkeyRoute(fastify: FastifyInstance) {
 
       void auditService
         .log({
-          action: "PASSKEY_REGISTERED", // nearest existing action; PASSKEY_REMOVED in future migration
+          action: "PASSKEY_REMOVED",
           identityId: req.identity.id,
           ip: req.ip,
           metadata: { deleted: true, credentialId: passkey.credentialId },

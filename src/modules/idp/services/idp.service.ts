@@ -58,6 +58,8 @@ export function buildSamlInstance(
   const callbackUrl = `${config.base.apiUrl}/api/v1/idp/saml/${tenantSlug}/callback`;
   const entityId = `${config.base.apiUrl}/api/v1/idp/saml/${tenantSlug}/metadata`;
 
+  assertSafeUrl(connection.entryPoint);
+
   return new SAML({
     entryPoint: connection.entryPoint,
     issuer: connection.issuer ?? entityId,

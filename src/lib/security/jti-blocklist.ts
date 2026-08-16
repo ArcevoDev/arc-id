@@ -27,21 +27,24 @@
 //      If Redis is unavailable, fall through to the DB check.
 //
 // FALLBACK BEHAVIOUR:
-//   If Redis is not configured or unavailable, all functions no-op and
-//   the system falls back to the existing DB-based RevokedJti check.
-//   This keeps the auth system running during Redis outages.
+//   If Redis is not configured or unavailable, an in-memory Map takes over.
+//   This is safe within a single Node.js process (event loop is
+//   single-threaded). NOT safe across multiple processes — use Redis in
+//   production. The DB RevokedJti check in auth-guard remains authoritative.
 
 import { config } from "@/core/config";
 import { logger } from "@/lib/logger";
 
+// ── In-memory fallback ────────────────────────────────────────────────────────
+// Keyed by the full Redis key string. Value is the expiry timestamp (ms).
+const memStore = new Map<string, number>();
+
 // ── Redis init (lazy, same pattern as challenge-store.ts) ─────────────────────
 
 let _redis: import("@upstash/redis").Redis | null = null;
-let _initFailed = false;
 
 async function getRedis(): Promise<import("@upstash/redis").Redis | null> {
   if (!config.redis.enabled) return null;
-  if (_initFailed) return null;
   if (_redis) return _redis;
 
   try {
@@ -49,10 +52,9 @@ async function getRedis(): Promise<import("@upstash/redis").Redis | null> {
     _redis = new Redis({ url: config.redis.url!, token: config.redis.token! });
     return _redis;
   } catch (err) {
-    _initFailed = true;
     logger.error(
       { err },
-      "[JTI_BLOCKLIST] Redis init failed — falling back to DB-only revocation checks",
+      "[JTI_BLOCKLIST] Redis init failed — falling back to in-memory store",
     );
     return null;
   }
@@ -62,10 +64,16 @@ async function getRedis(): Promise<import("@upstash/redis").Redis | null> {
 
 const jtiKey = (jti: string): string => `arcid:revoked_jti:${jti}`;
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function now(): number {
+  return Date.now();
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Add a JTI to the Redis blocklist.
+ * Add a JTI to the blocklist.
  *
  * @param jti         The JWT ID claim value.
  * @param ttlSeconds  How long to keep the block. Should equal the remaining
@@ -73,56 +81,85 @@ const jtiKey = (jti: string): string => `arcid:revoked_jti:${jti}`;
  *                    to use the default access token TTL (900s = 15min).
  */
 export async function blockJti(jti: string, ttlSeconds = 900): Promise<void> {
-  const r = await getRedis();
-  if (!r) return; // No Redis — DB-only path handles revocation
+  const ttl = Math.max(ttlSeconds, 1);
+  const key = jtiKey(jti);
 
-  try {
-    // SET key "1" EX ttl — minimal value, we only care about key existence
-    await r.set(jtiKey(jti), "1", { ex: Math.max(ttlSeconds, 1) });
-  } catch (err) {
-    // Non-fatal — DB RevokedJti is the authoritative store
-    logger.warn(
-      { err, jti },
-      "[JTI_BLOCKLIST] Failed to write to Redis — DB check remains active",
-    );
+  const r = await getRedis();
+
+  if (r) {
+    try {
+      await r.set(key, "1", { ex: ttl });
+      return;
+    } catch (err) {
+      logger.warn(
+        { err, jti },
+        "[JTI_BLOCKLIST] Failed to write to Redis — falling back to in-memory",
+      );
+    }
   }
+
+  // In-memory fallback
+  memStore.set(key, now() + ttl * 1000);
+  logger.warn(
+    { jti },
+    "[JTI_BLOCKLIST] Using in-memory store — not safe for multi-process deployments",
+  );
 }
 
 /**
- * Check if a JTI is in the Redis blocklist.
+ * Check if a JTI is in the blocklist.
  *
  * Returns:
- *   true  — JTI is definitively blocked (Redis confirmed)
- *   false — JTI is not in Redis (may still be in DB — caller should check)
- *   false — Redis unavailable (caller must fall back to DB check)
+ *   true  — JTI is definitively blocked (Redis or in-memory confirmed)
+ *   false — JTI is not blocked (caller should check DB as authoritative fallback)
  */
 export async function isJtiBlocked(jti: string): Promise<boolean> {
+  const key = jtiKey(jti);
   const r = await getRedis();
-  if (!r) return false; // No Redis — fall through to DB
 
-  try {
-    const val = await r.get(jtiKey(jti));
-    return val !== null;
-  } catch (err) {
-    logger.warn(
-      { err, jti },
-      "[JTI_BLOCKLIST] Redis GET failed — falling through to DB check",
-    );
-    return false; // Conservative: don't block on Redis failure
+  if (r) {
+    try {
+      const val = await r.get(key);
+      return val !== null;
+    } catch (err) {
+      logger.warn(
+        { err, jti },
+        "[JTI_BLOCKLIST] Redis GET failed — falling through to in-memory check",
+      );
+    }
   }
+
+  // In-memory fallback
+  const expiresAt = memStore.get(key);
+  if (expiresAt === undefined) return false;
+  if (expiresAt < now()) {
+    memStore.delete(key);
+    return false;
+  }
+  return true;
 }
 
 /**
- * Remove a JTI from the Redis blocklist.
+ * Remove a JTI from the blocklist.
  * Typically not needed (TTL handles expiry) but useful for testing.
  */
 export async function unblockJti(jti: string): Promise<void> {
+  const key = jtiKey(jti);
   const r = await getRedis();
-  if (!r) return;
 
-  try {
-    await r.del(jtiKey(jti));
-  } catch {
-    // Non-fatal
+  if (r) {
+    try {
+      await r.del(key);
+      return;
+    } catch {
+      // Non-fatal
+    }
   }
+
+  memStore.delete(key);
+}
+
+/** Flush all in-memory entries. Useful in tests. */
+export function clearMemStore(): void {
+  memStore.clear();
 }

@@ -60,6 +60,7 @@ export const logoutFlow: Flow<
           action: "SESSION_REVOKED",
           identityId: ctx.identityId,
           ip: ctx.ip,
+          requestId: ctx.requestId,
           metadata: {
             reason: "session_not_found_on_logout",
             sessionId: input.sessionId,

@@ -1,145 +1,108 @@
-// src/app/(dashboard)/oauth/tokens/page.tsx
 "use client";
-import { useState } from "react";
-import { useOAuthTokens } from "@/hooks/use-oauth-tokens";
-import { PageHeader } from "@/components/layout/page-header";
-import { DataTable, Column } from "@/components/shared/data-table";
-import { ConfirmActionDialog } from "@/components/arc";
-import { Icons } from "@/lib/ui/icon-registry";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
-import type { ActiveToken } from "@/hooks/use-oauth-tokens";
 
-export default function TokensPage() {
-  const { tokens, loading, refresh, revoke } = useOAuthTokens();
-  const [revokeId, setRevokeId] = useState<string | null>(null);
+import { useCallback, useEffect, useState } from "react";
+import { PageHeader } from "@arcevo/facet-layout";
+import { useOAuth } from "@/hooks/use-oauth";
+import { Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@arcevo/facet-components";
 
-  const columns: Column<ActiveToken>[] = [
-    {
-      key: "client",
-      header: "Application",
-      render: (t) => (
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-muted border border-border flex items-center justify-center shrink-0">
-            <Icons.key className="w-3.5 h-3.5 text-muted-foreground" />
-          </div>
-          <span className="text-sm text-foreground">{t.clientName}</span>
-        </div>
-      ),
-    },
-    {
-      key: "scopes",
-      header: "Scopes",
-      render: (t) => (
-        <div className="flex flex-wrap gap-1">
-          {(t.scopes ?? []).map((s) => (
-            <code
-              key={s}
-              className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground"
-            >
-              {s}
-            </code>
-          ))}
-        </div>
-      ),
-    },
-    {
-      key: "issued",
-      header: "Issued",
-      width: "140px",
-      render: (t) => (
-        <span className="text-xs text-muted-foreground">
-          {t.issuedAt
-            ? formatDistanceToNow(new Date(t.issuedAt), { addSuffix: true })
-            : "—"}
-        </span>
-      ),
-    },
-    {
-      key: "expires",
-      header: "Expires",
-      width: "140px",
-      render: (t) => (
-        <span className="text-xs text-muted-foreground">
-          {t.expiresAt
-            ? formatDistanceToNow(new Date(t.expiresAt), { addSuffix: true })
-            : "—"}
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      width: "100px",
-      render: (t) => (
-        <Badge
-          variant="outline"
-          className={`text-[11px] ${t.revoked ? "text-red-400 border-red-500/20" : "text-emerald-400 border-emerald-500/20"}`}
-        >
-          {t.revoked ? "Revoked" : "Active"}
-        </Badge>
-      ),
-    },
-    {
-      key: "actions",
-      header: "",
-      width: "80px",
-      render: (t) =>
-        !t.revoked ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setRevokeId(t.id)}
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2 text-xs"
-          >
-            Revoke
-          </Button>
-        ) : null,
-    },
-  ];
+interface ActiveToken {
+  id: string;
+  clientName: string;
+  scopes: string[];
+  issuedAt: string;
+  expiresAt: string;
+  revoked: boolean;
+}
+
+export default function OAuthTokensPage() {
+  const { listTokens, revokeToken } = useOAuth();
+  const [tokens, setTokens] = useState<ActiveToken[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const result = await listTokens();
+    if (result.data) setTokens(result.data as unknown as ActiveToken[]);
+    else setError(result.error?.message ?? "Failed to load OAuth tokens");
+  }, [listTokens]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleRevoke = async (tokenId: string) => {
+    const result = await revokeToken(tokenId);
+    if (!result.error) {
+      setTokens((prev) => prev?.filter((t) => t.id !== tokenId) ?? null);
+      setError(null);
+    } else {
+      setError(result.error?.message ?? "Failed to revoke token");
+    }
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Active Tokens"
-        description="Access tokens currently issued to OAuth applications."
-        action={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refresh}
-            disabled={loading}
-          >
-            <Icons.refresh
-              className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`}
-            />
+        title="OAuth Tokens"
+        description="Active access tokens"
+        actions={
+          <Button variant="secondary" size="sm" onClick={load}>
             Refresh
           </Button>
         }
       />
-
-      <DataTable
-        columns={columns}
-        data={tokens}
-        isLoading={loading}
-        rowKey={(t) => t.id}
-        emptyTitle="No active tokens"
-        emptyDesc="Access tokens issued via the OAuth 2.0 authorization flow appear here."
-      />
-
-      <ConfirmActionDialog
-        open={!!revokeId}
-        onOpenChange={(v) => !v && setRevokeId(null)}
-        title="Revoke token?"
-        description="The application using this token will be signed out immediately."
-        confirmLabel="Revoke"
-        destructive
-        onConfirm={async () => {
-          await revoke(revokeId!);
-          setRevokeId(null);
-        }}
-      />
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Application</TableHead>
+            <TableHead>Scopes</TableHead>
+            <TableHead>Expires</TableHead>
+            <TableHead className="w-24"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tokens === null ? (
+            <TableRow>
+              <TableCell className="text-muted-foreground" colSpan={4}>
+                Loading tokens…
+              </TableCell>
+            </TableRow>
+          ) : tokens.length === 0 ? (
+            <TableRow>
+              <TableCell className="text-muted-foreground" colSpan={4}>
+                No OAuth tokens yet.
+              </TableCell>
+            </TableRow>
+          ) : (
+            tokens.map((t) => {
+              const expired = new Date(t.expiresAt) < new Date();
+              return (
+                <TableRow key={t.id}>
+                  <TableCell className="font-medium">{t.clientName}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {t.scopes.length ? t.scopes.join(", ") : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={expired ? "destructive" : "default"}>
+                      {new Date(t.expiresAt).toLocaleDateString()}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => handleRevoke(t.id)}
+                    >
+                      Revoke
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }

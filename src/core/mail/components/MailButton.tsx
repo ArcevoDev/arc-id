@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Button } from "@react-email/components";
-import { tokens as t } from "./tokens";
+import { EmailButton } from "@arcevo/facet-emails";
 
 interface MailButtonProps {
   href: string;
@@ -13,23 +12,9 @@ export const MailButton = ({
   children,
   variant = "primary",
 }: MailButtonProps) => (
-  <Button
-    href={href}
-    style={{
-      backgroundColor: variant === "danger" ? t.color.danger : t.color.primary,
-      borderRadius: t.radius.md,
-      color: t.color.textInverse,
-      display: "block",
-      fontSize: t.font.sizeMd,
-      fontWeight: "600",
-      padding: "13px 24px",
-      textAlign: "center",
-      textDecoration: "none",
-      width: "100%",
-      boxSizing: "border-box",
-      marginBottom: t.space.lg,
-    }}
-  >
+  <EmailButton href={href} variant={variant === "danger" ? "danger" : "primary"}>
     {children}
-  </Button>
+  </EmailButton>
 );
+
+export default MailButton;

@@ -1,4 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@prisma-client", () => ({
+  AuditLogAction: {},
+  VcFormat: { JWT: "JWT", LDP: "LDP" },
+  UserStatus: { ACTIVE: "ACTIVE", PENDING: "PENDING" },
+  MfaType: {},
+  Prisma: { DbNull: null, JsonNull: null, AnyNull: null },
+  PrismaClient: vi.fn(),
+}));
+
 import { queryAuditLogsFlow } from "./query-audit-logs.flow";
 import { createMockFlowCtx } from "@/test-utils/mock-db";
 
@@ -33,60 +43,60 @@ describe("queryAuditLogsFlow", () => {
       }),
     );
   });
+});
 
-  it("lets a SYSTEM ADMIN requester filter by any identityId/tenantId from the query", async () => {
-    const ctx = createMockFlowCtx();
-    ctx.db.tenantMembership.findFirst.mockResolvedValue({
-      role: { name: "ADMIN" },
-    });
-    ctx.db.auditLog.findMany.mockResolvedValue([]);
-    ctx.db.auditLog.count.mockResolvedValue(0);
-
-    await queryAuditLogsFlow.execute(
-      {
-        query: {
-          ...baseQuery,
-          identityId: "target-id",
-          tenantId: "target-tenant",
-        },
-        requesterIdentityId: "admin-id",
-        requesterTenantId: "SYSTEM",
-      },
-      ctx,
-    );
-
-    expect(ctx.db.auditLog.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { identityId: "target-id", tenantId: "target-tenant" },
-      }),
-    );
+it("lets a SYSTEM ADMIN requester filter by any identityId/tenantId from the query", async () => {
+  const ctx = createMockFlowCtx();
+  ctx.db.tenantMembership.findFirst.mockResolvedValue({
+    role: { name: "ADMIN", permissions: [{ permissionId: "ap_1" }] },
   });
+  ctx.db.auditLog.findMany.mockResolvedValue([]);
+  ctx.db.auditLog.count.mockResolvedValue(0);
 
-  it("does NOT grant admin scope for a non-ADMIN SYSTEM-tenant membership (e.g. MEMBER role)", async () => {
-    const ctx = createMockFlowCtx();
-    ctx.db.tenantMembership.findFirst.mockResolvedValue({
-      role: { name: "MEMBER" },
-    });
-    ctx.db.auditLog.findMany.mockResolvedValue([]);
-    ctx.db.auditLog.count.mockResolvedValue(0);
-
-    await queryAuditLogsFlow.execute(
-      {
-        query: {
-          ...baseQuery,
-          identityId: "someone-else",
-          tenantId: "someone-elses-tenant",
-        },
-        requesterIdentityId: "me",
-        requesterTenantId: "my-tenant",
+  await queryAuditLogsFlow.execute(
+    {
+      query: {
+        ...baseQuery,
+        identityId: "target-id",
+        tenantId: "target-tenant",
       },
-      ctx,
-    );
+      requesterIdentityId: "admin-id",
+      requesterTenantId: "SYSTEM",
+    },
+    ctx,
+  );
 
-    expect(ctx.db.auditLog.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { identityId: "me", tenantId: "my-tenant" },
-      }),
-    );
+  expect(ctx.db.auditLog.findMany).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: { identityId: "target-id", tenantId: "target-tenant" },
+    }),
+  );
+});
+
+it("does NOT grant admin scope for a non-ADMIN SYSTEM-tenant membership (e.g. MEMBER role)", async () => {
+  const ctx = createMockFlowCtx();
+  ctx.db.tenantMembership.findFirst.mockResolvedValue({
+    role: { name: "MEMBER", permissions: [] },
   });
+  ctx.db.auditLog.findMany.mockResolvedValue([]);
+  ctx.db.auditLog.count.mockResolvedValue(0);
+
+  await queryAuditLogsFlow.execute(
+    {
+      query: {
+        ...baseQuery,
+        identityId: "someone-else",
+        tenantId: "someone-elses-tenant",
+      },
+      requesterIdentityId: "me",
+      requesterTenantId: "my-tenant",
+    },
+    ctx,
+  );
+
+  expect(ctx.db.auditLog.findMany).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: { identityId: "me", tenantId: "my-tenant" },
+    }),
+  );
 });

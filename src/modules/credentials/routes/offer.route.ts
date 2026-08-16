@@ -1,12 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { flowExecutor } from "@/core/flows";
-import { createOfferFlow, createAcceptFlow } from "../flows/offer-credential.flow";
+import {
+  createOfferFlow,
+  createAcceptFlow,
+} from "../flows/offer-credential.flow";
 import { IssueCredentialSchema } from "../validators/credential.schemas";
 import { z } from "zod";
 
 const AcceptOfferParams = z.object({
-  token: z.string()
+  token: z.string(),
 });
 
 export async function offerRoute(fastify: FastifyInstance) {
@@ -52,7 +55,10 @@ export async function offerRoute(fastify: FastifyInstance) {
   withZod.post(
     "/offers/:token/accept",
     {
-      preHandler: [fastify.auth.requireUser],
+      preHandler: [
+        fastify.auth.requireUser,
+        fastify.auth.requirePermission("credential:issue"),
+      ],
       schema: {
         tags: ["Verifiable Credentials Engine"],
         summary: "Accept a credential offer (authenticated user)",
@@ -74,11 +80,15 @@ export async function offerRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const { token } = req.params as { token: string };
-      const result = await flowExecutor.run(createAcceptFlow, { token }, {
-        identityId: req.identity.id,
-        tenantId: req.identity.tenantId,
-        ip: req.ip,
-      });
+      const result = await flowExecutor.run(
+        createAcceptFlow,
+        { token },
+        {
+          identityId: req.identity.id,
+          tenantId: req.identity.tenantId,
+          ip: req.ip,
+        },
+      );
       return reply.status(201).send({ success: true, data: result });
     },
   );

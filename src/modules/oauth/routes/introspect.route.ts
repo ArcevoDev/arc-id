@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { IntrospectSchema } from "../validators/oauth.schemas";
 import { z } from "zod";
+import { isJtiBlocked } from "@/lib/security/jti-blocklist";
 
 export async function introspectRoute(fastify: FastifyInstance) {
   fastify.post(
@@ -43,6 +44,10 @@ export async function introspectRoute(fastify: FastifyInstance) {
         if (!active) return reply.send({ active: false });
 
         if (accessToken.jti) {
+          // Check Redis first (fast O(1)), then DB (authoritative fallback)
+          const blockedInRedis = await isJtiBlocked(accessToken.jti);
+          if (blockedInRedis) return reply.send({ active: false });
+
           const revoked = await fastify.db.revokedJti.findUnique({
             where: { jti: accessToken.jti },
           });

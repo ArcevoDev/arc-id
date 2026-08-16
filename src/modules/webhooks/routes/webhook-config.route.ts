@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { randomBytes, createHmac } from "crypto";
 import { ApiError } from "@/core/errors";
-import { assertSafeUrl } from "@/lib/url-safety";
+import { assertSafeUrl, fetchWithSsrfGuard } from "@/lib/url-safety";
 import { auditService } from "@/modules/audit/services/audit.service";
 import {
   EndpointBodySchema,
@@ -292,8 +292,7 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
         .digest("hex");
 
       try {
-        assertSafeUrl(endpoint.url);
-        const res = await fetch(endpoint.url, {
+        const res = await fetchWithSsrfGuard(endpoint.url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

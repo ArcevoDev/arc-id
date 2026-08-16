@@ -203,6 +203,7 @@ export class TokenService {
           jti: accessJti,
           clientId: client.id,
           identityId,
+          sessionId,
           scopes,
           audience,
           issuedAt: now,

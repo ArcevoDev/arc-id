@@ -11,6 +11,7 @@ export class IdentityRepository {
       include: {
         localAccount: true,
         mfas: { where: { enabled: true } },
+        passkeys: true,
         memberships: {
           where: { status: "ACTIVE" },
           include: { role: true, tenant: true },

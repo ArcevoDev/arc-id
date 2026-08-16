@@ -8,6 +8,7 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { listTenantsRoute } from "./routes/list-tenants.route";
 import { tenantRoute } from "./routes/tenant.route";
 import { membershipRoute } from "./routes/membership.route";
 import { policyRoute } from "./routes/policy.route";
@@ -50,6 +51,7 @@ export const tenantPlugin = fp(
       async (tenantScope) => {
         const withZod = tenantScope.withTypeProvider<ZodTypeProvider>();
 
+        await withZod.register(listTenantsRoute);
         await withZod.register(tenantRoute);
         await withZod.register(membershipRoute);
         await withZod.register(policyRoute);

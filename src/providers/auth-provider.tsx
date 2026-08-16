@@ -1,49 +1,68 @@
-// src/providers/auth-provider.tsx
-// Hydrates auth store on mount and handles route protection.
-// Components read from useAuthStore — never from this provider directly.
 "use client";
-import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+
+import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { useTenantStore } from "@/store/tenant.store";
+import { tenants, arcIdClient } from "@/sdk";
 
-const PUBLIC = [
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/mfa",
-];
-const isPublic = (p: string) => PUBLIC.some((pub) => p.startsWith(pub));
-
+/**
+ * AuthProvider — reads stored tokens on mount and restores session.
+ * After session restoration, hydrates the tenant store with the user's
+ * organisations.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { hydrate, isAuthenticated, isLoading } = useAuthStore();
-  const { fetchTenants } = useTenantStore();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { setLoading } = useAuthStore();
+  const hydrated = useRef(false);
 
   useEffect(() => {
-    hydrate();
-  }, []);
+    let cancelled = false;
 
-  useEffect(() => {
-    if (isLoading) return;
-    if (!isAuthenticated && !isPublic(pathname)) {
-      router.replace("/login");
-    }
-    if (isAuthenticated) {
-      fetchTenants().catch(() => {});
-    }
-  }, [isAuthenticated, isLoading, pathname]);
+    async function init() {
+      // Attempt to restore session from storage
+      try {
+        const stored = localStorage.getItem("arcid-auth");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.accessToken && parsed.user) {
+            useAuthStore.getState().setAuth(
+              parsed.user,
+              parsed.accessToken,
+              parsed.refreshToken ?? "",
+            );
+            // Keep the facet client's bearer token in sync with the store.
+            arcIdClient.setAccessToken(parsed.accessToken);
+          }
+        }
+      } catch {
+        // No stored session — user is unauthenticated
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+      // Hydrate tenant store with user's organisations. hydrated.current is
+      // only set after a successful list — a transient network failure must
+      // not permanently disable tenant hydration for the whole session.
+      if (!cancelled && useAuthStore.getState().isAuthenticated && !hydrated.current) {
+        const result = await tenants.list();
+        if (!cancelled) {
+          if (result.data && result.data.length > 0) {
+            useTenantStore.getState().setTenants(result.data);
+            const stored = localStorage.getItem("arcid-active-tenant");
+            const saved = stored ? JSON.parse(stored) : null;
+            const target = saved
+              ? result.data.find((t: any) => t.id === saved.id)
+              : result.data[0];
+            if (target) useTenantStore.getState().setActiveTenant(target);
+          }
+          hydrated.current = true;
+        }
+      }
+    }
+
+    init();
+
+    return () => { cancelled = true; };
+  }, [setLoading]);
 
   return <>{children}</>;
 }

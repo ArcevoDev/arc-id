@@ -32,7 +32,7 @@ export const PasswordResetMail = ({
     <MailSecurityNotice variant="warning">
       ⚠️ This link expires in <strong>1 hour</strong>.
       {ip ? ` Request originated from IP: ${ip}.` : ""} If you didn't request a
-      password reset, you can ignore this email — your password has not been
+      password reset, you can ignore this email - your password has not been
       changed.
     </MailSecurityNotice>
 

@@ -112,10 +112,7 @@ describe("SessionService", () => {
       it("evicts oldest sessions when at/over cap and creates the new one", async () => {
         const id = "identity-evict";
         db.session.count.mockResolvedValue(10); // at cap
-        db.session.findMany.mockResolvedValue([
-          { id: "oldest-1" },
-          { id: "oldest-2" },
-        ]);
+        db.session.findMany.mockResolvedValue([{ id: "oldest-1" }]);
 
         const s = fakeSession({ identityId: id });
         db.session.create.mockResolvedValue(s);

@@ -5,11 +5,20 @@ import { z } from "zod";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { ApiError } from "@/core/errors";
 import type { AuditLogAction } from "@prisma-client";
+import { blockJti } from "@/lib/security/jti-blocklist";
 
 async function revokeAllSessions(
   fastify: FastifyInstance,
   identityId: string,
 ): Promise<void> {
+  // Collect live access tokens before revoking — the auth guard checks
+  // revokedJti table + Redis, not accessToken.revoked. Without this,
+  // suspended/banned users' tokens remain valid until expiry.
+  const liveTokens = await fastify.db.accessToken.findMany({
+    where: { identityId, revoked: false, jti: { not: null } },
+    select: { jti: true, expiresAt: true },
+  });
+
   await fastify.db.$transaction([
     fastify.db.refreshToken.updateMany({
       where: { identityId, revoked: false },
@@ -19,7 +28,23 @@ async function revokeAllSessions(
       where: { identityId, valid: true },
       data: { valid: false },
     }),
+    fastify.db.accessToken.updateMany({
+      where: { identityId, revoked: false },
+      data: { revoked: true },
+    }),
+    ...liveTokens.map((t) =>
+      fastify.db.revokedJti.create({
+        data: { jti: t.jti!, expiresAt: t.expiresAt },
+      }),
+    ),
   ]);
+
+  // Redis blocklist — non-blocking
+  for (const t of liveTokens) {
+    const remainingTtlMs = t.expiresAt.getTime() - Date.now();
+    const remainingTtlSec = Math.max(Math.ceil(remainingTtlMs / 1000), 1);
+    void blockJti(t.jti!, remainingTtlSec).catch(() => {});
+  }
 }
 
 /**
@@ -137,6 +162,14 @@ export async function adminRoute(fastify: FastifyInstance) {
 
       await revokeAllSessions(fastify, id);
 
+      await auditService.log({
+        action: "SESSION_REVOKED_ALL",
+        identityId: id,
+        ip: req.ip ?? "0.0.0.0",
+        requestId: req.id,
+        metadata: { reason: "account_suspended" },
+      });
+
       if (identity.primaryEmail) {
         const { notificationService } =
           await import("@/lib/notifications/notification.service");
@@ -151,6 +184,7 @@ export async function adminRoute(fastify: FastifyInstance) {
         action: "IDENTITY_SUSPENDED",
         identityId: id,
         ip: req.ip ?? "0.0.0.0",
+        requestId: req.id,
         metadata: { reason },
       });
       return reply.send({ success: true });
@@ -189,6 +223,14 @@ export async function adminRoute(fastify: FastifyInstance) {
 
       if (status === "SUSPENDED" || status === "BANNED") {
         await revokeAllSessions(fastify, id);
+
+        await auditService.log({
+          action: "SESSION_REVOKED_ALL",
+          identityId: id,
+          ip: req.ip ?? "0.0.0.0",
+          requestId: req.id,
+          metadata: { reason: `account_${status.toLowerCase()}` },
+        });
       }
 
       if (status === "SUSPENDED" && identity.primaryEmail) {
@@ -210,6 +252,7 @@ export async function adminRoute(fastify: FastifyInstance) {
           action: auditAction,
           identityId: id,
           ip: req.ip ?? "0.0.0.0",
+          requestId: req.id,
           metadata: { status, reason },
         });
       }

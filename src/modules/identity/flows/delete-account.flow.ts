@@ -3,6 +3,7 @@ import type { Flow, FlowContext } from "@/core/flows";
 import { ApiError } from "@/core/errors/api-error";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { notificationService } from "@/lib/notifications/notification.service";
+import { blockJti } from "@/lib/security/jti-blocklist";
 
 export const deleteAccountFlow: Flow<
   Record<string, never>,
@@ -17,6 +18,14 @@ export const deleteAccountFlow: Flow<
     const identity = await ctx.db.identity.findUniqueOrThrow({
       where: { id: ctx.identityId },
       select: { primaryEmail: true, name: true },
+    });
+
+    // Collect live access tokens before revoking — we need their JTIs
+    // to blocklist them in Redis and the revokedJti table. The auth guard
+    // checks both, not accessToken.revoked, so this is not optional.
+    const liveTokens = await ctx.db.accessToken.findMany({
+      where: { identityId: ctx.identityId, revoked: false, jti: { not: null } },
+      select: { jti: true, expiresAt: true },
     });
 
     await ctx.db.$transaction([
@@ -36,7 +45,19 @@ export const deleteAccountFlow: Flow<
         where: { identityId: ctx.identityId, revoked: false },
         data: { revoked: true },
       }),
+      ...liveTokens.map((t) =>
+        ctx.db.revokedJti.create({
+          data: { jti: t.jti!, expiresAt: t.expiresAt },
+        }),
+      ),
     ]);
+
+    // Redis blocklist — non-blocking, runs outside the tx
+    for (const t of liveTokens) {
+      const remainingTtlMs = t.expiresAt.getTime() - Date.now();
+      const remainingTtlSec = Math.max(Math.ceil(remainingTtlMs / 1000), 1);
+      void blockJti(t.jti!, remainingTtlSec).catch(() => {});
+    }
 
     await auditService.log({
       action: "IDENTITY_DELETED",

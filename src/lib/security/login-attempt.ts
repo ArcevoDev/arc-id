@@ -36,11 +36,9 @@ import { logger } from "@/lib/logger";
 // ── Redis (lazy, same pattern as jti-blocklist.ts) ────────────────────────────
 
 let _redis: import("@upstash/redis").Redis | null = null;
-let _initFailed = false;
 
 async function getRedis(): Promise<import("@upstash/redis").Redis | null> {
   if (!config.redis.enabled) return null;
-  if (_initFailed) return null;
   if (_redis) return _redis;
 
   try {
@@ -48,7 +46,6 @@ async function getRedis(): Promise<import("@upstash/redis").Redis | null> {
     _redis = new Redis({ url: config.redis.url!, token: config.redis.token! });
     return _redis;
   } catch (err) {
-    _initFailed = true;
     logger.warn(
       { err },
       "[LOGIN_ATTEMPT] Redis unavailable — per-email lockout disabled, per-IP rate limit remains active",
