@@ -12,7 +12,7 @@ if (!databaseUrl) {
 }
 
 // Shadow database for `prisma migrate diff --from-migrations` (used by the
-// migration rollback test). Optional — Prisma 7's env() throws when a
+// migration rollback test). Optional - Prisma 7's env() throws when a
 // variable is unset, so read it defensively and only fall back to the
 // process env / sibling-DB derivation when it is genuinely absent.
 let shadowEnv: string | undefined;

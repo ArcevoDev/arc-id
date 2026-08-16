@@ -6,12 +6,12 @@
  * the configured KMS backend (or LOCAL_KMS_KEY), and writes the
  * ciphertext + kmsProvider back.  Rows where kmsProvider is already
  * set (or where the ciphertext doesn't look like a plaintext PEM) are
- * skipped — see canDetectPlaintext() for the heuristic.
+ * skipped - see canDetectPlaintext() for the heuristic.
  *
  * Idempotent: running twice on an already-encrypted key will not
  * double-encrypt or corrupt it.  If the heuristic can't distinguish a
  * key's state from the bytes alone, it errs on the side of treating
- * the row as plaintext (safe — encrypting an already-encrypted blob
+ * the row as plaintext (safe - encrypting an already-encrypted blob
  * produces deterministic garbage that decrypt fails on later).
  *
  * Usage:
@@ -37,11 +37,11 @@ import { logger } from "../src/lib/logger";
  * decoded to string, we treat it as plaintext.
  *
  * If the heuristic can't tell (returns true = "looks plaintext"), the script
- * tries to encrypt — worst case the row was already ciphertext, the encrypt
+ * tries to encrypt - worst case the row was already ciphertext, the encrypt
  * produces wrong output, and then decrypting later produces garbage, which
  * is no worse than the current "decrypt garbage" state.  The idempotency
  * guard in main() reads the row back after write and verifies the
- * kmsProvider is set — if it was already ciphertext, encrypting the
+ * kmsProvider is set - if it was already ciphertext, encrypting the
  * ciphertext again is still idempotent in that the kmsProvider stays set.
  */
 function canDetectPlaintext(bytes: Buffer): boolean {
@@ -84,7 +84,7 @@ async function main() {
     if (!canDetectPlaintext(buf)) {
       logger.warn(
         { id: row.id },
-        "[encrypt-existing-keys] Skipping — bytes don't look like plaintext PEM",
+        "[encrypt-existing-keys] Skipping - bytes don't look like plaintext PEM",
       );
       continue;
     }

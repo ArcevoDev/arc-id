@@ -1,7 +1,7 @@
 # ── Stage 1: Install ALL dependencies ─────────────────────────────────────────
 # We install everything here (deps + devDeps) because:
 #   a) tsup marks every dependency as "external", so the build output is just
-#      compiled JS — node_modules must exist at runtime.
+#      compiled JS - node_modules must exist at runtime.
 #   b) Prisma CLI (devDep) is needed for `prisma generate` and `prisma migrate deploy`.
 FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat

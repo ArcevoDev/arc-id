@@ -4,7 +4,7 @@
 // HSTS is now explicit rather than relying on helmet defaults.
 //
 // CSP DESIGN:
-//   API server — serves JSON, not HTML. Only Swagger UI (/docs) needs relaxed
+//   API server - serves JSON, not HTML. Only Swagger UI (/docs) needs relaxed
 //   script/style-src. All other routes serve JSON only.
 //   Swagger UI requires 'unsafe-inline' for its bundle loader and inline styles.
 //

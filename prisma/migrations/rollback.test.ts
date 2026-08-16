@@ -4,7 +4,7 @@
 //
 // Two tiers:
 //   Tier 1 (always runs, no DB): static integrity checks on the committed
-//     migration chain — every migration dir has a non-empty migration.sql,
+//     migration chain - every migration dir has a non-empty migration.sql,
 //     names are ordered, and none are empty no-ops (a rollback hazard).
 //   Tier 2 (needs a live Postgres + opt-in): when ARC_ID_ROLLBACK_TEST=1 AND
 //     DATABASE_URL is set AND reachable, runs `prisma migrate diff
@@ -60,7 +60,7 @@ describe("migration chain integrity (no DB required)", () => {
       const sql = fs.readFileSync(sqlPath, "utf8").trim();
       expect(
         sql.length,
-        `${dir}/migration.sql is empty — an empty migration is a rollback hazard (delete it and regenerate)`,
+        `${dir}/migration.sql is empty - an empty migration is a rollback hazard (delete it and regenerate)`,
       ).toBeGreaterThan(0);
     }
   });
@@ -85,14 +85,14 @@ describe("migration chain integrity (no DB required)", () => {
       let m: RegExpExecArray | null;
       while ((m = re.exec(sql))) drops.set(m[1], drops.get(m[1]) ?? 0 + 1);
     }
-    // No assertion needed beyond executing — this is a guard that flags
+    // No assertion needed beyond executing - this is a guard that flags
     // surprising DROPs if the chain is ever rewritten. Drops of extension
     // artifacts are allowed; the check documents intent.
     expect(true).toBe(true);
   });
 });
 
-// ── Tier 2 — live Postgres ───────────────────────────────────────────────────
+// ── Tier 2 - live Postgres ───────────────────────────────────────────────────
 
 const dbUrl = process.env.DATABASE_URL;
 

@@ -668,7 +668,7 @@ model AccessToken {
 model RefreshToken {
   id         String    @id @default(cuid())
   token      String    @unique
-  jti        String    @unique // JWT ID claim — the thing you track
+  jti        String    @unique // JWT ID claim - the thing you track
   familyId   String // all tokens in one login share this
   parentJti  String? // null for root token
   used       Boolean   @default(false) // flip to true the moment it's consumed
@@ -754,8 +754,8 @@ model Session {
   expiresAt      DateTime
   valid          Boolean  @default(true)
 
-  // Auth assurance level — set on session creation and updated on MFA/passkey completion.
-  // NULL on existing sessions — treated as "aal1" by auth guards.
+  // Auth assurance level - set on session creation and updated on MFA/passkey completion.
+  // NULL on existing sessions - treated as "aal1" by auth guards.
   // Values: "aal1" | "aal2" | "elevated"
   authLevel  String?
   // Timestamp of last step-up re-authentication (Phase B: step-up auth guard uses this).

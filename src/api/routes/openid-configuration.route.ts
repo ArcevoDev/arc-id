@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolvePemContent } from "@/api/plugins/jwt.plugin";
 
 /**
- * RFC 8414 — OAuth 2.0 Authorization Server Metadata
+ * RFC 8414 - OAuth 2.0 Authorization Server Metadata
  * Consumed by OIDC relying parties to discover endpoints.
  *
  * id_token_signing_alg_values_supported is determined at runtime by the
@@ -13,7 +13,7 @@ import { resolvePemContent } from "@/api/plugins/jwt.plugin";
  * so this document always reflects the actual active algorithm.
  *
  * FIX: Previous version listed ["HS256", "ES256"] unconditionally.
- *   - ES256 is never used anywhere in the codebase — removed.
+ *   - ES256 is never used anywhere in the codebase - removed.
  *   - Algorithm is now resolved once at startup using the same
  *     resolvePemContent() path that jwt.plugin.ts and token.service.ts use,
  *     so the advertised value always matches what the server actually signs with.
@@ -21,7 +21,7 @@ import { resolvePemContent } from "@/api/plugins/jwt.plugin";
  *             ["HS256"] when only JWT_SECRET is configured.
  */
 export async function openIdConfigurationRoute(fastify: FastifyInstance) {
-  // Resolve once at server startup — algorithm never changes at runtime.
+  // Resolve once at server startup - algorithm never changes at runtime.
   const privateKeyPem = resolvePemContent(config.security.jwt.privateKey);
   const publicKeyPem = resolvePemContent(config.security.jwt.publicKey);
   const activeAlgorithms =

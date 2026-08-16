@@ -3,7 +3,7 @@
 // CHANGE: The exported `prisma` singleton is now wrapped with
 // withTenantIsolation(). Every route and flow that uses ctx.db (which is
 // this singleton, or a $transaction derived from it) automatically gets the
-// tenant write guard — no per-route changes needed.
+// tenant write guard - no per-route changes needed.
 //
 // The raw PrismaClient (before the extension) is NOT exported. If you
 // genuinely need to bypass isolation (seeding, migrations, sys-admin scripts

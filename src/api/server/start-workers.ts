@@ -15,7 +15,7 @@ const PROCESS_ID = randomUUID().slice(0, 8);
 const TOKEN_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 // ── Token cleanup scheduler (replaces the node-cron TODO comment) ─────────────
-// Uses plain setInterval — no extra dependency, perfectly sufficient.
+// Uses plain setInterval - no extra dependency, perfectly sufficient.
 function scheduleTokenCleanup(): NodeJS.Timeout {
   // Run once immediately on boot, then on interval.
   void runTokenCleanup().catch((err) =>
@@ -43,7 +43,7 @@ async function startWorkers() {
   const shutdown = async (signal: string) => {
     logger.info(
       { signal, processId: PROCESS_ID },
-      "[WORKERS] Shutdown signal — stopping workers",
+      "[WORKERS] Shutdown signal - stopping workers",
     );
 
     stopWebhookWorker();

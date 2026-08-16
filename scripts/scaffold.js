@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * arc-id/scaffold-mail.js
- * Complete React Email system — run from inside arc-id:
+ * Complete React Email system - run from inside arc-id:
  *   node scaffold-mail.js
  *
  * Writes:
@@ -61,7 +61,7 @@ function section(t) {
 //   pnpm add @react-email/components@1.0.12
 // ════════════════════════════════════════════════════════════════════════════
 
-section("Core — mail engine");
+section("Core - mail engine");
 write(
   "src/core/mail/mail.engine.ts",
   `
@@ -92,15 +92,15 @@ export async function compileMailText(
 // ════════════════════════════════════════════════════════════════════════════
 // SHARED DESIGN TOKENS
 // Single source of truth for colours, spacing, and typography.
-// Import into every component — never hard-code values.
+// Import into every component - never hard-code values.
 // ════════════════════════════════════════════════════════════════════════════
-section("Components — design tokens");
+section("Components - design tokens");
 write(
   "src/core/mail/components/tokens.ts",
   `
 /**
  * ArcID mail design tokens.
- * Shared across all components — change here, changes everywhere.
+ * Shared across all components - change here, changes everywhere.
  */
 export const tokens = {
   color: {
@@ -150,9 +150,9 @@ export const tokens = {
 );
 
 // ════════════════════════════════════════════════════════════════════════════
-// MAIL LAYOUT — base wrapper used by every template
+// MAIL LAYOUT - base wrapper used by every template
 // ════════════════════════════════════════════════════════════════════════════
-section("Components — MailLayout");
+section("Components - MailLayout");
 write(
   "src/core/mail/components/MailLayout.tsx",
   `
@@ -167,7 +167,7 @@ interface MailLayoutProps {
   previewText:  string;
   heading:      string;
   children:     React.ReactNode;
-  /** Optional footer note — defaults to standard ArcID footer */
+  /** Optional footer note - defaults to standard ArcID footer */
   footerNote?:  string;
 }
 
@@ -309,7 +309,7 @@ const footerMeta: React.CSSProperties = {
 // ════════════════════════════════════════════════════════════════════════════
 // REUSABLE COMPONENTS
 // ════════════════════════════════════════════════════════════════════════════
-section("Components — reusable primitives");
+section("Components - reusable primitives");
 
 write(
   "src/core/mail/components/MailButton.tsx",
@@ -463,7 +463,7 @@ import { Section, Text, Row, Column } from "@react-email/components";
 import { tokens as t } from "./tokens";
 
 interface MailCodeBlockProps {
-  /** Array of code strings — displayed in a grid (2 columns for recovery codes) */
+  /** Array of code strings - displayed in a grid (2 columns for recovery codes) */
   codes:    string[];
   label?:   string;
   columns?: 1 | 2;
@@ -632,7 +632,7 @@ export const MagicLinkMail = ({ loginUrl, name, ip }: MagicLinkMailProps) => (
     </MailSecurityNotice>
 
     <MailText variant="small">
-      If you didn't request this sign-in link, your account is still secure —
+      If you didn't request this sign-in link, your account is still secure -
       simply ignore this email.
     </MailText>
 
@@ -677,7 +677,7 @@ export const PasswordResetMail = ({ resetUrl, name, ip }: PasswordResetMailProps
     <MailSecurityNotice variant="warning">
       ⚠️ This link expires in <strong>1 hour</strong>.
       {ip ? \` Request originated from IP: \${ip}.\` : ""}
-      {" "}If you didn't request a password reset, you can ignore this email —
+      {" "}If you didn't request a password reset, you can ignore this email -
       your password has not been changed.
     </MailSecurityNotice>
 
@@ -749,12 +749,12 @@ export interface WelcomeMailProps {
 
 export const WelcomeMail = ({ name, dashboardUrl }: WelcomeMailProps) => (
   <MailLayout
-    previewText="Welcome to ArcID — your identity is now active"
+    previewText="Welcome to ArcID - your identity is now active"
     heading={\`Welcome\${name ? \`, \${name}\` : ""}!\`}
   >
     <MailText>
       Your ArcID account is now verified and active. ArcID is your sovereign
-      identity layer — secure authentication, multi-tenant access control,
+      identity layer - secure authentication, multi-tenant access control,
       and verifiable credentials, all in one place.
     </MailText>
 
@@ -785,7 +785,7 @@ import { tokens as t } from "../components/tokens";
 export interface MfaCodeMailProps {
   code:   string;
   name?:  string;
-  /** Seconds until expiry — default 600 (10 min) */
+  /** Seconds until expiry - default 600 (10 min) */
   ttlSec?: number;
 }
 
@@ -854,7 +854,7 @@ export interface RecoveryCodesIssuedMailProps {
 
 export const RecoveryCodesIssuedMail = ({ codes, name }: RecoveryCodesIssuedMailProps) => (
   <MailLayout
-    previewText="Your ArcID MFA recovery codes — save these now"
+    previewText="Your ArcID MFA recovery codes - save these now"
     heading="Save Your Recovery Codes"
   >
     <MailText>
@@ -1242,9 +1242,9 @@ export default AccountDeletionMail;
 );
 
 // ════════════════════════════════════════════════════════════════════════════
-// TEMPLATE REGISTRY — maps preview slugs to React elements with sample data
+// TEMPLATE REGISTRY - maps preview slugs to React elements with sample data
 // ════════════════════════════════════════════════════════════════════════════
-section("Preview — template registry + route");
+section("Preview - template registry + route");
 write(
   "src/core/mail/preview/template-registry.ts",
   `
@@ -1322,7 +1322,7 @@ export const TEMPLATE_REGISTRY: Record<string, React.ReactElement> = {
   }),
   "account-suspended": React.createElement(AccountSuspendedMail, {
     name:   "Alex",
-    reason: "Violation of terms of service — section 4.2",
+    reason: "Violation of terms of service - section 4.2",
   }),
   "tenant-invite": React.createElement(TenantInviteMail, {
     inviteeEmail: "alex@example.com",
@@ -1449,9 +1449,9 @@ export async function mailPreviewRoute(fastify: FastifyInstance) {
 );
 
 // ════════════════════════════════════════════════════════════════════════════
-// NOTIFICATION SERVICE — fully async, uses all templates
+// NOTIFICATION SERVICE - fully async, uses all templates
 // ════════════════════════════════════════════════════════════════════════════
-section("Notification service — complete");
+section("Notification service - complete");
 write(
   "src/lib/notifications/notification.service.ts",
   `
@@ -1488,7 +1488,7 @@ async function sendEmail(to: string, subject: string, element: React.ReactElemen
     logger.info("[MAIL] Sent", { to, subject });
   } catch (err) {
     logger.error("[MAIL] Failed to send", { err, to, subject });
-    // Do not throw — mail failures must never crash auth flows
+    // Do not throw - mail failures must never crash auth flows
   }
 }
 
@@ -1496,7 +1496,7 @@ async function sendEmail(to: string, subject: string, element: React.ReactElemen
 
 async function sendSms(phone: string, content: string): Promise<void> {
   if (!config.sms.apiKey) {
-    logger.warn("[SMS] BREVO_API_KEY not configured — SMS skipped", { phone });
+    logger.warn("[SMS] BREVO_API_KEY not configured - SMS skipped", { phone });
     return;
   }
   try {
@@ -1527,24 +1527,24 @@ export const notificationService = {
 
   async sendEmailVerification(to: string, token: string, name?: string) {
     const url = \`\${config.base.apiUrl}/auth/email/verify?token=\${token}\`;
-    await sendEmail(to, "Verify your email — ArcID",
+    await sendEmail(to, "Verify your email - ArcID",
       React.createElement(VerifyEmailMail, { verifyUrl: url, name }));
   },
 
   async sendMagicLink(to: string, token: string, opts?: { name?: string; ip?: string }) {
     const url = \`\${config.base.apiUrl}/auth/magic-link?token=\${token}\`;
-    await sendEmail(to, "Your sign-in link — ArcID",
+    await sendEmail(to, "Your sign-in link - ArcID",
       React.createElement(MagicLinkMail, { loginUrl: url, name: opts?.name, ip: opts?.ip }));
   },
 
   async sendPasswordReset(to: string, token: string, opts?: { name?: string; ip?: string }) {
     const url = \`\${config.base.apiUrl}/auth/password/reset/confirm?token=\${token}\`;
-    await sendEmail(to, "Reset your password — ArcID",
+    await sendEmail(to, "Reset your password - ArcID",
       React.createElement(PasswordResetMail, { resetUrl: url, name: opts?.name, ip: opts?.ip }));
   },
 
   async sendPasswordChanged(to: string, opts?: { name?: string; ip?: string }) {
-    await sendEmail(to, "Your password was changed — ArcID",
+    await sendEmail(to, "Your password was changed - ArcID",
       React.createElement(PasswordChangedMail, {
         name:      opts?.name,
         ip:        opts?.ip,
@@ -1561,12 +1561,12 @@ export const notificationService = {
   // ── MFA / Security emails ────────────────────────────────────────────────────
 
   async sendMfaCode(to: string, code: string, opts?: { name?: string; ttlSec?: number }) {
-    await sendEmail(to, \`\${code} — Your ArcID verification code\`,
+    await sendEmail(to, \`\${code} - Your ArcID verification code\`,
       React.createElement(MfaCodeMail, { code, name: opts?.name, ttlSec: opts?.ttlSec }));
   },
 
   async sendRecoveryCodes(to: string, codes: string[], name?: string) {
-    await sendEmail(to, "Your ArcID recovery codes — save these now",
+    await sendEmail(to, "Your ArcID recovery codes - save these now",
       React.createElement(RecoveryCodesIssuedMail, { codes, name }));
   },
 
@@ -1668,7 +1668,7 @@ export const notificationService = {
 // ════════════════════════════════════════════════════════════════════════════
 // Register preview route in server (dev only, already handled by route guard)
 // ════════════════════════════════════════════════════════════════════════════
-section("Server — register preview route");
+section("Server - register preview route");
 write(
   "src/api/routes/mail-preview.route.ts",
   `
@@ -1682,7 +1682,7 @@ console.log(`
 ║  Mail system scaffold complete                                   ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║                                                                  ║
-║  PACKAGE QUESTION — @react-email/components ^1.0.12              ║
+║  PACKAGE QUESTION - @react-email/components ^1.0.12              ║
 ║  Safe to use. v1.x is the current stable series.                 ║
 ║  The "deprecated" warning was a transient npm notice during      ║
 ║  the v0 → v1 migration. If it warns again, pin it:               ║
@@ -1694,7 +1694,7 @@ console.log(`
 ║    open http://localhost:4000/mail/preview                       ║
 ║                                                                  ║
 ║  OR use React Email's own dev server (recommended for rapid      ║
-║  iteration — no need to start Fastify):                          ║
+║  iteration - no need to start Fastify):                          ║
 ║    pnpm add -D react-email                                       ║
 ║    Add to package.json scripts:                                  ║
 ║    "mail:preview": "email dev --dir src/core/mail/templates"     ║

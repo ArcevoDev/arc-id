@@ -43,7 +43,7 @@ export const envSchema = z
     WEBAUTHN_RP_NAME: z.string().default("ArcID"),
     WEBAUTHN_ORIGIN: z.string().url().default("http://localhost:3000"),
 
-    // Upstash Redis Token Cache Layer (optional — falls back to in-memory)
+    // Upstash Redis Token Cache Layer (optional - falls back to in-memory)
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
@@ -51,7 +51,7 @@ export const envSchema = z
     RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
     EMAIL_FROM: z.string().default("ArcID <noreply@arcevocirqle.com.ng>"),
 
-    // SMS Gateway — SKIPPED for now (Brevo costs too much at MVP stage)
+    // SMS Gateway - SKIPPED for now (Brevo costs too much at MVP stage)
     BREVO_API_KEY: z.string().optional(),
     SMS_SENDER: z.string().default("ArcID"),
 

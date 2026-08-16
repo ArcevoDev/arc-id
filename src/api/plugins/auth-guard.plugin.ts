@@ -2,7 +2,7 @@
 //
 // CHANGE: jti revocation check now uses a two-tier lookup:
 //   1. Redis blocklist (O(1), sub-millisecond) via isJtiBlocked()
-//   2. DB RevokedJti table (indexed point-lookup) — only if Redis miss
+//   2. DB RevokedJti table (indexed point-lookup) - only if Redis miss
 //
 // If Redis is not configured or unavailable, the check falls through to
 // the DB exactly as before. No behaviour change when Redis is absent.
@@ -70,9 +70,9 @@ export const authGuardPlugin = fp(
           throw ApiError.unauthorized("Malformed token payload signature");
         }
 
-        // ── JTI revocation check — two-tier ──────────────────────────────────
-        // Tier 1: Redis blocklist — O(1), no DB hit when Redis is available.
-        // Tier 2: DB RevokedJti — authoritative fallback.
+        // ── JTI revocation check - two-tier ──────────────────────────────────
+        // Tier 1: Redis blocklist - O(1), no DB hit when Redis is available.
+        // Tier 2: DB RevokedJti - authoritative fallback.
         // A miss on both means the token is not revoked.
         if (payload.jti) {
           const blockedInRedis = await isJtiBlocked(payload.jti);
@@ -81,7 +81,7 @@ export const authGuardPlugin = fp(
             throw ApiError.unauthorized("Token has been revoked");
           }
 
-          // Redis miss (or Redis unavailable) — check DB
+          // Redis miss (or Redis unavailable) - check DB
           const revokedInDb = await fastify.db.revokedJti.findUnique({
             where: { jti: payload.jti },
             select: { jti: true },

@@ -48,7 +48,7 @@ export const jwtPlugin = fp(
         sign: { algorithm: "RS256" },
         verify: {
           algorithms: ["RS256"],
-          // audience check is NOT enforced here — handled per-route if needed
+          // audience check is NOT enforced here - handled per-route if needed
         },
       });
     } else {

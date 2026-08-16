@@ -1,17 +1,17 @@
 // prisma/seed.ts
 //
-// Uses a raw PrismaClient — NOT the isolated client from @/core/db.
+// Uses a raw PrismaClient - NOT the isolated client from @/core/db.
 // Seed scripts run outside the HTTP server and legitimately cross tenant
 // boundaries (creating the SYSTEM tenant itself, global roles, etc.).
 // The tenant-isolation extension is designed for HTTP request paths only.
 //
 // CHANGE FROM PREVIOUS VERSION:
-//   Step 8 (new) — seeds a real EC P-256 TenantSigningKey for the SYSTEM
+//   Step 8 (new) - seeds a real EC P-256 TenantSigningKey for the SYSTEM
 //   tenant and wires it into the DID document's verificationMethod array.
 //
 //   Previously the DID was seeded with publicKeyBytes: Buffer.from([]) and
 //   verificationMethod: []. The signing.service.ts does a findFirst by tenantId
-//   to resolve the private key for VC signing — if no key exists, every call
+//   to resolve the private key for VC signing - if no key exists, every call
 //   to POST /credentials/issue would throw "No active signing key found".
 //
 //   The fix: generate a real EC P-256 keypair at seed time, store it in
@@ -53,7 +53,7 @@ if (process.env.NODE_ENV === "production" && !process.env.ADMIN_PASSWORD) {
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "ArcID@Dev2025!";
 
 if (process.env.NODE_ENV === "production") {
-  // Defense in depth — even if ADMIN_PASSWORD is set, reject the known
+  // Defense in depth - even if ADMIN_PASSWORD is set, reject the known
   // dev default so a copy-pasted .env.example value can't slip through.
   if (ADMIN_PASSWORD === "ArcID@Dev2025!") {
     console.error(
@@ -129,7 +129,7 @@ async function main() {
     },
     {
       name: "MEMBER",
-      description: "Standard member access — default for new registrations",
+      description: "Standard member access - default for new registrations",
     },
     {
       name: "GUEST",
@@ -372,7 +372,7 @@ async function main() {
     });
     console.log(`✅ Root DID: ${systemDid} (verificationMethod wired)`);
   } else {
-    // Key already exists — just ensure the DID row is present
+    // Key already exists - just ensure the DID row is present
     await prisma.decentralizedIdentifier.upsert({
       where: { tenantId: SYSTEM_TENANT_ID },
       update: {},
@@ -390,7 +390,7 @@ async function main() {
         },
       },
     });
-    console.log(`ℹ️  SYSTEM signing key already exists — skipping keygen`);
+    console.log(`ℹ️  SYSTEM signing key already exists - skipping keygen`);
     console.log(`ℹ️  Root DID: ${systemDid}`);
   }
 

@@ -36,14 +36,14 @@ const WRITE_ACTIONS = new Set([
  *
  *   create      → args.data.tenantId
  *   update      → args.data.tenantId
- *   createMany  → args.data is an array — check first element
+ *   createMany  → args.data is an array - check first element
  *   updateMany  → args.data.tenantId
  *   upsert      → args.create.tenantId  ← DIFFERENT: no args.data for upsert
  *                 (args.update.tenantId as fallback)
  *
  * The previous implementation used `args.data?.tenantId` for every action
  * including upsert. For upsert, Prisma's args are `{ where, create, update }`
- * — there is no `data` field. This caused every upsert on a REQUIRED_TENANT_MODEL
+ * - there is no `data` field. This caused every upsert on a REQUIRED_TENANT_MODEL
  * to throw TENANT_ISOLATION_VIOLATION even when tenantId was correctly supplied
  * in args.create.
  */
@@ -58,7 +58,7 @@ function extractTenantId(action: string, args: any): string | null | undefined {
     }
 
     case "upsert":
-      // Prisma upsert: { where, create, update } — no args.data
+      // Prisma upsert: { where, create, update } - no args.data
       // Prefer create.tenantId (the authoritative value for new records).
       // Fall back to update.tenantId so callers that set it in both branches work.
       return args.create?.tenantId ?? args.update?.tenantId;
@@ -91,7 +91,7 @@ export function withTenantIsolation<T extends PrismaClient>(client: T) {
             throw new ApiError(
               `[TenantIsolation] ${operation} on ${model} requires tenantId in data payload. ` +
                 `Got: ${JSON.stringify(tenantIdValue)}. ` +
-                `This is a server-side programming error — the route or flow must supply tenantId.`,
+                `This is a server-side programming error - the route or flow must supply tenantId.`,
               500,
               "TENANT_ISOLATION_VIOLATION",
             );

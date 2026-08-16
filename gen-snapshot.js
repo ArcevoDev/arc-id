@@ -26,7 +26,7 @@ const IGNORED_ITEMS = new Set([
   // ── SECURITY: Never include in snapshots ──────────────────────────────────
   // These files contain secrets, private keys, and credentials.
   // Sharing a snapshot that includes them exposes credentials to whoever
-  // receives it — AI tools, collaborators, issue trackers, etc.
+  // receives it - AI tools, collaborators, issue trackers, etc.
   ".env",
   ".env.local",
   ".env.development",
@@ -140,7 +140,7 @@ console.log(
   "✨ Success! Structure and all contents written to arcid_codebase_snapshot.txt",
 );
 
-// ── Report only — gen-output.js no longer overwrites .agent/output.txt
+// ── Report only - gen-output.js no longer overwrites .agent/output.txt
 // (that file is the manual session tracker; see its header).
 import("./gen-output.js")
   .then(() => console.log("ℹ️  gen-output.js ran in report-only mode (tracker untouched)"))

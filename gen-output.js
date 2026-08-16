@@ -1,10 +1,10 @@
-// gen-output.js — verify + report project state WITHOUT clobbering the tracker
+// gen-output.js - verify + report project state WITHOUT clobbering the tracker
 //
 // Usage: node gen-output.js
 //
 // .agent/output.txt is now a MANUAL, facet-style session tracker + build
 // roadmap (see ../facet/.agent/output.txt for the convention). It must NOT
-// be overwritten by a script — every session updates it by hand (crossing
+// be overwritten by a script - every session updates it by hand (crossing
 // out done items), and gen-snapshot.js used to chain this script and stomp
 // on those edits.
 //
@@ -21,7 +21,7 @@ const OUTPUT_FILE = path.join(ROOT, ".agent", "output.txt");
 
 if (fs.existsSync(OUTPUT_FILE)) {
   console.log(
-    "ℹ️  .agent/output.txt is a MANUAL tracker — gen-output.js no longer overwrites it.\n" +
+    "ℹ️  .agent/output.txt is a MANUAL tracker - gen-output.js no longer overwrites it.\n" +
       "   Run `pnpm test` and copy the file/test counts into output.txt by hand.\n",
   );
 }

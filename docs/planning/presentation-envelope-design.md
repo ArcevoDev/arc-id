@@ -1,6 +1,6 @@
-# Presentation Envelope Design — ArcVerify Integration
+# Presentation Envelope Design - ArcVerify Integration
 
-> **✅ Built — shipped in 0.1.0.** `jws-proof.ts` (6 unit tests),
+> **✅ Built - shipped in 0.1.0.** `jws-proof.ts` (6 unit tests),
 > `verify-session.route.ts` (5 tests), `verify-present.route.ts` (9 tests).
 > This document is kept as a reference for the design rationale; the actual
 > implementation may differ in detail from what's described below.
@@ -10,7 +10,7 @@
 ArcVerify (or any relying party) needs to ask ArcWallet "prove you hold
 credential X." The current stack can verify a VC in isolation
 (`verifyCredentialFlow`), but there's no way for a third party to bind
-that verification to a real-time challenge — without which any
+that verification to a real-time challenge - without which any
 credential presentation is subject to replay.
 
 A full OIDC4VP / Presentation Exchange implementation is deferred to v2.
@@ -50,7 +50,7 @@ ArcVerify                   ArcID                          ArcWallet
 // 1. ArcVerify initiates a session
 POST /verify/session
 Body: {
-  credentialRef: string; // opaque hint — credential type or ID
+  credentialRef: string; // opaque hint - credential type or ID
 }
 Response: {
   sessionId: string; // short-lived (5 min TTL)
@@ -94,16 +94,16 @@ Response: {
 
 OIDC4VP / W3C Vp requires `@context`, `type`, potentially `presentationSubmission`
 matching a `PresentationDefinition`. None of ArcVerify needs that complexity
-— ArcVerify and ArcWallet are both first-party apps you control. The hash +
+- ArcVerify and ArcWallet are both first-party apps you control. The hash +
 nonce envelope is sufficient for v1 and can be embedded inside a real
 `VerifiablePresentation` later without changing the verification path.
 
-## Implementation notes (built — verify against actual code)
+## Implementation notes (built - verify against actual code)
 
 **All of the following are implemented, not planned:**
-- `VerifySession` model + `VerifySessionStatus` enum — schema + migration done
-- `POST /verify/session` — unauthenticated, rate-limited (30/min/IP), 32-byte challenge, 5-min TTL
-- `POST /verify/present` — unauthenticated, rate-limited, JWS proof verification via `jws-proof.ts`
+- `VerifySession` model + `VerifySessionStatus` enum - schema + migration done
+- `POST /verify/session` - unauthenticated, rate-limited (30/min/IP), 32-byte challenge, 5-min TTL
+- `POST /verify/present` - unauthenticated, rate-limited, JWS proof verification via `jws-proof.ts`
 - Proof helper: `verifyDetachedJws(proof, expectedNonce, expectedCredentialHash, didKey, db)` in `src/lib/security/jws-proof.ts`
 - Anti-replay: CONSUMED/EXPIRED sessions return 410, used-once enforced
 - See `src/modules/credentials/routes/verify-session.route.ts`, `verify-present.route.ts`, `src/lib/security/jws-proof.ts`

@@ -1,6 +1,6 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# lock-file — committed: deploy workflows run pnpm install --frozen-lockfile
+# lock-file - committed: deploy workflows run pnpm install --frozen-lockfile
 # pnpm-lock.yaml
 
 # dependencies
@@ -58,6 +58,6 @@ ArcevoCirqle_Design_Standards_Manual_v1.0..txt
 # local e2e harness
 /scratch-e2e/
 
-# arc-id generated codebase snapshot (tooling output — regenerate via gen-snapshot.js)
+# arc-id generated codebase snapshot (tooling output - regenerate via gen-snapshot.js)
 arcid_codebase_snapshot.txt
 repo_structure.txt

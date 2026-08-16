@@ -34,10 +34,10 @@ export const rateLimitPlugin = fp(
       keyGenerator: (req) => {
         // Try to extract identity claims from the JWT payload if already decoded.
         // auth-guard.plugin.ts sets req.identity after verifying the JWT, but
-        // rate limiting runs BEFORE preHandlers — so we read from req.user
+        // rate limiting runs BEFORE preHandlers - so we read from req.user
         // (set by jwtVerify) if available, not req.identity.
         //
-        // We do a best-effort decode here WITHOUT verification — we're just
+        // We do a best-effort decode here WITHOUT verification - we're just
         // generating a bucket key, not making a security decision. The actual
         // signature verification happens in requireUser.
         try {
@@ -60,7 +60,7 @@ export const rateLimitPlugin = fp(
             }
           }
         } catch {
-          // Malformed JWT or not a JWT — fall through to IP keying.
+          // Malformed JWT or not a JWT - fall through to IP keying.
         }
         return req.ip;
       },

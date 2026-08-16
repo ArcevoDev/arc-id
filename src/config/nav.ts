@@ -2,7 +2,7 @@
  * ArcID Navigation Configuration
  *
  * Single source of truth for the sidebar nav tree.
- * The Sidebar component reads this — not hardcoded JSX.
+ * The Sidebar component reads this - not hardcoded JSX.
  *
  * Permission gating (requiredPermission) is defined here but
  * is NOT enforced in v1. All nav items are shown to authenticated
@@ -21,7 +21,7 @@ export interface NavItem {
   label: string;
   /** Icon name from the icon registry */
   icon: IconName;
-  /** Optional RBAC permission string — reserved for future gating */
+  /** Optional RBAC permission string - reserved for future gating */
   requiredPermission?: string;
   /** Sub-items (rendered as collapsible group in sidebar) */
   children?: NavItem[];

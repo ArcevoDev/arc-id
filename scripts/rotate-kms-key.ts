@@ -22,7 +22,7 @@
  *      new key config.
  *   3. Run: tsx scripts/rotate-kms-key.ts
  *   4. After completion, update your regular env vars to match the
- *      new key — the old key is no longer needed for any row.
+ *      new key - the old key is no longer needed for any row.
  *
  * The script decodes new-key config from ROTATE_* env vars so both
  * old and new keys are available simultaneously during rotation.
@@ -83,7 +83,7 @@ async function main() {
     const ciphertext = Buffer.from(row.privateKey);
 
     if (!row.kmsProvider) {
-      // Plaintext row — just encrypt under the new key directly
+      // Plaintext row - just encrypt under the new key directly
       const reEncrypted = await newKms.encrypt(ciphertext);
       await prisma.tenantSigningKey.update({
         where: { id: row.id },

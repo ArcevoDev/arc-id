@@ -3,7 +3,7 @@
 # Runs Prisma migrations on every start, then exec's the container CMD.
 #
 # WHY THIS PATTERN:
-#   `prisma migrate deploy` is idempotent — it only applies pending migrations
+#   `prisma migrate deploy` is idempotent - it only applies pending migrations
 #   that haven't been recorded in the _prisma_migrations table. Running it on
 #   every container start is safe and ensures the schema is always up-to-date,
 #   even after a rollback or a fresh database volume.

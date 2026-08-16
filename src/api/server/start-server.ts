@@ -38,7 +38,7 @@ async function start() {
   const shutdown = async (signal: string) => {
     server.log.info(
       { signal },
-      "Shutdown signal received — draining connections",
+      "Shutdown signal received - draining connections",
     );
 
     try {

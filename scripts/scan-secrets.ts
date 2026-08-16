@@ -9,7 +9,7 @@
 // for high-entropy credential material and PII dumps that must never reach
 // logs or VCS. Node_modules, .git, and generated artifacts are excluded.
 //
-// This is a lint-style guard, not a substitute for gitleaks/trufflehog in CI —
+// This is a lint-style guard, not a substitute for gitleaks/trufflehog in CI -
 // it catches the classes of leaks that matter for this codebase (real secrets
 // in config, credentials logged in plaintext, key material in docs).
 
@@ -30,7 +30,7 @@ const EXCLUDE_DIRS = new Set([
 ]);
 
 const EXCLUDE_FILES = new Set([
-  // This very script — its patterns intentionally match the sample strings
+  // This very script - its patterns intentionally match the sample strings
   // used in test fixtures and CI placeholder secrets.
   "scan-secrets.ts",
 ]);
@@ -146,7 +146,7 @@ const targets = ["src", "prisma", "docs", "scripts"].map((t) => {
   const abs = path.join(ROOT, t);
   return fs.existsSync(abs) && fs.statSync(abs).isDirectory() ? walk(abs) : [];
 });
-// Only scan the committed .env.example — the live .env is gitignored/local
+// Only scan the committed .env.example - the live .env is gitignored/local
 // and its real secrets are not part of the repo's risk surface.
 const envFiles = [".env.example", ".env.test", ".env.ci"].filter((f) =>
   fs.existsSync(path.join(ROOT, f)),
@@ -160,11 +160,11 @@ const findings: Finding[] = [];
 for (const file of files) scanFile(file, findings);
 
 if (findings.length === 0) {
-  console.log(`✅ scan:secrets — clean (${files.length} files scanned)`);
+  console.log(`✅ scan:secrets - clean (${files.length} files scanned)`);
   process.exit(0);
 }
 
-console.error(`❌ scan:secrets — ${findings.length} potential secret/PII leak(s):\n`);
+console.error(`❌ scan:secrets - ${findings.length} potential secret/PII leak(s):\n`);
 for (const f of findings) {
   const rel = path.relative(ROOT, f.file).replace(/\\/g, "/");
   console.error(`  [${f.pattern}] ${rel}:${f.line}`);

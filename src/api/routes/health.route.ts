@@ -1,14 +1,14 @@
 // src/api/routes/health.route.ts
 //
-// Two distinct probes — required for correct k8s / Railway / Fly.io behaviour:
+// Two distinct probes - required for correct k8s / Railway / Fly.io behaviour:
 //
-//   GET /health/live  — liveness: is the process alive and responding?
+//   GET /health/live  - liveness: is the process alive and responding?
 //                       k8s restarts the pod if this fails.
-//                       Never touches the DB — a slow DB must not kill the process.
+//                       Never touches the DB - a slow DB must not kill the process.
 //
-//   GET /health/ready — readiness: is the process ready to receive traffic?
+//   GET /health/ready - readiness: is the process ready to receive traffic?
 //                       k8s stops sending traffic (but does not restart) if this fails.
-//                       Performs a fast DB ping — if the DB is down, traffic stops
+//                       Performs a fast DB ping - if the DB is down, traffic stops
 //                       routing here until connectivity is restored.
 //
 // The legacy GET /health is kept as an alias for /health/live so existing
@@ -16,7 +16,7 @@
 import type { FastifyInstance } from "fastify";
 
 export async function healthRoute(fastify: FastifyInstance) {
-  // ── Liveness — process is up ───────────────────────────────────────────────
+  // ── Liveness - process is up ───────────────────────────────────────────────
   fastify.get("/health/live", async () => ({
     status: "ok",
     probe: "liveness",
@@ -31,10 +31,10 @@ export async function healthRoute(fastify: FastifyInstance) {
     ts: new Date().toISOString(),
   }));
 
-  // ── Readiness — DB is reachable ────────────────────────────────────────────
+  // ── Readiness - DB is reachable ────────────────────────────────────────────
   fastify.get("/health/ready", async (_req, reply) => {
     try {
-      // Cheapest possible query — just checks the DB connection is alive.
+      // Cheapest possible query - just checks the DB connection is alive.
       await fastify.db.$queryRaw`SELECT 1`;
 
       return reply.send({
@@ -46,7 +46,7 @@ export async function healthRoute(fastify: FastifyInstance) {
     } catch (err: any) {
       fastify.log.error(
         { err },
-        "[HEALTH] Readiness check failed — DB unreachable",
+        "[HEALTH] Readiness check failed - DB unreachable",
       );
 
       return reply.status(503).send({

@@ -5,7 +5,7 @@
 > blocks remain for end-to-end verification and routes that depend on
 > external IdPs or real browser+WebAuthn.
 
-# Swagger UI + Postman — Complete Route Verification
+# Swagger UI + Postman - Complete Route Verification
 
 ## Setup
 
@@ -23,7 +23,7 @@ Authorize in Swagger: click **Authorize** → paste Bearer token from login resp
 
 ---
 
-## BLOCK 1 — System health (no auth)
+## BLOCK 1 - System health (no auth)
 
 | #   | Method | Path                                | Expected                              |
 | --- | ------ | ----------------------------------- | ------------------------------------- |
@@ -37,7 +37,7 @@ Stop DB connection and retest #2 → expect `503`.
 
 ---
 
-## BLOCK 2 — Registration & email verification
+## BLOCK 2 - Registration & email verification
 
 | #   | Method | Path             | Body                        | Expected                                  |
 | --- | ------ | ---------------- | --------------------------- | ----------------------------------------- |
@@ -54,9 +54,9 @@ After step 6, check mail preview for `VERIFY_EMAIL` token. Copy it.
 
 ---
 
-## BLOCK 3 — Login & session
+## BLOCK 3 - Login & session
 
-_**Status: Automated** — `src/modules/auth/flows/login.flow.test.ts` covers
+_**Status: Automated** - `src/modules/auth/flows/login.flow.test.ts` covers
 #11's logic (successful login with tokens, MFA-without-tokens path, banned/
 suspended/deleted rejections, bad-password flow, TenantPolicy requireMfa →
 mfaEnrollmentRequired, transaction rollback on token-issuance failure). #12's
@@ -80,9 +80,9 @@ Save `accessToken` as `$TOKEN`. Click **Authorize** in Swagger and paste it.
 
 ---
 
-## BLOCK 4 — Token lifecycle (OAuth)
+## BLOCK 4 - Token lifecycle (OAuth)
 
-_**Status: Partially automated** — `src/modules/oauth/services/token.service.test.ts`
+_**Status: Partially automated** - `src/modules/oauth/services/token.service.test.ts`
 covers #19's token-issuance logic (access/refresh/id token creation, familyId/
 parentJti threading, authLevel claims, client/subscription lookups).
 `src/modules/oauth/flows/token-refresh.flow.test.ts` covers #21–#22's
@@ -95,7 +95,7 @@ First register an OAuth client:
 | #   | Method | Path             | Body                                                                                               | Expected                              |
 | --- | ------ | ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | 16  | POST   | `/oauth/clients` | `{ name, redirectUris: ["http://localhost:3000/callback"], scopes: ["openid","profile","email"] }` | `201` with `clientId`, `clientSecret` |
-| 17  | GET    | `/oauth/clients` | —                                                                                                  | List registered clients               |
+| 17  | GET    | `/oauth/clients` | -                                                                                                  | List registered clients               |
 
 Authorization Code flow:
 
@@ -117,13 +117,13 @@ In Swagger you'll need to copy the URL manually into your browser to follow the 
 
 ---
 
-## BLOCK 5 — MFA
+## BLOCK 5 - MFA
 
 | #   | Method | Path                | Expected                                                       |
 | --- | ------ | ------------------- | -------------------------------------------------------------- | ---------------------------------- |
-| 26  | POST   | `/auth/mfa/setup`   | `{ secret, qrCode, uri }` — scan QR in Authenticator app       |
-| 27  | POST   | `/auth/mfa/confirm` | `{ code: "123456" }` → `{ recoveryCodes: [...] }` — save these |
-| 28  | POST   | `/auth/logout`      | — clears session                                               |
+| 26  | POST   | `/auth/mfa/setup`   | `{ secret, qrCode, uri }` - scan QR in Authenticator app       |
+| 27  | POST   | `/auth/mfa/confirm` | `{ code: "123456" }` → `{ recoveryCodes: [...] }` - save these |
+| 28  | POST   | `/auth/logout`      | - clears session                                               |
 | 29  | POST   | `/auth/login`       | `{ email, password }`                                          | `{ requiresMfa: true, sessionId }` |
 | 30  | POST   | `/auth/mfa/verify`  | `{ code: "123456", sessionId }`                                | Full token pair returned           |
 | 31  | POST   | `/auth/mfa/verify`  | recovery code from step 27                                     | Also works, marks code consumed    |
@@ -131,17 +131,17 @@ In Swagger you'll need to copy the URL manually into your browser to follow the 
 
 ---
 
-## BLOCK 6 — Step-up auth
+## BLOCK 6 - Step-up auth
 
 | #   | Method | Path            | Body                           | Expected                                        |
 | --- | ------ | --------------- | ------------------------------ | ----------------------------------------------- |
-| 33  | DELETE | `/auth/profile` | —                              | `403 STEP_UP_REQUIRED` (delete needs elevation) |
-| 34  | POST   | `/auth/step-up` | `{ password: "yourpassword" }` | `200` — session elevatedAt updated              |
-| 35  | DELETE | `/auth/profile` | —                              | `200` — now succeeds within 15-min window       |
+| 33  | DELETE | `/auth/profile` | -                              | `403 STEP_UP_REQUIRED` (delete needs elevation) |
+| 34  | POST   | `/auth/step-up` | `{ password: "yourpassword" }` | `200` - session elevatedAt updated              |
+| 35  | DELETE | `/auth/profile` | -                              | `200` - now succeeds within 15-min window       |
 
 ---
 
-## BLOCK 7 — Passkeys (WebAuthn)
+## BLOCK 7 - Passkeys (WebAuthn)
 
 These need a browser / Postman with WebAuthn support or a manual flow.
 
@@ -150,43 +150,43 @@ These need a browser / Postman with WebAuthn support or a manual flow.
 | 36  | POST   | `/auth/passkey/register/options` | Registration options + challenge                        |
 | 37  | POST   | `/auth/passkey/register/verify`  | `{ credential: <authenticator response> }` → `200`      |
 | 38  | GET    | `/auth/passkey`                  | List registered passkeys                                |
-| 39  | DELETE | `/auth/passkey/:passkeyId`       | Requires `requireElevated` — do step-up first           |
+| 39  | DELETE | `/auth/passkey/:passkeyId`       | Requires `requireElevated` - do step-up first           |
 | 40  | POST   | `/auth/passkey/auth/options`     | Auth challenge                                          |
 | 41  | POST   | `/auth/passkey/auth/verify`      | `{ credential }` → full token pair, `authLevel: "aal2"` |
 
 ---
 
-## BLOCK 8 — Password flows
+## BLOCK 8 - Password flows
 
 | #   | Method | Path                           | Body                               | Expected                             |
 | --- | ------ | ------------------------------ | ---------------------------------- | ------------------------------------ |
-| 42  | POST   | `/auth/password/request-reset` | `{ email }`                        | `200` — check mail preview for token |
-| 43  | POST   | `/auth/password/confirm-reset` | `{ token, newPassword }`           | `200` — old sessions revoked         |
-| 44  | POST   | `/auth/password/change`        | `{ currentPassword, newPassword }` | Needs step-up — do block 6 first     |
+| 42  | POST   | `/auth/password/request-reset` | `{ email }`                        | `200` - check mail preview for token |
+| 43  | POST   | `/auth/password/confirm-reset` | `{ token, newPassword }`           | `200` - old sessions revoked         |
+| 44  | POST   | `/auth/password/change`        | `{ currentPassword, newPassword }` | Needs step-up - do block 6 first     |
 
 ---
 
-## BLOCK 9 — Tenant management
+## BLOCK 9 - Tenant management
 
 | #   | Method | Path                            | Body                                 | Expected                                     |
 | --- | ------ | ------------------------------- | ------------------------------------ | -------------------------------------------- |
-| 45  | POST   | `/api/v1/tenants`               | `{ name: "Acme Inc", slug: "acme" }` | `201` — you are now ADMIN                    |
-| 46  | GET    | `/api/v1/tenants/acme`          | —                                    | `200` — your tenant data                     |
-| 47  | GET    | `/api/v1/tenants/system-global` | —                                    | `404 NOT FOUND` — you're not a SYSTEM member |
+| 45  | POST   | `/api/v1/tenants`               | `{ name: "Acme Inc", slug: "acme" }` | `201` - you are now ADMIN                    |
+| 46  | GET    | `/api/v1/tenants/acme`          | -                                    | `200` - your tenant data                     |
+| 47  | GET    | `/api/v1/tenants/system-global` | -                                    | `404 NOT FOUND` - you're not a SYSTEM member |
 
 Step 47 verifies the membership gate fix: non-members cannot enumerate tenant data by slug.
 
 | #   | Method | Path                                | Body                                                | Expected                                   |
 | --- | ------ | ----------------------------------- | --------------------------------------------------- | ------------------------------------------ |
-| 48  | POST   | `/api/v1/tenants/:tenantId/members` | `{ identityId: "<other user id>", role: "MEMBER" }` | `201` — check mail preview for invite link |
+| 48  | POST   | `/api/v1/tenants/:tenantId/members` | `{ identityId: "<other user id>", role: "MEMBER" }` | `201` - check mail preview for invite link |
 | 49  | POST   | `/invites/accept`                   | `{ token: "<from email>" }`                         | `200 "You have joined Acme Inc"`           |
 | 50  | POST   | `/invites/accept`                   | same token again                                    | `410 INVITE_EXPIRED_OR_USED`               |
 
 ---
 
-## BLOCK 10 — Credentials (VC)
+## BLOCK 10 - Credentials (VC)
 
-_**Status: Partially automated** — `src/modules/credentials/flows/verify-credential.flow.test.ts`
+_**Status: Partially automated** - `src/modules/credentials/flows/verify-credential.flow.test.ts`
 covers #54's verification path (ES256 signing, correct algorithm-from-header
 reading, tampered-signature rejection, missing-alg rejection).
 `src/modules/credentials/services/status-list.service.test.ts` covers the
@@ -195,7 +195,7 @@ CAS-based index allocation (#51's internal allocation) and revocation update.
 and sign-verify round-trip.
 `src/modules/credentials/routes/verify-session.route.test.ts` and
 `src/modules/credentials/routes/verify-present.route.test.ts` cover the
-presentation endpoint (#new — fully automated, 14 tests).
+presentation endpoint (#new - fully automated, 14 tests).
 The full route-level issue/revoke flow (#53, #55, #56) remains manual._
 
 Requires an ACTIVE tenant signing key. Create one first:
@@ -203,26 +203,26 @@ Requires an ACTIVE tenant signing key. Create one first:
 | #   | Method | Path                                     | Body                                                    | Expected                          |
 | --- | ------ | ---------------------------------------- | ------------------------------------------------------- | --------------------------------- |
 | 51  | POST   | `/api/v1/tenants/:tenantId/signing-keys` | `{ algorithm: "ES256" }`                                | `201` with `kid`                  |
-| 52  | GET    | `/api/v1/tenants/acme/jwks`              | —                                                       | Public JWKS for Acme              |
+| 52  | GET    | `/api/v1/tenants/acme/jwks`              | -                                                       | Public JWKS for Acme              |
 | 53  | POST   | `/api/v1/credentials/issue`              | `{ subjectDid, credentialType, claims: { name, org } }` | `201` with `vc` string            |
 | 54  | POST   | `/api/v1/credentials/verify`             | `{ vc: "<vc string>" }`                                 | `200 valid: true`                 |
-| 55  | POST   | `/api/v1/credentials/:id/revoke`         | —                                                       | `200`                             |
+| 55  | POST   | `/api/v1/credentials/:id/revoke`         | -                                                       | `200`                             |
 | 56  | POST   | `/api/v1/credentials/verify`             | same vc                                                 | `200 valid: false, revoked: true` |
 
 ---
 
-## BLOCK 11 — Webhooks
+## BLOCK 11 - Webhooks
 
 | #   | Method | Path                                  | Body                                                               | Expected                                                           |
 | --- | ------ | ------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | 57  | POST   | `/api/v1/webhooks/endpoints`          | `{ url: "https://webhook.site/xxx", events: ["USER_REGISTERED"] }` | `201`                                                              |
-| 58  | GET    | `/api/v1/webhooks/endpoints`          | —                                                                  | List endpoints                                                     |
-| 59  | POST   | `/api/v1/webhooks/endpoints/:id/test` | —                                                                  | Sends a test ping — verify in webhook.site                         |
-| 60  | POST   | `/auth/register`                      | new email                                                          | `201` — webhook worker delivers `USER_REGISTERED` to your endpoint |
+| 58  | GET    | `/api/v1/webhooks/endpoints`          | -                                                                  | List endpoints                                                     |
+| 59  | POST   | `/api/v1/webhooks/endpoints/:id/test` | -                                                                  | Sends a test ping - verify in webhook.site                         |
+| 60  | POST   | `/auth/register`                      | new email                                                          | `201` - webhook worker delivers `USER_REGISTERED` to your endpoint |
 
 ---
 
-## BLOCK 12 — Admin routes
+## BLOCK 12 - Admin routes
 
 | #   | Method | Path                       | Expected                                |
 | --- | ------ | -------------------------- | --------------------------------------- |
@@ -245,7 +245,7 @@ WHERE "identityId" = '<your-id>'
 
 ---
 
-## BLOCK 13 — Audit log
+## BLOCK 13 - Audit log
 
 | #   | Method | Path                                      | Expected                          |
 | --- | ------ | ----------------------------------------- | --------------------------------- |
@@ -254,9 +254,9 @@ WHERE "identityId" = '<your-id>'
 
 ---
 
-## Social login & IdP federation — implemented, not 501
+## Social login & IdP federation - implemented, not 501
 
-_**Status: Partially automated** — `src/modules/idp/services/idp.service.test.ts`
+_**Status: Partially automated** - `src/modules/idp/services/idp.service.test.ts`
 covers the `federatedLogin` Phase 0 email-verification gate, new-identity
 provisioning, and existing-identity linking. The full social/provider callback
 routes (Google/GitHub/Apple/Microsoft) still require external IdP credentials
@@ -292,17 +292,17 @@ Behavior depends on environment configuration:
 
 To exercise these in a test environment without real IdP credentials,
 either mock the provider/discovery endpoints, or skip these blocks and
-note them as "requires external IdP — not covered by this run."
+note them as "requires external IdP - not covered by this run."
 
 ---
 
 ## Regression checks after each deployment
 
-_**Status: Automated** — the logic underpinning R3 (login → tokens) is covered
+_**Status: Automated** - the logic underpinning R3 (login → tokens) is covered
 by login.flow.test.ts and token.service.test.ts. R1 (health), R2 (register),
 R4 (sessions), and R5 (openid-config) remain route-level manual checks._
 
-Run these 5 checks first — if any fail, something fundamental broke:
+Run these 5 checks first - if any fail, something fundamental broke:
 
 1. `GET /health/ready` → 200
 2. `POST /auth/register` → 201

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "@arcevo/facet-tokens/tokens.css";
 import "@/styles/globals.css";
 import { Providers } from "@/providers";
-import { ArcMetadata } from "@/lib/ui/metadata";
+import { ArcMetadata } from "@/components/ui/metadata";
 
 export const metadata: Metadata = {
   metadataBase: new URL(ArcMetadata.url),
@@ -60,7 +60,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
