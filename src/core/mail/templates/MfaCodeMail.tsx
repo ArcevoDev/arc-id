@@ -1,6 +1,11 @@
 ﻿import * as React from "react";
-import { EmailSection, EmailText, EmailDivider } from "@arcevo/facet-emails";
-import { MailLayout, MailText, tokens as t } from "../components";
+import {
+  EmailLayout,
+  EmailText,
+  EmailSection,
+  EmailDivider,
+} from "@arcevo/facet-emails";
+import { MAIL_COLOR, MAIL_SPACE, MAIL_FONT, MAIL_RADIUS } from "../brand";
 
 export interface MfaCodeMailProps {
   code: string;
@@ -9,38 +14,57 @@ export interface MfaCodeMailProps {
   ttlSec?: number;
 }
 
-export const MfaCodeMail = ({ code, name, ttlSec = 600 }: MfaCodeMailProps) => {
+export const MfaCodeMail = ({
+  code,
+  name,
+  ttlSec = 600,
+}: MfaCodeMailProps) => {
   const minutes = Math.round(ttlSec / 60);
   return (
-    <MailLayout
+    <EmailLayout
       previewText={`Your ArcID verification code is ${code} - valid for ${minutes} minutes`}
       heading="Verification Code"
-      eyebrow="Two-factor authentication"
+      brandName="ArcID"
+      footerNote="This message was sent by ArcID, the sovereign identity engine. You are receiving it because this address is connected to an ArcID account."
+      footerMeta={`© ${new Date().getFullYear()} ArcID. All rights reserved.`}
     >
-      <MailText>
+      <EmailText
+        style={{
+          fontSize: "11px",
+          fontWeight: 600,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: MAIL_COLOR.textMuted,
+          marginBottom: MAIL_SPACE.sm,
+        }}
+      >
+        Two-factor authentication
+      </EmailText>
+
+      <EmailText style={{ marginBottom: MAIL_SPACE.md }}>
         {name ? `Hello ${name},` : "Hello,"} a sign-in to your ArcID account is
         waiting on one last proof: the code below. It's the second lock on your
         door - the one only you hold.
-      </MailText>
+      </EmailText>
 
       {/* Big code display */}
       <EmailSection
         style={{
-          backgroundColor: t.color.bgMuted,
-          border: `1px solid ${t.color.border}`,
-          borderRadius: t.radius.md,
-          padding: `${t.space.xl} ${t.space.lg}`,
+          backgroundColor: MAIL_COLOR.bgMuted,
+          border: `1px solid ${MAIL_COLOR.border}`,
+          borderRadius: MAIL_RADIUS.md,
+          padding: `${MAIL_SPACE.xl} ${MAIL_SPACE.lg}`,
           textAlign: "center",
-          marginBottom: t.space.lg,
+          marginBottom: MAIL_SPACE.lg,
         }}
       >
         <EmailText
           style={{
-            fontFamily: t.font.mono,
+            fontFamily: MAIL_FONT.mono,
             fontSize: "36px",
             fontWeight: "700",
             letterSpacing: "0.3em",
-            color: t.color.text,
+            color: MAIL_COLOR.text,
             margin: 0,
             textAlign: "center",
           }}
@@ -49,18 +73,18 @@ export const MfaCodeMail = ({ code, name, ttlSec = 600 }: MfaCodeMailProps) => {
         </EmailText>
       </EmailSection>
 
-      <MailText variant="small">
+      <EmailText variant="small" style={{ marginBottom: MAIL_SPACE.md }}>
         This code expires in <strong>{minutes} minutes</strong> and can only be
         used once.
-      </MailText>
+      </EmailText>
 
       <EmailDivider />
 
-      <MailText variant="muted">
+      <EmailText variant="muted" style={{ marginBottom: MAIL_SPACE.md }}>
         ArcID will never ask you for this code by phone, chat, or email. If
         someone does, they are not us - end the conversation.
-      </MailText>
-    </MailLayout>
+      </EmailText>
+    </EmailLayout>
   );
 };
 

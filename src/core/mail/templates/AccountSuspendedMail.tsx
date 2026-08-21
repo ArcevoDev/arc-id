@@ -1,10 +1,16 @@
 ﻿import * as React from "react";
 import {
-  MailLayout,
-  MailText,
-  MailSecurityNotice,
-  MailDivider,
-} from "../components";
+  EmailLayout,
+  EmailText,
+  EmailSecurityNotice,
+  EmailDivider,
+} from "@arcevo/facet-emails";
+import {
+  MAIL_COLOR,
+  MAIL_SPACE,
+  DEFAULT_MAIL_FOOTER_NOTE,
+  DEFAULT_MAIL_FOOTER_META,
+} from "../brand";
 
 export interface AccountSuspendedMailProps {
   name?: string;
@@ -15,37 +21,54 @@ export const AccountSuspendedMail = ({
   name,
   reason,
 }: AccountSuspendedMailProps) => (
-  <MailLayout
+  <EmailLayout
     previewText="Your ArcID account has been suspended"
     heading="Account Suspended"
-    eyebrow="Important notice"
+    brandName="ArcID"
     footerNote="This is an automated notice from ArcID."
+    footerMeta={DEFAULT_MAIL_FOOTER_META}
   >
-    <MailText>
+    <EmailText
+      style={{
+        fontSize: "11px",
+        fontWeight: 600,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: MAIL_COLOR.textMuted,
+        marginBottom: MAIL_SPACE.sm,
+      }}
+    >
+      Important notice
+    </EmailText>
+
+    <EmailText style={{ marginBottom: MAIL_SPACE.md }}>
       {name ? `Hello ${name},` : "Hello,"} your ArcID account has been
       suspended. While it is suspended, you won't be able to sign in or use
       ArcID-integrated services.
-    </MailText>
+    </EmailText>
 
     {reason && (
-      <MailSecurityNotice variant="danger">
+      <EmailSecurityNotice variant="danger">
         <strong>Reason:</strong> {reason}
-      </MailSecurityNotice>
+      </EmailSecurityNotice>
     )}
 
-    <MailDivider />
+    <EmailDivider />
 
-    <MailText>
+    <EmailText style={{ marginBottom: MAIL_SPACE.md }}>
       If you believe this was a mistake, or if you'd like to appeal, our
       support team can help - include the email address on this account and
       we'll review it promptly.
-    </MailText>
+    </EmailText>
 
-    <MailText variant="muted">
+    <EmailText
+      variant="muted"
+      style={{ marginBottom: MAIL_SPACE.md }}
+    >
       Suspensions are reversible. We'd rather get you back inside with the
       right access than keep you out by mistake.
-    </MailText>
-  </MailLayout>
+    </EmailText>
+  </EmailLayout>
 );
 
 export default AccountSuspendedMail;

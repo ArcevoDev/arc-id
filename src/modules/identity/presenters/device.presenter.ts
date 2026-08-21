@@ -5,7 +5,7 @@ export function presentDevice(device: Device) {
     id: device.id,
     platform: device.platform,
     browser: device.browser,
-    createdAt: device.createdAt,
+    createdAt: device.createdAt.toISOString(),
     lastSeenAt: device.lastSeenAt,
   };
 }

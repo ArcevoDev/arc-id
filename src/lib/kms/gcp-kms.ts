@@ -5,6 +5,7 @@
 // the resolution check for this optional peer dependency.
 
 import type { KmsEnvelope } from "./kms.interface";
+import { ApiError } from "@/core/errors";
 
 async function getKmsClient(): Promise<{ keyManagementServiceClient: any }> {
   try {
@@ -15,7 +16,7 @@ async function getKmsClient(): Promise<{ keyManagementServiceClient: any }> {
     const client = new KeyManagementServiceClient();
     return { keyManagementServiceClient: client };
   } catch {
-    throw new Error(
+    throw ApiError.internal(
       "@google-cloud/kms is not installed. " +
         "Run: pnpm add @google-cloud/kms",
     );
@@ -24,7 +25,7 @@ async function getKmsClient(): Promise<{ keyManagementServiceClient: any }> {
 
 export function createGcpKms(keyName: string): KmsEnvelope {
   if (!keyName) {
-    throw new Error("GCP_KMS_KEY_NAME is required for GCP KMS mode");
+    throw ApiError.internal("GCP_KMS_KEY_NAME is required for GCP KMS mode");
   }
 
   return {

@@ -3,16 +3,7 @@
 > **Target**: Replace arc-id's in-repo shadcn/ui components, auth UI, and SDK
 > client with the published `@arcevo/facet-*` packages.
 >
-> **Status (2026-08-14)**: Phases 0–5 DONE. `@arcevo/facet-sdk@1.1.0`
-> verified complete against arc-id's registered routes; `@arcevo/facet-tokens`
-> wired (Phase 2); `src/components/ui/` deleted and all consumers on
-> `@arcevo/facet-components@1.5.0` (Phase 3); auth pages on `@arcevo/facet-auth@1.1.4`
-> via `ArcProvider` + `zustandTokenStorage` bridge (Phase 4, commit `d6f6707`);
-> layouts on `@arcevo/facet-layout@1.3.1` (Phase 5, `AuthLayout`/`ConsoleLayout`).
-> Phase 6 (purge) partially done - `src/components/ui/` and the in-repo
-> login/register/mfa forms are gone; `forgot-password-form`/`reset-password-form`
-> remain and work.
-> All six facet packages are published to npm and pinned in package.json.
+> **Status (2026-08-21)**: Phases 0–6 + Phase E DONE. `@arcevo/facet-sdk@1.1.0` verified complete against arc-id's registered routes; `@arcevo/facet-tokens` wired (Phase 2); `src/components/ui/` deleted (Phase 3); all consumers on `@arcevo/facet-components@1.10.0`; auth pages on `@arcevo/facet-auth@1.2.2` via `ArcProvider` + `zustandTokenStorage` bridge (commit `d6f6707`); layouts on `@arcevo/facet-layout@1.4.1` (`AuthLayout`/`ConsoleLayout`). Phase 6 (purge) FULLY done (2026-08-19) - `src/components/{ui,auth,layout}/` deleted; forgot/reset password forms now on `@arcevo/facet-auth` (ForgotPasswordForm/ResetPasswordForm). All nine facet packages published to npm and pinned in package.json (sdk 1.1.0, auth 1.2.2, components 1.10.0, layout 1.4.1, tokens 1.1.4, emails ^1.1.1, store ^0.1.0, cli ^0.8.0, docs 1.4.6).
 > See `docs/planning/arcid-v1-roadmap.md` for overall project state.
 
 ---
@@ -25,11 +16,11 @@ a single source of truth:
 | Duplicated in arc-id | Replaced by | Files affected |
 |---|---|---|
 | ~~`src/components/ui/*` (shadcn components)~~ | ✅ `@arcevo/facet-components` - **done (2026-08-12)** | ~25 files, all migrated, dir deleted |
-| ~~`src/components/auth/*` (LoginForm, RegisterForm, etc.)~~ | ✅ `@arcevo/facet-auth` - **done (2026-08-14)** | login/register/mfa pages on `SignIn`/`SignUp`/`MfaDialog`; `login-form`/`register-form`/`mfa-form` deleted; forgot/reset forms still in-repo |
+| ~~`src/components/auth/*` (LoginForm, RegisterForm, etc.)~~ | ✅ `@arcevo/facet-auth` - **done (2026-08-14)** | login/register/mfa pages on `SignIn`/`SignUp`/`MfaDialog`; `login-form`/`register-form`/`mfa-form` deleted; forgot/reset forms on `@arcevo/facet-auth` (ForgotPasswordForm/ResetPasswordForm) |
 | ~~`src/sdk/*` (client + 10 domain SDKs)~~ | ✅ `@arcevo/facet-sdk` - **done (2026-08-05)** | ~13 files, dir reduced to `index.ts` |
 
-**What arc-id keeps**: layout components (`src/components/layout/`), pages
-(`src/app/`), Zustand stores (`src/store/`), hooks (`src/hooks/`), nav config,
+**What arc-id keeps**: layout components (`@arcevo/facet-layout`), pages
+(`src/app/`), Zustand stores (`@arcevo/facet-store`), hooks (`src/hooks/`), nav config,
 providers, and CSS custom utilities.
 
 ### Published versions (pin exact - no `^`)
@@ -37,12 +28,14 @@ providers, and CSS custom utilities.
 | Package | Version |
 |---|---|
 | `@arcevo/facet-sdk` | 1.1.0 |
-| `@arcevo/facet-components` | 1.5.0 |
-| `@arcevo/facet-auth` | 1.1.4 |
-| `@arcevo/facet-layout` | 1.3.1 |
-| `@arcevo/facet-tokens` | 1.1.0 |
-| `@arcevo/facet-cli` | 0.4.0 (installed - basis for `packages/cli` work) |
-| `@arcevo/facet-docs` | 1.4.1 (installed - docs scaffold basis) |
+| `@arcevo/facet-components` | 1.10.0 |
+| `@arcevo/facet-auth` | 1.2.2 |
+| `@arcevo/facet-layout` | 1.4.1 |
+| `@arcevo/facet-tokens` | 1.1.4 |
+| `@arcevo/facet-emails` | ^1.1.1 (installed - mail layer) |
+| `@arcevo/facet-store` | ^0.1.0 (installed - stores extracted) |
+| `@arcevo/facet-cli` | ^0.8.0 (installed - basis for `packages/cli` work, scaffolded) |
+| `@arcevo/facet-docs` | 1.4.6 (installed - docs scaffold basis) |
 
 ---
 
@@ -226,14 +219,14 @@ phase's commit.
 | Check | How |
 |---|---|
 | `pnpm typecheck` | Clean across all phases |
-| `pnpm test` | All 340 tests passing |
+| `pnpm test` | All 342 tests passing |
 | `pnpm dev:all` | Manual smoke test: login, register, MFA, tenant switch, passkey |
 | Facet docs match | Compare facet's docs gallery against rendered components in arc-id |
 | CSS regression | Sidebar, Topbar, TenantSwitcher, and pages render with correct colors |
 
 ---
 
-_Guide updated 2026-08-14 - Phases 0–5 done (SDK + tokens + components + auth
-forms + layout). Phase 6 purge is partial: `ui/` + login/register/mfa forms
-gone; forgot/reset forms remain in-repo. Pins: sdk 1.1.0, components 1.5.0,
-auth 1.1.4, layout 1.3.1, tokens 1.1.0, cli 0.4.0, docs 1.4.1._
+_Guide updated 2026-08-21 - Phases 0–6 + Phase E done (SDK + tokens + components +
+auth + layout + mail + stores). Phase 6 purge FULLY done; forgot/reset forms on
+facet-auth. Pins: sdk 1.1.0, auth 1.2.2, components 1.10.0, layout 1.4.1, tokens
+1.1.4, emails ^1.1.1, store ^0.1.0, cli ^0.8.0, docs 1.4.6._

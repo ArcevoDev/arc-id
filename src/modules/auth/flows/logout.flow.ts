@@ -24,6 +24,7 @@
 
 import { z } from "zod";
 import type { Flow, FlowContext } from "@/core/flows";
+import type { IsolatedPrismaClient } from "@/core/db";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { blockJti } from "@/lib/security/jti-blocklist";
 
@@ -75,7 +76,7 @@ export const logoutFlow: Flow<
       ? new Date(input.accessTokenExp * 1000)
       : undefined;
 
-    await (ctx.db as any).$transaction(async (tx: any) => {
+    await (ctx.db as unknown as IsolatedPrismaClient).$transaction(async (tx) => {
       if (session.refreshTokenId) {
         await tx.refreshToken.updateMany({
           where: {

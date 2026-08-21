@@ -24,7 +24,7 @@ import { PrismaClient, KeyType } from "@prisma-client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { generateKeyPair, exportSPKI, exportPKCS8, exportJWK } from "jose";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 
 const DATABASE_URL = process.env.DATABASE_URL!;
 if (!DATABASE_URL) {
@@ -159,6 +159,7 @@ async function main() {
     { action: "client:create", description: "Create OAuth clients" },
     { action: "client:read", description: "List OAuth clients" },
     { action: "client:delete", description: "Delete OAuth clients" },
+    { action: "client:update", description: "Update OAuth clients" },
     { action: "idp:manage", description: "Manage IdP connections" },
     {
       action: "project:manage",
@@ -506,6 +507,71 @@ async function main() {
   } else {
     console.log(`ℹ️  Admin already exists: ${ADMIN_EMAIL}`);
   }
+
+  // ── 11. Legal consent + verified external identifier for admin ──────────────
+  //
+  // The issue-credential flow now gates VC issuance on:
+  //   1. The subject DID resolving to an Identity with a verified ExternalIdentifier
+  //   2. The holder/subject Identity having an accepted LegalConsent
+  //
+  // Seed these for the SYSTEM admin so demo/E2E credential issuance works
+  // out of the box without manual setup.
+  const adminIdentity = await prisma.identity.findUniqueOrThrow({
+    where: { primaryEmail: ADMIN_EMAIL },
+    select: { id: true },
+  });
+
+  const adminEmailHash = createHash("sha256").update(ADMIN_EMAIL).digest("hex");
+  const adminDid = `${deriveDidWeb(API_BASE)}:admin`;
+
+  await prisma.decentralizedIdentifier.upsert({
+    where: { id: adminDid },
+    update: { identityId: adminIdentity.id },
+    create: {
+      id: adminDid,
+      identityId: adminIdentity.id,
+      tenantId: null,
+      keyType: KeyType.JsonWebKey2020,
+      publicKeyBytes: Buffer.from([]),
+      didDocument: {
+        id: adminDid,
+        "@context": ["https://www.w3.org/ns/did/v1"],
+        verificationMethod: [],
+        authentication: [],
+        assertionMethod: [],
+      },
+    },
+  });
+
+  await prisma.externalIdentifier.upsert({
+    where: {
+      type_valueHash: { type: "email", valueHash: adminEmailHash },
+    },
+    update: { identityId: adminIdentity.id, verified: true, displayValue: ADMIN_EMAIL },
+    create: {
+      identityId: adminIdentity.id,
+      type: "email",
+      valueHash: adminEmailHash,
+      displayValue: ADMIN_EMAIL,
+      verified: true,
+    },
+  });
+
+  await prisma.legalConsent.upsert({
+    where: {
+      identityId_documentId: {
+        identityId: adminIdentity.id,
+        documentId: "arcevocirqle-terms-of-service",
+      },
+    },
+    update: {},
+    create: {
+      identityId: adminIdentity.id,
+      documentId: "arcevocirqle-terms-of-service",
+      version: "1.0",
+    },
+  });
+  console.log("✅ SYSTEM admin DID + verified email + legal consent");
 
   console.log("\n🎉 Seed complete.");
   console.log(

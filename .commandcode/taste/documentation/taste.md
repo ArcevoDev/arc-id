@@ -16,3 +16,10 @@
 - If a terminal command fails or times out after 2-3 retries, stop and let the user run it manually instead of continuing to retry. Confidence: 0.75
 - If a background typecheck (redirected to a file) exits non-zero with empty output, re-run it in the foreground with a long timeout — on this machine the background redirect can silently swallow tsc's error output, and the foreground run is what surfaces the real errors. Confidence: 0.6
 - During a production-grade audit, verify CI workflows against declared repo tooling versions (e.g., `pnpm/action-setup` pins vs `package.json` `packageManager`) and against documented-but-unwired checks (e.g., a `scan:secrets` script that docs say exists but CI never runs) — fix the drift and wire the missing checks. Confidence: 0.7
+
+- When adding a public API method to a published shared package, document it under an `## Unreleased` section in the package's CHANGELOG.md rather than bumping the package version or editing an existing release header — leave the release cadence (version bump + publish) to the user; re-export the new type from the package entry (`index.ts`). Confidence: 0.85
+
+- Don't delete large documentation files that are still mostly accurate; make surgical fixes only to the stale portions (e.g., a 310-line testing guide with a handful of stale lines should be patched, not deleted) rather than wholesale removal. Confidence: 0.8
+
+- Don't guess when fixing documentation that depends on a pending infrastructure decision (e.g., the dev mail-sink approach); wait for the concrete decision before rewriting the dependent sections, since guessing produces docs that go stale the moment the decision lands. Confidence: 0.7
+- When documenting a blocker, don't trust a prior session's blame/root-cause attribution — re-verify the actual root cause directly against the current state and document the accurate root cause; a prior session's "THE ONE PROBLEM" diagnosis can be stale (e.g., blamed facet-auth + react-hook-form when the real failure is the bundled Form in facet-components importing react-hook-form against the wrong entry point). Confidence: 0.85

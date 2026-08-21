@@ -9,6 +9,17 @@
  */
 
 @import "tailwindcss";
+
+/* facet-components / facet-layout / facet-auth ship NO runtime CSS of their
+ * own - their components are styled entirely with Tailwind utility classes.
+ * Tailwind v4 does NOT scan node_modules by default, so we must @source the
+ * published facet packages here, otherwise every Navbar / Button / Card /
+ * Footer renders as unstyled bare HTML. */
+@source "../../node_modules/@arcevo/facet-components/dist";
+@source "../../node_modules/@arcevo/facet-layout/dist";
+@source "../../node_modules/@arcevo/facet-tokens/dist";
+@source "../../node_modules/@arcevo/facet-auth/dist";
+
 /* facet-tokens maps the design-token CSS variables into Tailwind v4
  * utility classes (@theme) and ships the .glass/.glow-indigo/... classes
  * in tokens.css (imported first in src/app/layout.tsx). tailwind.css also

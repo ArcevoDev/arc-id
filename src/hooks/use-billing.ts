@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore } from "@arcevo/facet-store";
 import { billing } from "@/sdk";
 import type { Subscription } from "@arcevo/facet-sdk";
 

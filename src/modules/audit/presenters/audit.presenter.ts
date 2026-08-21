@@ -9,6 +9,6 @@ export function presentAuditLog(log: AuditLog) {
     ip: log.ip,
     userAgent: log.userAgent,
     metadata: log.metadata,
-    createdAt: log.createdAt,
+    createdAt: log.createdAt.toISOString(),
   };
 }

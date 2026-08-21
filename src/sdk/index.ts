@@ -25,8 +25,7 @@ import {
   type ApiResponse,
   type User,
 } from "@arcevo/facet-sdk";
-import { useAuthStore } from "@/store/auth.store";
-import { useTenantStore } from "@/store/tenant.store";
+import { useAuthStore, useTenantStore } from "@arcevo/facet-store";
 
 // ── Client singleton ─────────────────────────────────────────────────────────
 
@@ -62,11 +61,15 @@ function onAuthCleared() {
 // original failure path (onAuthCleared) runs instead.
 let refreshInFlight = false;
 
+// Declared before `client` to break the circular type dependency:
+// client → onTokenRefresh → authSdk → client.
+// `authSdk` is assigned after `client` is created; onTokenRefresh only runs
+// at call-time, well after both are initialised.
 let authSdk: AuthSdk;
 
-const client = new ArcIdClient({
+const client: ArcIdClient = new ArcIdClient({
   baseUrl: BASE_URL,
-  onTokenRefresh: async () => {
+  onTokenRefresh: async (): Promise<string | null> => {
     const state = useAuthStore.getState();
     if (!state.refreshToken || refreshInFlight) return null;
 

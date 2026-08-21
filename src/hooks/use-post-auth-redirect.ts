@@ -4,31 +4,19 @@ import { useRouter } from "next/navigation";
 import type { User } from "@arcevo/facet-sdk";
 
 /**
- * Decide where an authenticated user should land.
+ * Decide where an authenticated user should land after login/register.
  *
- * - A user with at least one ACTIVE tenant membership (a dev/org user)
- *   goes to the console dashboard, which is tenant-scoped.
- * - A general user (no membership, or no tenant context) goes to the
- *   web-wallet view (their credentials / profile).
- *
- * The discriminator is real data from the auth response, not a guess.
+ * All authenticated users go to the console (/console). The console
+ * dashboard itself determines whether the user has a tenant context or
+ * needs to create/join one. This replaces the old wallet redirect since
+ * Arc-Wallet is now a separate standalone app.
  */
-export function resolvePostAuthRoute(user?: User | null): string {
-  if (!user) return "/login";
-
-  const hasTenant = (user.memberships ?? []).some(
-    (m) => m.status === "ACTIVE" || m.status === undefined || m.status === null,
-  );
-  const isAdmin = (user.roles ?? []).some(
-    (r) => r === "ADMIN" || r === "SUPER_ADMIN" || r === "SYSTEM_ADMIN",
-  );
-
-  if (hasTenant || isAdmin) return "/dashboard";
-  return "/wallet";
+export function resolvePostAuthRoute(_user?: User | null): string {
+  return "/console";
 }
 
 /** Redirect after login/register based on the resolved user type. */
 export function usePostAuthRedirect() {
   const router = useRouter();
-  return (user?: User | null) => router.replace(resolvePostAuthRoute(user));
+  return (_user?: User | null) => router.replace(resolvePostAuthRoute(_user));
 }

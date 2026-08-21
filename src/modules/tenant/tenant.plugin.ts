@@ -16,9 +16,14 @@ import { signingKeyRoute } from "./routes/signing-key.route";
 import { tenantDidRoute } from "./routes/did.route";
 import { projectRoute } from "./routes/project.route";
 import { onboardingFlowRoute } from "./routes/onboarding.route";
+import { inviteRoute } from "./routes/invite.route";
 
 export const tenantPlugin = fp(
   async (fastify: FastifyInstance) => {
+    // Public route: accept tenant invitation.
+    // Not tenant-scoped — the SDK calls POST /invites/accept directly.
+    await fastify.withTypeProvider<ZodTypeProvider>().register(inviteRoute);
+
     /**
      * All tenant routes are mounted under /tenants.
      * Canonical paths:

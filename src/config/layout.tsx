@@ -1,4 +1,4 @@
-import { Icon } from "@/components/ui/icon";
+import { Icon } from "@arcevo/facet-components";
 import type { LayoutConfig, NavSection } from "@arcevo/facet-layout";
 import { navConfig } from "@/config/nav";
 

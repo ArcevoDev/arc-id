@@ -51,6 +51,7 @@ export async function policyRoute(fastify: FastifyInstance) {
         params: z.object({ tenantId: z.string().cuid() }),
         body: z.object({
           requireMfa: z.boolean().optional(),
+          requireLegalConsent: z.boolean().optional(),
           sessionTtlMinutes: z.number().int().min(5).max(10080).optional(),
           allowedEmailDomains: z.array(z.string()).optional(),
           maxSessionsPerUser: z.number().int().min(1).max(100).optional(),

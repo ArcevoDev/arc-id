@@ -1,7 +1,10 @@
 import { Resend } from "resend";
 import { config } from "@/core/config";
 import { logger } from "@/lib/logger";
-import { compileMailTemplate } from "@/core/mail/mail.engine";
+import {
+  compileMailTemplate,
+  compileMailText,
+} from "@/core/mail/mail.engine";
 
 // ── Templates ─────────────────────────────────────────────────────────────────
 import { VerifyEmailMail } from "@/core/mail/templates/VerifyEmailMail";
@@ -30,8 +33,11 @@ async function sendEmail(
   element: React.ReactElement,
 ): Promise<void> {
   try {
-    const html = await compileMailTemplate(element);
-    await resend.emails.send({ from: config.mail.from, to, subject, html });
+    const [html, text] = await Promise.all([
+      compileMailTemplate(element),
+      compileMailText(element),
+    ]);
+    await resend.emails.send({ from: config.mail.from, to, subject, html, text });
     logger.info("[MAIL] Sent", { to, subject });
   } catch (err) {
     logger.error("[MAIL] Failed to send", { err, to, subject });

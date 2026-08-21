@@ -16,7 +16,7 @@ export function presentIdentity(identity: IdentityWithMemberships) {
     emailVerified: identity.emailVerified,
     roles: identity.memberships?.map((m) => m.role.name) ?? [],
     metadata: identity.metadata,
-    createdAt: identity.createdAt,
-    updatedAt: identity.updatedAt,
+    createdAt: identity.createdAt.toISOString(),
+    updatedAt: identity.updatedAt.toISOString(),
   };
 }

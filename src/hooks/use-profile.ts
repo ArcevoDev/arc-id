@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore } from "@arcevo/facet-store";
 import { identity } from "@/sdk";
 import type { JsonObject } from "@arcevo/facet-sdk";
 

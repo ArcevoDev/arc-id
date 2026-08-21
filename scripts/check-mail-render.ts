@@ -3,19 +3,19 @@
 // Compiles every template in the registry to HTML + text, verifying each
 // renders without throwing through the facet-emails renderer.
 import { TEMPLATE_REGISTRY, TEMPLATE_NAMES } from "../src/core/mail/preview/template-registry";
-import {
-  compileMailTemplate,
-  compileMailText,
-} from "../src/core/mail/mail.engine";
+import { compileMailTree } from "../src/core/mail/mail.engine";
+import { renderEmailText } from "@arcevo/facet-emails";
 
 let pass = 0;
 let fail = 0;
 
 for (const name of TEMPLATE_NAMES) {
   try {
-    const element = TEMPLATE_REGISTRY[name];
-    const html = await compileMailTemplate(element);
-    const text = await compileMailText(element);
+    const template = TEMPLATE_REGISTRY[name];
+    const tree =
+      typeof template.tree === "function" ? template.tree() : template.tree;
+    const html = compileMailTree(tree);
+    const text = renderEmailText(tree);
     if (!html || html.length < 200) throw new Error("html too short");
     if (!text || text.length < 20) throw new Error("text too short");
     pass++;

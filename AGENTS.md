@@ -16,7 +16,7 @@ Version `0.1.0` in package.json (pre-release, no stability promises).
 Package manager is **pnpm**. Module system is **ESM only** (`"type": "module"`
 in package.json) - never emit `require()`/`module.exports`.
 
-**Test suite:** 62 files / 340 tests / 0 code failures on `pnpm test` (all passing clean, ~4-5 min runtime on Windows - route-level + Prisma imports dominate). Migration-rollback Tier-2 is opt-in via `pnpm test:rollback` (needs a live Postgres). Typecheck clean (`tsc --noEmit`). Updated 2026-08-12.
+**Test suite:** 61 files / 342 tests / 0 code failures on `pnpm test` (all passing clean, ~60s runtime on Windows - route-level + Prisma imports dominate). Migration-rollback Tier-2 is opt-in via `pnpm test:rollback` (needs a live Postgres). Typecheck clean (`tsc --noEmit`). Updated 2026-08-21.
 
 ## Non-negotiable architecture rules (same - stable)
 
@@ -90,20 +90,20 @@ shipped. See `CLAUDE.md` for the full verified status table. Open work:
   Phase 2: `@arcevo/facet-tokens/tokens.css` imported before
   `globals.css` in `layout.tsx`; `:root` token block removed from
   globals.css. Phase 3: `src/components/ui/*` deleted and all consumers
-  switched to **`@arcevo/facet-components@1.5.0`** (icons use the
+  switched to **`@arcevo/facet-components@1.10.0`** (icons use the
   package's native `<Icon name="…" />` registry - no local icon registry).
-  Phase 4: auth pages on **`@arcevo/facet-auth@1.1.4`** via `ArcProvider` +
+  Phase 4: auth pages on **`@arcevo/facet-auth@1.2.2`** via `ArcProvider` +
   `zustandTokenStorage` bridge (commit `d6f6707`); in-repo
   `login-form`/`register-form`/`mfa-form` deleted.
-  Phase 5: layouts on **`@arcevo/facet-layout@1.3.1`** (`AuthLayout` +
-  `ConsoleLayout`). Phase 6 purge is partial - `src/components/auth/`
-  still holds `forgot-password-form`/`reset-password-form` (in use).
-  All six facet packages pinned: sdk 1.1.0, components 1.5.0, auth 1.1.4,
-  layout 1.3.1, tokens 1.1.0, cli 0.4.0, docs 1.4.1 (cli/docs installed
-  as the basis for the upcoming `packages/cli` work).
+  Phase 5: layouts on **`@arcevo/facet-layout@1.4.1`** (`AuthLayout` +
+  `ConsoleLayout`). Phase 6 purge is FULLY done (2026-08-19) - `src/components/auth/` deleted;
+  `forgot-password-form`/`reset-password-form` now on `@arcevo/facet-auth` (ForgotPasswordForm/ResetPasswordForm).
+All nine facet packages pinned: sdk 1.1.0, auth 1.2.2, components 1.10.0,
+   layout 1.4.1, tokens 1.1.4, emails ^1.1.1, store ^0.1.0, cli ^0.8.0, docs 1.4.6 (cli/docs
+   installed as the basis for `packages/cli` work, now scaffolded).
 - **Phase 3 - Security hardening** - ✅ **Closed (2026-07-28).** Cross-tenant HTTP integration test added (3 tests, fastify.inject, passes). SSRF call-site gaps (4/4 closed: idp.route OIDC discovery + token endpoint, webhook test-ping, SAML entryPoint). CSRF review complete - only OAuth state cookies in social.route.ts, all `sameSite: "lax"` + `httpOnly` + `secure`. Redis-backed distributed revocation done - `AccessToken.sessionId` column + migration + `DELETE /sessions/:id` revokes bound access tokens + blocks JTIs in Redis (full kill chain).
 - **Phase 4 - Observability** - ✅ **Shipped (2026-07-28).** Correlation IDs through `FlowContext.requestId` → audit log metadata. `@fastify-metrics` at `GET /metrics`. Pino structured logs carry traceId on every flow init/ok/fail.
 - **CLI + SDK packages** - deferred until frontend rebuild stabilises the
   API contract.
-- **LegalConsent** - stays schema-only until a consumer exists.
-- **ExternalIdentifier.verified → VC issuance** - deferred, needs design first.
+- **LegalConsent** - ✅ Done (2026-08-19): gate wired into `issue-credential.flow.ts` (E2) — VC issuance blocked when the tenant policy requires consent and none is recorded.
+- **ExternalIdentifier.verified → VC issuance** - ✅ Done (2026-08-19): gate wired into `issue-credential.flow.ts` (E1) — subject DID must resolve to an Identity with ≥1 verified external identifier before issuance.

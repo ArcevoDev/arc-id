@@ -126,9 +126,6 @@ enum AuditLogAction {
   WEBHOOK_DELIVERED
   OAUTH_CLIENT_CREATED
   OAUTH_CLIENT_UPDATED
-  ROLE_CREATED
-  ROLE_UPDATED
-  ROLE_ASSIGNED
   PASSKEY_USED
   CREDENTIAL_ISSUED
   CREDENTIAL_REVOKED
@@ -147,7 +144,9 @@ enum AuditLogAction {
   IDP_CONNECTION_UPDATED
   DELEGATION_GRANTED
   DELEGATION_REVOKED
-  SESSION_ELEVATED
+   SESSION_ELEVATED
+   EXTERNAL_IDENTIFIER_VERIFICATION_SENT
+   EXTERNAL_IDENTIFIER_VERIFIED
 }
 
 // CENTRAL CORE: IDENTITY (INDIVIDUAL ACCOUNT HOLDERS)
@@ -501,6 +500,7 @@ model TenantPolicy {
   id                  String   @id @default(cuid())
   tenantId            String   @unique
   requireMfa          Boolean  @default(false)
+  requireLegalConsent Boolean  @default(true)
   sessionTtlMinutes   Int      @default(10080)
   allowedEmailDomains String[]
   maxSessionsPerUser  Int      @default(10)
@@ -819,9 +819,11 @@ model ExternalIdentifier {
   type         String
   valueHash    String
   displayValue String?
-  verified     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  verified              Boolean @default(false)
+  verificationCode      String?
+  verificationExpiresAt DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
 

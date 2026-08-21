@@ -112,17 +112,28 @@ const mockCreatedVc = { id: "urn:uuid:vc-001" };
 describe("issueCredentialFlow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockResolveOrThrow.mockReset().mockResolvedValue({ id: validInput.subjectDid });
+    mockResolveOrThrow.mockReset().mockResolvedValue({
+      id: validInput.subjectDid,
+      identityId: "identity-123",
+    });
     mockSign.mockReset().mockResolvedValue(mockSignedResult);
     mockAllocateIndex.mockReset().mockResolvedValue(mockStatusListResult);
   });
+
+  /** Sets up the happy-path DB mocks shared across success tests. */
+  function setupHappyPathDb(ctx: any) {
+    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
+    ctx.db.tenantPolicy.findUnique.mockResolvedValue({ requireLegalConsent: true });
+    ctx.db.externalIdentifier.findFirst.mockResolvedValue({ id: "ext-verified" });
+    ctx.db.legalConsent.findFirst.mockResolvedValue({ id: "consent-1" });
+    ctx.db.verifiableCredential.create.mockResolvedValue(mockCreatedVc);
+  }
 
   // ── Happy path ─────────────────────────────────────────────────────────
 
   it("issues a JWT credential with valid input", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
-    ctx.db.verifiableCredential.create.mockResolvedValue(mockCreatedVc);
+    setupHappyPathDb(ctx);
 
     const result = await issueCredentialFlow.execute(validInput, ctx);
 
@@ -153,8 +164,7 @@ describe("issueCredentialFlow", () => {
 
   it("issues an SD_JWT credential", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
-    ctx.db.verifiableCredential.create.mockResolvedValue(mockCreatedVc);
+    setupHappyPathDb(ctx);
     mockSign.mockResolvedValue({
       proof: "sd-jwt-proof",
       signedCredential: "sd-jwt-token",
@@ -214,7 +224,7 @@ describe("issueCredentialFlow", () => {
 
   it("propagates signing service errors", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
+    setupHappyPathDb(ctx);
     mockSign.mockRejectedValue(new Error("KMS unreachable"));
 
     await expect(
@@ -224,7 +234,7 @@ describe("issueCredentialFlow", () => {
 
   it("propagates status list allocation errors", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
+    setupHappyPathDb(ctx);
     mockAllocateIndex.mockRejectedValue(new Error("List full"));
 
     await expect(
@@ -236,8 +246,7 @@ describe("issueCredentialFlow", () => {
 
   it("sends notification when holderId is present with an email", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM", identityId: "issuer-id" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
-    ctx.db.verifiableCredential.create.mockResolvedValue(mockCreatedVc);
+    setupHappyPathDb(ctx);
     ctx.db.identity.findUnique.mockResolvedValue({
       primaryEmail: "holder@test.com",
       name: "Alice",
@@ -257,8 +266,7 @@ describe("issueCredentialFlow", () => {
 
   it("does not send notification when holderId is omitted", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
-    ctx.db.verifiableCredential.create.mockResolvedValue(mockCreatedVc);
+    setupHappyPathDb(ctx);
 
     await issueCredentialFlow.execute(
       { ...validInput, holderId: undefined },
@@ -273,8 +281,7 @@ describe("issueCredentialFlow", () => {
 
   it("does not crash when holder has no email", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
-    ctx.db.verifiableCredential.create.mockResolvedValue(mockCreatedVc);
+    setupHappyPathDb(ctx);
     ctx.db.identity.findUnique.mockResolvedValue(null);
 
     const result = await issueCredentialFlow.execute(validInput, ctx);
@@ -286,8 +293,7 @@ describe("issueCredentialFlow", () => {
 
   it("does not crash when audit log write fails (void catch)", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
-    ctx.db.verifiableCredential.create.mockResolvedValue(mockCreatedVc);
+    setupHappyPathDb(ctx);
     const { auditService } = await import("@/modules/audit/services/audit.service");
     (auditService.log as any).mockRejectedValue(new Error("DB connection lost"));
 
@@ -299,8 +305,7 @@ describe("issueCredentialFlow", () => {
 
   it("does not crash when webhook dispatch fails (void catch)", async () => {
     const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
-    ctx.db.decentralizedIdentifier.findUnique.mockResolvedValue(mockTenantDid);
-    ctx.db.verifiableCredential.create.mockResolvedValue(mockCreatedVc);
+    setupHappyPathDb(ctx);
     const { dispatchWebhookEvent } = await import(
       "@/lib/webhooks/webhook-dispatcher"
     );
@@ -311,5 +316,86 @@ describe("issueCredentialFlow", () => {
     const result = await issueCredentialFlow.execute(validInput, ctx);
 
     expect(result.credentialId).toBe(mockCreatedVc.id);
+  });
+
+  // ── Gate failures ───────────────────────────────────────────────────────
+
+  it("throws 403 when subject DID is not bound to an identity", async () => {
+    const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
+    setupHappyPathDb(ctx);
+    mockResolveOrThrow.mockResolvedValue({ id: validInput.subjectDid, identityId: null });
+
+    await expect(
+      issueCredentialFlow.execute(validInput, ctx),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining("not bound to an identity"),
+    });
+
+    expect(ctx.db.verifiableCredential.create).not.toHaveBeenCalled();
+  });
+
+  it("throws 403 when subject identity has no verified external identifier", async () => {
+    const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
+    setupHappyPathDb(ctx);
+    ctx.db.externalIdentifier.findFirst.mockResolvedValue(null);
+
+    await expect(
+      issueCredentialFlow.execute(validInput, ctx),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining("verified external identifier"),
+    });
+
+    expect(ctx.db.verifiableCredential.create).not.toHaveBeenCalled();
+  });
+
+  it("throws 403 when identity has no legal consent", async () => {
+    const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
+    setupHappyPathDb(ctx);
+    ctx.db.legalConsent.findFirst.mockResolvedValue(null);
+
+    await expect(
+      issueCredentialFlow.execute(validInput, ctx),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining("legal consent"),
+    });
+
+    expect(ctx.db.verifiableCredential.create).not.toHaveBeenCalled();
+  });
+
+  it("checks legal consent against subject identity when holderId omitted", async () => {
+    const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
+    setupHappyPathDb(ctx);
+    ctx.db.legalConsent.findFirst.mockResolvedValue(null);
+
+    await expect(
+      issueCredentialFlow.execute(
+        { ...validInput, holderId: undefined },
+        ctx,
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining("legal consent"),
+    });
+
+    // Consent was checked against the subject identityId, not holderId
+    expect(ctx.db.legalConsent.findFirst).toHaveBeenCalledWith({
+      where: { identityId: "identity-123" },
+      select: { id: true },
+    });
+  });
+
+  it("skips LegalConsent check when tenant policy has requireLegalConsent: false", async () => {
+    const ctx = createMockFlowCtx({ tenantId: "SYSTEM" });
+    setupHappyPathDb(ctx);
+    ctx.db.tenantPolicy.findUnique.mockResolvedValue({ requireLegalConsent: false });
+    ctx.db.legalConsent.findFirst.mockResolvedValue(null);
+
+    const result = await issueCredentialFlow.execute(validInput, ctx);
+
+    expect(result.credentialId).toBe(mockCreatedVc.id);
+    expect(ctx.db.legalConsent.findFirst).not.toHaveBeenCalled();
   });
 });

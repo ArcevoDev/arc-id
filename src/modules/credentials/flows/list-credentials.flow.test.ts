@@ -29,6 +29,7 @@ const mockCredential = (id: string, overrides: Record<string, unknown> = {}) => 
   subjectDid: "did:key:z6MktafZ",
   issuedAt: new Date("2026-07-22T12:00:00Z"),
   expiresAt: new Date("2027-07-22T12:00:00Z"),
+  createdAt: new Date("2026-07-22T12:00:00Z"),
   credentialSubject: { name: "Alice" },
   issuer: { id: "did:web:test.arcevocirqle.com.ng", tenantId: "SYSTEM" },
   ...overrides,
@@ -89,6 +90,7 @@ describe("listCredentialsFlow", () => {
       subjectDid: "did:key:z6MktafZ",
       issuedAt: raw.issuedAt,
       expiresAt: raw.expiresAt,
+      createdAt: raw.createdAt.toISOString(),
       credentialSubject: { name: "Charlie", email: "charlie@test.com" },
     });
   });

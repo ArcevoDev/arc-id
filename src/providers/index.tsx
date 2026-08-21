@@ -4,8 +4,8 @@ import { ArcProvider } from "@arcevo/facet-auth";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { zustandTokenStorage } from "@/providers/facet-auth-bridge";
-import { arcIdClient } from "@/sdk";
-import { useAuthStore } from "@/store/auth.store";
+import { arcIdClient, persistSession, clearPersistedSession } from "@/sdk";
+import { useAuthStore } from "@arcevo/facet-store";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -22,8 +22,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
         onAuthChange={({ user, isAuthenticated }) => {
           if (isAuthenticated && user) {
             useAuthStore.getState().setUser(user);
+            const { accessToken, refreshToken } = useAuthStore.getState();
+            if (accessToken) {
+              persistSession(user, accessToken, refreshToken ?? "");
+            }
           } else if (!isAuthenticated) {
             useAuthStore.getState().clearAuth();
+            clearPersistedSession();
           }
         }}
       >

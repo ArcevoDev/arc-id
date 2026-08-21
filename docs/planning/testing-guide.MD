@@ -14,11 +14,12 @@ Start both services:
 ```bash
 pnpm dev:api      # http://localhost:4000
 pnpm dev:workers  # background webhook worker
-pnpm dev:web      # http://localhost:3000 (for mail preview)
+pnpm dev:web      # http://localhost:3000 (public app / OAuth redirect target)
 ```
 
 Swagger UI → http://localhost:4000/docs  
-Mail preview → http://localhost:3000/mail/preview  
+Template gallery (static samples) → http://127.0.0.1:3888  
+Auth emails (verify/reset/invite) delivered via Resend → check recipient inbox.  
 Authorize in Swagger: click **Authorize** → paste Bearer token from login response.
 
 ---
@@ -45,7 +46,7 @@ Stop DB connection and retest #2 → expect `503`.
 | 7   | POST   | `/auth/register` | same email again            | `409 CONFLICT`                            |
 | 8   | POST   | `/auth/register` | 6 times from same IP        | `429 TOO_MANY_REQUESTS` (hits 5/hr limit) |
 
-After step 6, check mail preview for `VERIFY_EMAIL` token. Copy it.
+After step 6, check the recipient inbox (email delivered via Resend) for the verification token. Copy it.
 
 | #   | Method | Path                 | Body                        | Expected                                |
 | --- | ------ | -------------------- | --------------------------- | --------------------------------------- |
@@ -160,7 +161,7 @@ These need a browser / Postman with WebAuthn support or a manual flow.
 
 | #   | Method | Path                           | Body                               | Expected                             |
 | --- | ------ | ------------------------------ | ---------------------------------- | ------------------------------------ |
-| 42  | POST   | `/auth/password/request-reset` | `{ email }`                        | `200` - check mail preview for token |
+| 42  | POST   | `/auth/password/request-reset` | `{ email }`                        | `200` - check inbox for reset token (via Resend) |
 | 43  | POST   | `/auth/password/confirm-reset` | `{ token, newPassword }`           | `200` - old sessions revoked         |
 | 44  | POST   | `/auth/password/change`        | `{ currentPassword, newPassword }` | Needs step-up - do block 6 first     |
 
@@ -178,7 +179,7 @@ Step 47 verifies the membership gate fix: non-members cannot enumerate tenant da
 
 | #   | Method | Path                                | Body                                                | Expected                                   |
 | --- | ------ | ----------------------------------- | --------------------------------------------------- | ------------------------------------------ |
-| 48  | POST   | `/api/v1/tenants/:tenantId/members` | `{ identityId: "<other user id>", role: "MEMBER" }` | `201` - check mail preview for invite link |
+| 48  | POST   | `/api/v1/tenants/:tenantId/members` | `{ identityId: "<other user id>", role: "MEMBER" }` | `201` - check invitee inbox for the accept link (via Resend) |
 | 49  | POST   | `/invites/accept`                   | `{ token: "<from email>" }`                         | `200 "You have joined Acme Inc"`           |
 | 50  | POST   | `/invites/accept`                   | same token again                                    | `410 INVITE_EXPIRED_OR_USED`               |
 

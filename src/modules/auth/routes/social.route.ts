@@ -58,21 +58,21 @@ function buildRedirectUri(provider: string) {
 function getGoogle() {
   const { clientId, clientSecret } = config.social.google;
   if (!clientId || !clientSecret)
-    throw new Error("Google OAuth not configured");
+    throw ApiError.internal("Google OAuth not configured");
   return new Google(clientId, clientSecret, buildRedirectUri("google"));
 }
 
 function getGitHub() {
   const { clientId, clientSecret } = config.social.github;
   if (!clientId || !clientSecret)
-    throw new Error("GitHub OAuth not configured");
+    throw ApiError.internal("GitHub OAuth not configured");
   return new GitHub(clientId, clientSecret, buildRedirectUri("github"));
 }
 
 function getApple() {
   const { clientId, teamId, keyId, privateKey } = config.social.apple;
   if (!clientId || !teamId || !keyId || !privateKey)
-    throw new Error("Apple OAuth not configured");
+    throw ApiError.internal("Apple OAuth not configured");
 
   // Arctic v3 requires privateKey to be a Uint8Array byte representation
   const privateKeyBytes = new Uint8Array(Buffer.from(privateKey, "utf-8"));
@@ -89,7 +89,7 @@ function getApple() {
 function getMicrosoft() {
   const { clientId, clientSecret, tenantId } = config.social.microsoft;
   if (!clientId || !clientSecret)
-    throw new Error("Microsoft OAuth not configured");
+    throw ApiError.internal("Microsoft OAuth not configured");
   return new MicrosoftEntraId(
     tenantId,
     clientId,
@@ -108,6 +108,13 @@ interface ProviderProfile {
   accessToken: string;
   refreshToken?: string | null;
   expiresAt?: Date | null;
+}
+
+interface GoogleUserInfo {
+  sub: string;
+  email?: string | null;
+  name?: string | null;
+  picture?: string | null;
 }
 
 async function handleCallback(
@@ -328,7 +335,7 @@ export async function socialRoute(instance: FastifyInstance) {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
       );
-      const profile = (await resp.json()) as any;
+      const profile: GoogleUserInfo = await resp.json();
 
       const tokenData = await handleCallback(
         instance,

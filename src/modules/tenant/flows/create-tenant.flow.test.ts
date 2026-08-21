@@ -79,6 +79,7 @@ describe("createTenantFlow — tenant caps", () => {
       slug: "test-org",
       sector: "technology",
       createdAt: new Date(),
+      updatedAt: new Date(),
       roles: MOCK_ROLES,
     });
     ctx.db.role.findMany = vi.fn().mockResolvedValue(MOCK_ROLES);
@@ -112,6 +113,7 @@ describe("createTenantFlow — tenant caps", () => {
       slug: "test-org",
       sector: "technology",
       createdAt: new Date(),
+      updatedAt: new Date(),
       roles: [
         {
           id: "role_admin",
@@ -147,6 +149,7 @@ describe("createTenantFlow — tenant caps", () => {
       slug: "test-org",
       sector: "technology",
       createdAt: new Date(),
+      updatedAt: new Date(),
       roles: [
         {
           id: "role_admin",
@@ -182,6 +185,7 @@ describe("createTenantFlow — tenant caps", () => {
       slug: "test-org",
       sector: "technology",
       createdAt: new Date(),
+      updatedAt: new Date(),
       roles: MOCK_ROLES,
     });
     ctx.db.role.findMany = vi.fn().mockResolvedValue([
@@ -213,6 +217,7 @@ describe("createTenantFlow — tenant caps", () => {
       slug: "unlimited-org",
       sector: "technology",
       createdAt: new Date(),
+      updatedAt: new Date(),
       roles: MOCK_ROLES,
     });
     ctx.db.role.findMany = vi.fn().mockResolvedValue([
@@ -244,6 +249,7 @@ describe("createTenantFlow — tenant caps", () => {
       slug: "test-org",
       sector: "technology",
       createdAt: new Date(),
+      updatedAt: new Date(),
       roles: [
         {
           id: "role_admin",

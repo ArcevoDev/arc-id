@@ -12,9 +12,13 @@ import { flowExecutor } from "@/core/flows";
 import { linkExternalIdFlow } from "../flows/link-external-id.flow";
 import { listExternalIdsFlow } from "../flows/list-external-ids.flow";
 import { unlinkExternalIdFlow } from "../flows/unlink-external-id.flow";
+import { verifyExternalIdentifierFlow } from "../flows/verify-identifier.flow";
+import { confirmExternalIdentifierFlow } from "../flows/confirm-identifier.flow";
 import {
   LinkExternalIdSchema,
   ExternalIdResponseSchema,
+  VerifyExternalIdSchema,
+  ConfirmVerifyExternalIdSchema,
   EXTERNAL_ID_TYPES,
 } from "../validators/external-id.schemas";
 
@@ -127,6 +131,78 @@ export async function externalIdRoute(fastify: FastifyInstance) {
         success: true,
         message: "External identifier unlinked",
       });
+    },
+  );
+
+  // POST /external-ids/:id/verify — send a 6-digit verification code
+  withZod.post(
+    "/external-ids/:id/verify",
+    {
+      preHandler: fastify.auth.requireUser,
+      schema: {
+        tags: ["Identity & Profile"],
+        summary: "Send a verification code to an external identifier",
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string() }),
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            data: VerifyExternalIdSchema.extend({
+              success: z.boolean(),
+              type: z.string(),
+            }).omit({ id: true }),
+          }),
+        },
+      },
+    },
+    async (req, reply) => {
+      const result = await flowExecutor.run(
+        verifyExternalIdentifierFlow,
+        { id: req.params.id },
+        {
+          identityId: req.identity.id,
+          tenantId: req.identity.tenantId,
+          ip: req.ip,
+        },
+      );
+
+      return reply.send({ success: true, data: result });
+    },
+  );
+
+  // POST /external-ids/:id/confirm — validate the 6-digit verification code
+  withZod.post(
+    "/external-ids/:id/confirm",
+    {
+      preHandler: fastify.auth.requireUser,
+      schema: {
+        tags: ["Identity & Profile"],
+        summary: "Confirm an external identifier with a verification code",
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string() }),
+        body: ConfirmVerifyExternalIdSchema.omit({ id: true }),
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            data: ConfirmVerifyExternalIdSchema.omit({ code: true }).extend({
+              verified: z.boolean(),
+            }),
+          }),
+        },
+      },
+    },
+    async (req, reply) => {
+      const result = await flowExecutor.run(
+        confirmExternalIdentifierFlow,
+        { id: req.params.id, code: req.body.code },
+        {
+          identityId: req.identity.id,
+          tenantId: req.identity.tenantId,
+          ip: req.ip,
+        },
+      );
+
+      return reply.send({ success: true, data: result });
     },
   );
 }

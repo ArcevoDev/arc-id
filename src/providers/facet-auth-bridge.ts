@@ -1,7 +1,7 @@
 "use client";
 
 import type { TokenStorage } from "@arcevo/facet-auth";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore } from "@arcevo/facet-store";
 import { arcIdClient } from "@/sdk";
 
 /**

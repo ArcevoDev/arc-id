@@ -9,7 +9,7 @@ export function presentMembership(membership: MembershipWithRole) {
     tenantId: membership.tenantId,
     role: membership.role.name,
     status: membership.status,
-    createdAt: membership.createdAt,
+    createdAt: membership.createdAt.toISOString(),
   };
 }
 
@@ -23,7 +23,7 @@ export function presentMembershipBasic(
     tenantId: membership.tenantId,
     role: membership.role?.name ?? "MEMBER",
     status: membership.status,
-    createdAt: membership.createdAt,
+    createdAt: membership.createdAt.toISOString(),
   };
 }
 
@@ -46,7 +46,7 @@ export function presentMembershipWithIdentity(
     tenantId: membership.tenantId,
     role: membership.role.name,
     status: membership.status,
-    createdAt: membership.createdAt,
+    createdAt: membership.createdAt.toISOString(),
     email: membership.identity.primaryEmail,
     name: membership.identity.name,
     picture: membership.identity.picture,

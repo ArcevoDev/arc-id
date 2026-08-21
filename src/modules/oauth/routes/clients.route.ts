@@ -40,6 +40,14 @@ const CreateClientSchema = z.object({
 });
 
 /**
+ * Partial update for an existing OAuth client. Derived from
+ * CreateClientSchema (every field optional) with tenantId omitted — a
+ * client's owning tenant can never be changed here. clientId and
+ * clientSecret are never updatable (rotation is a separate concern).
+ */
+const UpdateClientSchema = CreateClientSchema.partial().omit({ tenantId: true });
+
+/**
  * Validates that, if projectId is supplied, the project actually belongs to
  * targetTenantId. Prevents attaching a client to a project owned by a
  * different tenant — which would otherwise let a tenant ADMIN silently
@@ -230,6 +238,116 @@ export async function clientsRoute(fastify: FastifyInstance) {
       });
 
       return reply.send({ success: true, data: clients });
+    },
+  );
+
+  // PATCH /oauth/clients/:clientId
+  fastify.patch(
+    "/clients/:clientId",
+    {
+      preHandler: fastify.auth.requirePlan("PRO"),
+      schema: {
+        tags: ["OAuth2 / OIDC Server"],
+        summary: "Update an OAuth client's mutable settings (PRO)",
+        security: [{ bearerAuth: [] }],
+        params: z.object({ clientId: z.string().min(1) }),
+        body: UpdateClientSchema,
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            data: z.object({
+              clientId: z.string(),
+              name: z.string(),
+              projectId: z.string().nullish(),
+              grantTypes: z.array(z.string()),
+              scopes: z.array(z.string()),
+              redirectUris: z.array(z.string()),
+              public: z.boolean(),
+              requirePkce: z.boolean(),
+            }),
+          }),
+        },
+      },
+    },
+    async (req, reply) => {
+      const { clientId } = req.params as { clientId: string };
+      const input = UpdateClientSchema.parse(req.body);
+
+      const client = await fastify.db.client.findFirst({ where: { clientId } });
+      if (!client) throw ApiError.notFound("Client not found");
+
+      const clientTenantId = client.tenantId ?? "SYSTEM";
+      if (
+        !(await hasPermission(
+          fastify.db,
+          req.identity.id,
+          clientTenantId,
+          "client:update",
+        ))
+      ) {
+        throw ApiError.forbidden("Permission required: client:update");
+      }
+
+      // projectId ownership is re-checked if it is being reassigned to a
+      // different project — prevents cross-tenant project leasing.
+      if (
+        input.projectId !== undefined &&
+        input.projectId !== client.projectId
+      ) {
+        await assertProjectBelongsToTenant(fastify, input.projectId, clientTenantId);
+      }
+
+      const updated = await fastify.db.client.update({
+        where: { id: client.id },
+        data: {
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.grantTypes !== undefined && { grantTypes: input.grantTypes }),
+          ...(input.scopes !== undefined && { scopes: input.scopes }),
+          ...(input.public !== undefined && { public: input.public }),
+          ...(input.requirePkce !== undefined && { requirePkce: input.requirePkce }),
+          ...(input.logoUri !== undefined && { logoUri: input.logoUri }),
+          ...(input.tosUri !== undefined && { tosUri: input.tosUri }),
+          ...(input.policyUri !== undefined && { policyUri: input.policyUri }),
+          ...(input.projectId !== undefined && { projectId: input.projectId }),
+          redirectUris:
+            input.redirectUris !== undefined
+              ? {
+                  deleteMany: {},
+                  create: input.redirectUris.map((uri) => ({ uri })),
+                }
+              : undefined,
+        },
+        include: { redirectUris: true },
+      });
+
+      await fastify.db.auditLog.create({
+        data: {
+          actionId: "OAUTH_CLIENT_UPDATED",
+          tenantId: clientTenantId,
+          identityId: req.identity.id,
+          ip: req.ip,
+          metadata: {
+            clientId,
+            changedFields: Object.keys(input),
+          },
+        },
+      });
+
+      return reply.send({
+        success: true,
+        data: {
+          clientId: updated.clientId,
+          name: updated.name,
+          projectId: updated.projectId,
+          grantTypes: updated.grantTypes as string[],
+          scopes: updated.scopes as string[],
+          redirectUris: (updated.redirectUris as Array<{ uri: string }>).map(
+            (r) => r.uri,
+          ),
+          public: updated.public,
+          requirePkce: updated.requirePkce,
+        },
+      });
     },
   );
 

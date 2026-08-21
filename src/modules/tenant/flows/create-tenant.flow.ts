@@ -2,6 +2,7 @@
 import { z } from "zod";
 import type { Flow } from "@/core/flows/flow";
 import type { FlowContext } from "@/core/flows/flow-context";
+import type { IsolatedPrismaClient } from "@/core/db";
 import { CreateTenantSchema } from "../validators/tenant.schemas";
 import { presentTenant } from "../presenters/tenant.presenter";
 import { ApiError } from "@/core/errors/api-error";
@@ -39,7 +40,7 @@ export const createTenantFlow: Flow<z.infer<typeof CreateTenantSchema>> = {
       );
     }
 
-    const tenant = await ((ctx.db as any).$transaction(async (tx: any) => {
+    const tenant = await (ctx.db as unknown as IsolatedPrismaClient).$transaction(async (tx) => {
       const newTenant = await tx.tenant.create({
         data: {
           name: input.name,
@@ -67,7 +68,7 @@ export const createTenantFlow: Flow<z.infer<typeof CreateTenantSchema>> = {
         include: { roles: true },
       });
 
-      const adminRole = newTenant.roles.find((r: any) => r.name === "ADMIN");
+      const adminRole = newTenant.roles.find((r) => r.name === "ADMIN");
       if (!adminRole) throw ApiError.internal("Failed to seed ADMIN role");
 
       await tx.tenantMembership.create({
@@ -80,7 +81,7 @@ export const createTenantFlow: Flow<z.infer<typeof CreateTenantSchema>> = {
       });
 
       return newTenant;
-    }) as Promise<any>);
+    });
 
     void auditService
       .log({

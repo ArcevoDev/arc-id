@@ -88,8 +88,11 @@ TESTING THE WHOLE FLOW FROM THE UI
    c. GitHub (needs .env client creds)
    d. Google  (needs .env client creds)
 5. After auth, the user lands on:
-   - /dashboard  if they have an ACTIVE tenant membership (dev/org)
-   - /wallet     if they are a general user (web version of ArcWallet)
+   - /console  if they have an ACTIVE tenant membership (dev/org)
+   - /console  if they are a general user (no active tenant yet — the
+     console prompts them to create or join one).
+     (Arc-Wallet is a separate standalone app; /wallet is no longer mounted
+     under arc-id — users always land on /console now.)
 
 ================================================================
 TROUBLESHOOTING

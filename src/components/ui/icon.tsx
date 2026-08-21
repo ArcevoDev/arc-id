@@ -1,6 +1,6 @@
 "use client";
 
-import GeneratedIcon, { type GeneratedIconProps } from "@/components/ui/icons.generated";
+import { Icon as GeneratedIcon, type IconProps as GeneratedIconProps } from "@arcevo/facet-components";
 
 /**
  * ArcID icon component.

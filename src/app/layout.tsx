@@ -2,15 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "@arcevo/facet-tokens/tokens.css";
 import "@/styles/globals.css";
 import { Providers } from "@/providers";
-import { ArcMetadata } from "@/components/ui/metadata";
+import { ArcMetadata } from "@/components/metadata";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(ArcMetadata.url),
   title: {
-    default: `${ArcMetadata.name} - ${ArcMetadata.tagline}`,
+    default: `${ArcMetadata.name} · ${ArcMetadata.tagline}`,
     template: `%s · ${ArcMetadata.name}`,
   },
-  description: ArcMetadata.longDescription,
+  description: ArcMetadata.description,
   keywords: [...ArcMetadata.keywords],
   authors: [{ name: ArcMetadata.org.name, url: ArcMetadata.org.url }],
   creator: ArcMetadata.org.name,
@@ -19,46 +18,25 @@ export const metadata: Metadata = {
     type: "website",
     locale: ArcMetadata.locale,
     siteName: ArcMetadata.name,
-    title: `${ArcMetadata.name} - ${ArcMetadata.tagline}`,
+    title: `${ArcMetadata.name} · ${ArcMetadata.tagline}`,
     description: ArcMetadata.longDescription,
-    images: [
-      {
-        url: ArcMetadata.ogImage,
-        width: 1200,
-        height: 630,
-        alt: `${ArcMetadata.name} - ${ArcMetadata.tagline}`,
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${ArcMetadata.name} - ${ArcMetadata.tagline}`,
-    description: ArcMetadata.description,
-    images: [ArcMetadata.ogImage],
-    creator: ArcMetadata.twitterHandle,
+    url: ArcMetadata.url,
   },
   robots: { index: false, follow: false },
-  icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-    shortcut: "/favicon.ico",
-  },
-  manifest: "/site.webmanifest",
-  applicationName: ArcMetadata.name,
 };
 
 export const viewport: Viewport = {
-  themeColor: [{ media: "(prefers-color-scheme: dark)", color: ArcMetadata.themeColor }],
+  themeColor: ArcMetadata.themeColor,
   width: "device-width",
   initialScale: 1,
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>

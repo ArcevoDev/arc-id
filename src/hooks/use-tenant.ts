@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useTenantStore } from "@/store/tenant.store";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore, useTenantStore } from "@arcevo/facet-store";
 import { tenants, arcIdClient, persistSession } from "@/sdk";
 
 export function useTenant() {
@@ -16,7 +15,7 @@ export function useTenant() {
       setTenants(result.data);
       const stored = localStorage.getItem("arcid-active-tenant");
       const saved = stored ? JSON.parse(stored) : null;
-      const target = saved ? result.data.find((t: any) => t.id === saved.id) : result.data[0];
+      const target = saved ? result.data.find((t) => t.id === saved.id) : result.data[0];
       if (target) setActiveTenant(target);
     } else {
       setTenants([]);
@@ -61,6 +60,26 @@ export function useTenant() {
     [tenantList, setActiveTenant],
   );
 
+  const createTenant = useCallback(
+    async (name: string, slug: string) => {
+      if (!useAuthStore.getState().accessToken) {
+        return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
+      }
+      const result = await tenants.create({ name, slug });
+      if (result.data) {
+        setTenants([result.data, ...tenantList]);
+        setActiveTenant(result.data);
+        localStorage.setItem("arcid-active-tenant", JSON.stringify(result.data));
+      }
+      return result;
+    },
+    [tenantList, setActiveTenant, setTenants],
+  );
+
+  const acceptInvite = useCallback(async (token: string) => {
+    return tenants.acceptInvite({ token });
+  }, []);
+
   return {
     activeTenant,
     tenants: tenantList,
@@ -70,5 +89,7 @@ export function useTenant() {
     hydrateTenants,
     listMembers,
     switchTenant,
+    createTenant,
+    acceptInvite,
   };
 }

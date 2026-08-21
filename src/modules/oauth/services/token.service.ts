@@ -25,6 +25,7 @@ import { addMinutes, addHours, addDays } from "date-fns";
 import { FlowContext } from "@/core/flows";
 import { config } from "@/core/config";
 import { resolvePemContent } from "@/api/plugins/jwt.plugin";
+import { ApiError } from "@/core/errors";
 
 function parseTtlToMinutes(ttl: string | number): number {
   if (typeof ttl === "number") return ttl;
@@ -117,7 +118,7 @@ export class TokenService {
     ]);
 
     if (!client) {
-      throw new Error(`OAuth Client matching '${clientId}' not found.`);
+      throw ApiError.notFound(`OAuth Client matching '${clientId}' not found.`);
     }
 
     const now = new Date();

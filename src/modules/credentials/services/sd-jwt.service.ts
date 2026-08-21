@@ -10,6 +10,7 @@ import { SDJwtVcInstance } from "@sd-jwt/sd-jwt-vc";
 import type { Signer, Verifier, Hasher, SaltGenerator } from "@sd-jwt/core";
 import { createHash, randomBytes } from "crypto";
 import { importPKCS8, importSPKI } from "jose";
+import { ApiError } from "@/core/errors";
 
 // ── Built-in crypto replacements for @sd-jwt/crypto-nodejs ────────────────────
 
@@ -55,7 +56,7 @@ function algToSubtleParams(alg: string): SubtleParams {
     case "PS512":
       return { name: "RSA-PSS", saltLength: 64 };
     default:
-      throw new Error(
+      throw ApiError.badRequest(
         `SD-JWT: unsupported algorithm "${alg}". ` +
           `Supported: ES256, ES384, ES512, RS256, RS384, RS512, PS256, PS384, PS512`,
       );

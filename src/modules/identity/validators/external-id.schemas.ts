@@ -28,3 +28,12 @@ export const ExternalIdResponseSchema = z.object({
   verified: z.boolean(),
   createdAt: z.date(),
 });
+
+export const VerifyExternalIdSchema = z.object({
+  id: z.string(),
+});
+
+export const ConfirmVerifyExternalIdSchema = z.object({
+  id: z.string(),
+  code: z.string().length(6, "Verification code must be 6 digits"),
+});

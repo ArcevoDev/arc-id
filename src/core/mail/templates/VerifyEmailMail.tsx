@@ -1,13 +1,14 @@
 ﻿import * as React from "react";
-import { EmailSection, EmailText, EmailList } from "@arcevo/facet-emails";
 import {
-  MailLayout,
-  MailButton,
-  MailText,
-  MailDivider,
-  MailLinkFallback,
-  tokens as t,
-} from "../components";
+  EmailLayout,
+  EmailButton,
+  EmailText,
+  EmailDivider,
+  EmailSection,
+  EmailList,
+  EmailLink,
+} from "@arcevo/facet-emails";
+import { MAIL_COLOR, MAIL_SPACE, MAIL_RADIUS, MAIL_FONT } from "../brand";
 
 export interface VerifyEmailMailProps {
   verifyUrl: string;
@@ -15,41 +16,56 @@ export interface VerifyEmailMailProps {
 }
 
 export const VerifyEmailMail = ({ verifyUrl, name }: VerifyEmailMailProps) => (
-  <MailLayout
+  <EmailLayout
     previewText="One last step: verify your email and step into your ArcID identity"
     heading="Verify Your Email Address"
-    eyebrow="Welcome to ArcID"
+    brandName="ArcID"
+    footerNote="This message was sent by ArcID, the sovereign identity engine. You are receiving it because this address is connected to an ArcID account."
+    footerMeta={`© ${new Date().getFullYear()} ArcID. All rights reserved.`}
   >
-    <MailText>
+    <EmailText
+      style={{
+        fontSize: "11px",
+        fontWeight: 600,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: MAIL_COLOR.textMuted,
+        marginBottom: MAIL_SPACE.sm,
+      }}
+    >
+      Welcome to ArcID
+    </EmailText>
+
+    <EmailText style={{ marginBottom: MAIL_SPACE.md }}>
       {name ? `Hello ${name},` : "Hello,"} your ArcID profile is nearly ready.
       One small step remains: confirming that this inbox is truly yours.
-    </MailText>
+    </EmailText>
 
-    <MailText>
+    <EmailText style={{ marginBottom: MAIL_SPACE.md }}>
       Verification is the first stone in the foundation of your digital
       identity - the anchor that keeps every credential, passkey, and signature
       tied to you, and only you. It takes a moment, and it unlocks everything.
-    </MailText>
+    </EmailText>
 
-    <MailButton href={verifyUrl}>Verify Email Address</MailButton>
+    <EmailButton href={verifyUrl}>Verify Email Address</EmailButton>
 
-    <MailDivider />
+    <EmailDivider />
 
     <EmailSection
       style={{
-        backgroundColor: t.color.bgMuted,
-        border: `1px solid ${t.color.border}`,
-        borderRadius: t.radius.md,
-        padding: t.space.lg,
-        marginBottom: t.space.lg,
+        backgroundColor: MAIL_COLOR.bgMuted,
+        border: `1px solid ${MAIL_COLOR.border}`,
+        borderRadius: MAIL_RADIUS.md,
+        padding: MAIL_SPACE.lg,
+        marginBottom: MAIL_SPACE.lg,
       }}
     >
       <EmailText
         style={{
-          color: t.color.textMuted,
-          fontSize: t.font.sizeSm,
+          color: MAIL_COLOR.textMuted,
+          fontSize: MAIL_FONT.sizeSm,
           fontWeight: 600,
-          marginBottom: t.space.sm,
+          marginBottom: MAIL_SPACE.sm,
         }}
       >
         Once verified, your ArcID account gives you:
@@ -64,14 +80,25 @@ export const VerifyEmailMail = ({ verifyUrl, name }: VerifyEmailMailProps) => (
       />
     </EmailSection>
 
-    <MailText variant="small">
+    <EmailText variant="small" style={{ marginBottom: MAIL_SPACE.md }}>
       This link expires in <strong>1 hour</strong>. If you didn't create an
       ArcID account, you can safely ignore this email - no action will be
       taken, and nothing will be activated.
-    </MailText>
+    </EmailText>
 
-    <MailLinkFallback href={verifyUrl} />
-  </MailLayout>
+    <EmailText
+      variant="small"
+      style={{ marginBottom: "4px", marginTop: "24px" }}
+    >
+      If the button above doesn't work, copy and paste this link into your browser:
+    </EmailText>
+    <EmailLink
+      href={verifyUrl}
+      style={{ fontSize: "12px", wordBreak: "break-all" }}
+    >
+      {verifyUrl}
+    </EmailLink>
+  </EmailLayout>
 );
 
 export default VerifyEmailMail;

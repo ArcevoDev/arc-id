@@ -3,40 +3,45 @@ import {
   renderEmailFromReact,
   renderEmailText,
   toTemplateTree,
-  type EmailBrand,
+  renderEmail,
+  type TemplateNode,
 } from "@arcevo/facet-emails";
-import { tokens as t } from "./components/tokens";
+import { ARCID_EMAIL_BRAND, injectEmailCssVars } from "./brand";
 
 /**
- * ArcID brand tokens, mapped into the facet-emails `brand` option so every
- * layout/button/text/notice primitive inherits the ArcID look.
- */
-export const ARCID_EMAIL_BRAND: EmailBrand = {
-  primary: t.color.primary,
-  background: t.color.bgMuted,
-  surface: t.color.bg,
-  text: t.color.text,
-  muted: t.color.textLight,
-  fontFamily: t.font.family,
-  radius: 8,
-  brandName: "ArcID",
-};
-
-/**
- * Compiles a facet-emails React element to a flat HTML string.
- * Always await this before passing html to Resend.
+ * Compiles a React email element to a complete HTML document string.
+ *
+ * This wraps facet-emails' `renderEmailFromReact` and injects the ArcID
+ * CSS variables into the `<style>` block so that component-level
+ * `var(--primary)` / `var(--surface)` references resolve to ArcID colors
+ * instead of facet's defaults.
+ *
+ * Always await before passing html to Resend.
  */
 export async function compileMailTemplate(
   element: React.ReactElement,
 ): Promise<string> {
-  return renderEmailFromReact(element, { brand: ARCID_EMAIL_BRAND });
+  const html = await renderEmailFromReact(element, {
+    brand: ARCID_EMAIL_BRAND,
+  });
+  return injectEmailCssVars(html);
 }
 
 /**
- * Compiles to plain-text version for email clients that strip HTML.
+ * Compiles a React email element to plain-text for email clients that
+ * strip HTML.  Uses the framework-agnostic `renderEmailText` path.
  */
 export async function compileMailText(
   element: React.ReactElement,
 ): Promise<string> {
   return renderEmailText(toTemplateTree(element));
+}
+
+/**
+ * Compiles a template tree (framework-agnostic) to a full HTML document.
+ * Used by the facet-emails preview server.
+ */
+export function compileMailTree(tree: TemplateNode): string {
+  const html = renderEmail(tree, { brand: ARCID_EMAIL_BRAND });
+  return injectEmailCssVars(html);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore } from "@arcevo/facet-store";
 import { auth, arcIdClient, persistSession, clearPersistedSession } from "@/sdk";
 
 export function useAuth() {
@@ -125,6 +125,7 @@ export function useAuth() {
     requestMagicLink,
     authenticateMagicLink,
     clearSession,
+    client: arcIdClient,
   };
 }
 

@@ -1,7 +1,7 @@
-# ArcID v1 Roadmap - Updated 2026-08-14
+# ArcID v1 Roadmap - Updated 2026-08-21
 
-> Backend complete (0.1.0 equivalent). All Phase 0–4 shipped. **62 files / 340 tests / 0 code failures on `pnpm test` (all passing). Typecheck clean.**
-> Next work: P2.75 SDK/store/hook contract verification (facet-store + facet-react extraction basis) → CLI/SDK packages → ArcWallet Phase 4 integration. Facet migration Phases 0–5 done; Phase 6 purge is partial (forgot/reset forms remain in use).
+> Backend complete (0.1.0 equivalent). All Phase 0–8 + Phase E shipped. **61 files / 342 tests / 0 code failures on `pnpm test` (all passing). Typecheck clean.**
+> Next work: P2.75 SDK/store/hook contract verification (facet-store + facet-react extraction basis) → CLI/SDK packages → ArcWallet Phase 4 integration. Facet migration Phases 0–6 + Phase E done; Phase 6 purge FULLY done (forgot/reset forms now on `@arcevo/facet-auth`).
 
 ---
 
@@ -51,16 +51,15 @@ page → component(s) → hook (use-*.ts) → Zustand store → SDK (src/sdk/ind
 | Step | What | Status |
 |------|------|--------|
 | 1 | **SDK layer** (`src/sdk/`) | **Done - migrated to `@arcevo/facet-sdk` (2026-08-05).** `src/sdk/` is now `index.ts` only: an `ArcIdClient` singleton with 401 auto-refresh (wired to the Zustand auth store) re-exporting the facet domain SDK classes (`AuthSdk`, `TenantSdk`, `VcSdk`, `OAuthSdk`, `PasskeySdk`, `IdpSdk`, …). Old factory-pattern `src/sdk/*.sdk.ts` files deleted. Full route coverage lives in the published package - see `docs/migration/facet-migration-guide.md` Phase 1. |
-| 2 | **Zustand stores** (`src/store/`) | **Done.** `auth.store.ts` uses the facet-sdk `User` type (memberships-aware). `auth.store.test.ts` added (5 tests, 2026-08-12). `tenant.store.ts` has `isLoading` state + `setLoading` action. `ui.store.ts` unchanged. |
+| 2 | **Zustand stores** | **Done (Phase 8, 2026-08-19).** `src/store/` deleted; `useAuthStore`/`useTenantStore` from `@arcevo/facet-store@^0.1.0` (~26 hook sites). |
 | 3 | **Hooks** (`src/hooks/`) | **Done.** Added `use-credentials.ts`, `use-mfa.ts`, `use-webhooks.ts`, `use-api-keys.ts`. `use-tenant.ts` enhanced with `hydrateTenants()` + `switchTenant()`. Existing 11 hooks all correct. |
 | 4 | **Providers** (`src/providers/`) | **Done.** 401 auto-refresh wired in `src/sdk/index.ts`. `AuthProvider` restores session from localStorage on mount AND hydrates tenant store via `GET /tenants`. |
-| 5 | **Layout** (`src/components/layout/`) | **Done.** AppLayout, ConsoleLayout, Sidebar, Topbar, PageHeader all correct. **TenantSwitcher in Topbar** - visible when user has 2+ tenants. |
-| 6 | **UI primitives** | **Done - migrated to `@arcevo/facet-components@1.3.0` (2026-08-12).** `src/components/ui/` deleted; icons use the package's native `<Icon name="…" />` registry. Dead `src/lib/ui/icon-registry.ts` + `navigation.ts` deleted. `@/lib/utils` re-exports facet's `cn`. |
-| 7 | **Pages** (`src/app/`) | **Partial.** All `as any` casts eliminated from admin + credentials pages. API keys page uses `apiKeysSdk`. Pages that import SDK directly (login, register, billing, dashboard) remain per existing pattern - pragmatically acceptable. |
+| 5 | **Layout** | **Done.** `ConsoleLayout`/`AuthLayout` from `@arcevo/facet-layout@1.4.1`; in-repo `src/components/layout/` deleted. `TenantSwitcher` visible when user has 2+ tenants. |
+| 6 | **UI primitives** | **Done - migrated to `@arcevo/facet-components@1.10.0`.** `src/components/ui/` deleted; icons use the package's native `<Icon name="…" />` registry. Dead `src/lib/ui/icon-registry.ts` + `navigation.ts` deleted. `@/lib/utils` re-exports facet's `cn`. |
+| 7 | **Pages** (`src/app/`) | **Done.** `login`/`register` on `@arcevo/facet-auth`; `billing` uses `useBilling()`; `console` pages use `use-*` hooks + `facet-store`. **No `src/app` page imports the arc-id SDK (`@/sdk`) directly** (only type-only `import type` in billing + credentials/create). `apiKeysSdk` used for the keys page. No `as any` in frontend. |
 
 ### Remaining gaps (low priority, not blocking)
-- Some pages import SDK modules directly instead of going through hooks (e.g. login, register, billing, dashboard). These work correctly but violate the strict chain rule.
-- `ConfirmActionDialog` / `StepUpDialog` still use `{...{} as any}` prop spreads - need prop alignment fix in those components.
+- (Verified 2026-08-21: already closed. No `src/app` page imports `@/sdk` directly - `login`/`register` on `@arcevo/facet-auth`, `billing`/`console` via `use-*` hooks + `facet-store`; `src/components/` purged to facet, so no frontend `as any`.) Remaining real gaps: P4.1 (`DELEGATION_*` dead enums) + P4.3 `TenantSdk.create()` test coverage.
 
 ---
 
@@ -99,9 +98,10 @@ All 4 call-site gaps fixed: `idp.route.ts` (OIDC discovery + token endpoint), `w
 - Full OIDC4VCI/OIDC4VP - revisit after ArcWallet is live + external consumers exist
 - OPA/Cedar policy engine, SCIM, Terraform provider - all v2+
 - Identity-scoped signing key - permanently non-custodial by design
-- LegalConsent - schema-only until a concrete consumer (TOS acceptance flow)
+- LegalConsent - schema-only; audit (2026-08-17) found `issue-credential.flow.ts` (VC issuance) is a consumer path that never consults LegalConsent before issuing — dead data. See CLAUDE.md P4 / P4.1 (dead audit enums).
 - CLI + SDK packages - after frontend rebuild stabilises API contract. CLI basis is designed: see `docs/planning/arcid-cli-design.md` (command surface, DB/auth detection, safe overwrite/revert, facet-cli core reuse).
 - Integration tests against real Postgres - **P3, after facet ships**. SDK tests (4) run via `fastify.inject()` with mock DB covering the singleton wiring. Existing 340 mock-DB tests give good regression coverage. Real Postgres integration tests via testcontainers or enhanced CI service container deferred until facet consumption stabilises the frontend contract. **Migration rollback guard now exists** (2026-08-12): `prisma/migrations/rollback.test.ts` - Tier 1 static chain checks always run; Tier 2 (live `prisma migrate diff` + `deploy`) is opt-in via `pnpm test:rollback` (`ARC_ID_ROLLBACK_TEST=1`) and wired into CI against the Postgres service with `SHADOW_DATABASE_URL`.
+- **Email notification channel primitives** - Deferred. `sendMfaCode` + `MfaCodeMail` is defined (template + preview-registry + service method) but unwired — TOTP is authenticator-app based, so no email-MFA-code delivery channel exists yet. Further events have no method or template: billing/invoice (invoice, payment-failed, subscription-canceled), MFA-*enabled* confirmation (only a *disabled* alert exists today), credential-revoked, API-key-rotated, and webhook-delivery-failure alerts. The existing 13 templates are 1:1 complete with the 13 currently-wired email methods; real auth emails (verify/reset/invite) are delivered via Resend to the recipient inbox, while template layout/font preview is the static gallery on `:3888`. Wire new notifications only where there is a concrete trigger event + agreed template, using the fire-and-forget `void notificationService.X(...).catch(() => {})` pattern.
 
 ---
 
@@ -118,7 +118,7 @@ All 4 call-site gaps fixed: `idp.route.ts` (OIDC discovery + token endpoint), `w
 | 5 | 🟡 **MEDIUM** | `tenant.sdk.ts:list()` calls `GET /tenants` - no backend route exists, always returns 404 | Removed method |
 | 6 | 🟡 **MEDIUM** | `email-verify.flow.test.ts` crashed at import - `auditService.log()` import chain reached real PrismaClient without `$extends` mock | Added `vi.mock` for auditService |
 
-### Suite status: 62 files / 340 tests / 0 failures. Typecheck clean.
+### Suite status: 61 files / 342 tests / 0 failures. Typecheck clean.
 
 ### Remaining gaps (low/moderate, no fix needed now)
 - **Login passkey edge case test** - existing test at login.flow.test.ts:223 mocks identity directly bypassing the repository. Now that the repository is fixed, the mock approach masks the fix's verification. New test needed that exercises the full `findForAuth` → `hasPasskey` path.
@@ -184,9 +184,9 @@ Oracle Ampere A1 VM (2 OCPU, 12 GB RAM)
 
 `package.json` is `0.1.0`. Milestones:
 
-- `0.1.0` (current) - Backend complete: presentation endpoint, all Phase 0–4, 62 files / 340 tests
+- `0.1.0` (current) - Backend complete: all Phase 0–8 + Phase E, 61 files / 342 tests
 - `0.2.0` - Frontend consumed from facet, ArcWallet integration working end-to-end
-- `1.0.0` - Stable production with real-Postgres integration tests, secret scanning, migration rollback testing
+- `1.0.0` - Stable production: real-Postgres integration tests (P3, deferred) + P4.1 (`DELEGATION_*` enum cleanup) remaining; secret scanning + migration rollback testing done.
 
 ---
 

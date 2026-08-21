@@ -446,6 +446,10 @@ export async function idpRoute(fastify: FastifyInstance) {
         );
       }
 
+      // SSRF hardening: discoveryUrl is admin-configured (connection.issuer /
+      // metadataUrl) but still an outbound fetch — guard it like every other
+      // outbound call per the security invariant ("no exceptions").
+      assertSafeUrl(discoveryUrl);
       const discoveryResp = await fetch(discoveryUrl);
       if (!discoveryResp.ok) {
         throw ApiError.badRequest("Failed to fetch OIDC discovery document");

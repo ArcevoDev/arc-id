@@ -20,7 +20,7 @@ line, no cross-repo coordination, apps stay thin.
 ```
 facet monorepo (single versioning + publish)
 ├─ @arcevo/facet-sdk        headless client (pure fetch, zero UI)
-├─ @arcevo/facet-store      framework-agnostic stores (zustand) + injectable persistence [PLANNED]
+├─ @arcevo/facet-store      framework-agnostic stores (zustand) + injectable persistence [DONE - @arcevo/facet-store@^0.1.0, src/store/ deleted]
 ├─ @arcevo/facet-cli        the CLI (docs/emails init, add, icons, pkg/doctor/update/up)
 ├─ @arcevo/facet-components UI kit (React + Radix, incl. animation family)
 ├─ @arcevo/facet-layout     shells (Console/Auth/Landing)

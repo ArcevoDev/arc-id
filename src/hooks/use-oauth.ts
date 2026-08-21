@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore } from "@arcevo/facet-store";
 import { oauth } from "@/sdk";
+import type { CreateClientParams } from "@arcevo/facet-sdk";
 
 export function useOAuth() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -22,5 +23,15 @@ export function useOAuth() {
     return oauth.revokeToken(tokenId);
   }, [accessToken]);
 
-  return { listClients, listTokens, revokeToken };
+  const createClient = useCallback(async (data: CreateClientParams) => {
+    if (!accessToken) return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
+    return oauth.createClient(data);
+  }, [accessToken]);
+
+  const deleteClient = useCallback(async (clientId: string) => {
+    if (!accessToken) return { data: null, error: { statusCode: 401, error: "Unauthorized", message: "No access token" } as const };
+    return oauth.deleteClient(clientId);
+  }, [accessToken]);
+
+  return { listClients, listTokens, revokeToken, createClient, deleteClient };
 }

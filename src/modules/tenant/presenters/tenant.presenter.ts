@@ -5,8 +5,8 @@ export function presentTenant(tenant: Tenant) {
     id: tenant.id,
     name: tenant.name,
     slug: tenant.slug,
-    sector: tenant.sector,
-    createdAt: tenant.createdAt,
-    updatedAt: tenant.updatedAt,
+    sector: tenant.sector ?? undefined,
+    createdAt: tenant.createdAt.toISOString(),
+    updatedAt: tenant.updatedAt.toISOString(),
   };
 }

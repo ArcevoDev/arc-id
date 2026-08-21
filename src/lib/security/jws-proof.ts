@@ -11,6 +11,7 @@
 import type { DbClient } from "@/lib/db-client";
 import { compactVerify, importJWK, base64url } from "jose";
 import type { KeyType } from "@prisma-client";
+import { ApiError } from "@/core/errors";
 
 /**
  * Resolve a did:key's public key bytes to a jose-compatible CryptoKey.
@@ -33,7 +34,7 @@ async function didKeyToPublicKey(
       // SEC1 uncompressed EC point: 0x04 || x || y
       const raw = new Uint8Array(publicKeyBytes);
       if (raw[0] !== 0x04 || raw.length < 3) {
-        throw new Error("Invalid SEC1 uncompressed point");
+        throw ApiError.badRequest("Invalid SEC1 uncompressed point");
       }
       const pointLen = (raw.length - 1) / 2;
       const xBytes = raw.subarray(1, 1 + pointLen);
@@ -51,7 +52,7 @@ async function didKeyToPublicKey(
         crv = "P-521";
         alg = "ES512";
       } else {
-        throw new Error(`Unsupported EC key length: ${pointLen} bytes`);
+        throw ApiError.badRequest(`Unsupported EC key length: ${pointLen} bytes`);
       }
 
       const x = Buffer.from(xBytes).toString("base64url");
@@ -60,7 +61,7 @@ async function didKeyToPublicKey(
     }
 
     default:
-      throw new Error(
+      throw ApiError.badRequest(
         `Unsupported key type for proof verification: ${keyType}`,
       );
   }

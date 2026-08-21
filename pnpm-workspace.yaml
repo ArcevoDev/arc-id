@@ -7,12 +7,22 @@ allowBuilds:
   prisma: true
   sharp: true
   unrs-resolver: true
+
+# react-hook-form@7.84+ added a `react-server` export condition that omits
+# Controller/FormProvider/useFormContext/useForm. @arcevo/facet-components
+# imports these from react-hook-form, and when used in the Next.js Server
+# Component graph the build resolves via `react-server` and fails.
+# Pin below 7.84 so the main ESM entry (which has the full export surface)
+# is always used.
+overrides:
+  react-hook-form: 7.83.0
 minimumReleaseAgeExclude:
-  - '@arcevo/facet-cli@0.2.0 || 0.3.0 || 0.3.1 || 0.4.0 || 0.5.0 || 0.6.0 || 0.7.0'
-  - '@arcevo/facet-auth@1.1.1 || 1.1.3 || 1.1.4 || 1.1.5 || 1.1.6 || 1.2.0'
-  - '@arcevo/facet-components@1.3.0 || 1.5.0 || 1.6.0 || 1.7.0 || 1.8.0'
-  - '@arcevo/facet-docs@1.3.0 || 1.4.0 || 1.4.1 || 1.4.2 || 1.4.3 || 1.4.4'
-  - '@arcevo/facet-layout@1.2.0 || 1.3.0 || 1.3.1 || 1.3.2 || 1.3.3 || 1.3.4'
+  - '@arcevo/facet-cli@0.2.0 || 0.3.0 || 0.3.1 || 0.4.0 || 0.5.0 || 0.6.0 || 0.7.0 || 0.8.0'
+  - '@arcevo/facet-auth@1.1.1 || 1.1.3 || 1.1.4 || 1.1.5 || 1.1.6 || 1.2.0 || 1.2.2'
+  - '@arcevo/facet-components@1.3.0 || 1.5.0 || 1.6.0 || 1.7.0 || 1.8.0 || 1.10.0'
+  - '@arcevo/facet-docs@1.3.0 || 1.4.0 || 1.4.1 || 1.4.2 || 1.4.3 || 1.4.4 || 1.4.6'
+  - '@arcevo/facet-layout@1.2.0 || 1.3.0 || 1.3.1 || 1.3.2 || 1.3.3 || 1.3.4 || 1.4.1'
   - '@arcevo/facet-sdk@1.1.0'
-  - '@arcevo/facet-tokens@1.1.1 || 1.1.2'
-  - '@arcevo/facet-emails@1.1.0'
+  - '@arcevo/facet-tokens@1.1.1 || 1.1.2 || 1.1.4'
+  - '@arcevo/facet-emails@1.1.0 || 1.1.1'
+  - '@arcevo/facet-store@0.1.0'

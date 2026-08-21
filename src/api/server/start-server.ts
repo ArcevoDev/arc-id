@@ -65,11 +65,6 @@ async function start() {
     server.log.info(`ArcID Engine ready on port ${config.base.port}`);
     server.log.info(`Swagger UI  → http://localhost:${config.base.port}/docs`);
 
-    if (!config.base.isProduction) {
-      server.log.info(
-        `Mail Preview → http://localhost:${config.base.port}/mail/preview`,
-      );
-    }
   } catch (err) {
     server.log.error({ err }, "Failed to start server network listener");
     process.exit(1);

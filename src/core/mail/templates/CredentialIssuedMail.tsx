@@ -1,17 +1,21 @@
 ﻿import * as React from "react";
 import {
+  EmailLayout,
+  EmailButton,
+  EmailText,
+  EmailDivider,
   EmailSection,
   EmailRow,
   EmailColumn,
-  EmailText,
 } from "@arcevo/facet-emails";
 import {
-  MailLayout,
-  MailButton,
-  MailText,
-  MailDivider,
-  tokens as t,
-} from "../components";
+  MAIL_COLOR,
+  MAIL_SPACE,
+  MAIL_FONT,
+  MAIL_RADIUS,
+  DEFAULT_MAIL_FOOTER_NOTE,
+  DEFAULT_MAIL_FOOTER_META,
+} from "../brand";
 
 export interface CredentialIssuedMailProps {
   holderName?: string;
@@ -32,45 +36,61 @@ export const CredentialIssuedMail = ({
   expiresAt,
   walletUrl,
 }: CredentialIssuedMailProps) => (
-  <MailLayout
+  <EmailLayout
     previewText={`A new credential was issued to you by ${issuerName} - it's now in your wallet`}
     heading="A Credential, Yours"
-    eyebrow="Verifiable Credential"
+    brandName="ArcID"
+    footerNote={DEFAULT_MAIL_FOOTER_NOTE}
+    footerMeta={DEFAULT_MAIL_FOOTER_META}
   >
-    <MailText>
+    <EmailText
+      style={{
+        fontSize: "11px",
+        fontWeight: 600,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: MAIL_COLOR.textMuted,
+        marginBottom: MAIL_SPACE.sm,
+      }}
+    >
+      Verifiable Credential
+    </EmailText>
+
+    <EmailText style={{ marginBottom: MAIL_SPACE.md }}>
       {holderName ? `Hello ${holderName},` : "Hello,"} a new Verifiable
       Credential has been issued to your ArcID identity by{" "}
       <strong>{issuerName}</strong>. It now lives in your wallet - portable,
       tamper-evident, and ready to present whenever you choose.
-    </MailText>
+    </EmailText>
 
     {/* Credential detail card */}
     <EmailSection
       style={{
-        backgroundColor: t.color.bgMuted,
-        border: `1px solid ${t.color.border}`,
-        borderRadius: t.radius.md,
-        padding: t.space.lg,
-        marginBottom: t.space.lg,
+        backgroundColor: MAIL_COLOR.bgMuted,
+        border: `1px solid ${MAIL_COLOR.border}`,
+        borderRadius: MAIL_RADIUS.md,
+        padding: MAIL_SPACE.lg,
+        marginBottom: MAIL_SPACE.lg,
       }}
     >
       <EmailText
         style={{
-          color: t.color.text,
-          fontSize: t.font.sizeLg,
+          color: MAIL_COLOR.text,
+          fontSize: MAIL_FONT.sizeLg,
           fontWeight: "700",
           margin: 0,
-          marginBottom: t.space.md,
+          marginBottom: MAIL_SPACE.md,
         }}
       >
         {credentialType}
       </EmailText>
-      <EmailRow style={{ marginBottom: t.space.sm }}>
+
+      <EmailRow style={{ marginBottom: MAIL_SPACE.sm }}>
         <EmailColumn style={{ width: "40%" }}>
           <EmailText
             style={{
-              color: t.color.textMuted,
-              fontSize: t.font.sizeSm,
+              color: MAIL_COLOR.textMuted,
+              fontSize: MAIL_FONT.sizeSm,
               margin: 0,
             }}
           >
@@ -80,8 +100,8 @@ export const CredentialIssuedMail = ({
         <EmailColumn>
           <EmailText
             style={{
-              color: t.color.text,
-              fontSize: t.font.sizeSm,
+              color: MAIL_COLOR.text,
+              fontSize: MAIL_FONT.sizeSm,
               fontWeight: "600",
               margin: 0,
             }}
@@ -90,12 +110,13 @@ export const CredentialIssuedMail = ({
           </EmailText>
         </EmailColumn>
       </EmailRow>
-      <EmailRow style={{ marginBottom: t.space.sm }}>
+
+      <EmailRow style={{ marginBottom: MAIL_SPACE.sm }}>
         <EmailColumn style={{ width: "40%" }}>
           <EmailText
             style={{
-              color: t.color.textMuted,
-              fontSize: t.font.sizeSm,
+              color: MAIL_COLOR.textMuted,
+              fontSize: MAIL_FONT.sizeSm,
               margin: 0,
             }}
           >
@@ -104,7 +125,11 @@ export const CredentialIssuedMail = ({
         </EmailColumn>
         <EmailColumn>
           <EmailText
-            style={{ color: t.color.text, fontSize: t.font.sizeSm, margin: 0 }}
+            style={{
+              color: MAIL_COLOR.text,
+              fontSize: MAIL_FONT.sizeSm,
+              margin: 0,
+            }}
           >
             {new Date(issuedAt).toLocaleDateString("en-US", {
               dateStyle: "long",
@@ -112,13 +137,14 @@ export const CredentialIssuedMail = ({
           </EmailText>
         </EmailColumn>
       </EmailRow>
+
       {expiresAt && (
         <EmailRow>
           <EmailColumn style={{ width: "40%" }}>
             <EmailText
               style={{
-                color: t.color.textMuted,
-                fontSize: t.font.sizeSm,
+                color: MAIL_COLOR.textMuted,
+                fontSize: MAIL_FONT.sizeSm,
                 margin: 0,
               }}
             >
@@ -128,8 +154,8 @@ export const CredentialIssuedMail = ({
           <EmailColumn>
             <EmailText
               style={{
-                color: t.color.text,
-                fontSize: t.font.sizeSm,
+                color: MAIL_COLOR.text,
+                fontSize: MAIL_FONT.sizeSm,
                 margin: 0,
               }}
             >
@@ -142,26 +168,38 @@ export const CredentialIssuedMail = ({
       )}
     </EmailSection>
 
-    {walletUrl && <MailButton href={walletUrl}>View in Your Wallet</MailButton>}
+    {walletUrl && (
+      <EmailButton href={walletUrl}>View in Your Wallet</EmailButton>
+    )}
 
-    <MailText variant="small">
+    <EmailText variant="small" style={{ marginBottom: MAIL_SPACE.md }}>
       What makes this different from a paper certificate? This credential is
       cryptographically signed by {issuerName} and tied to your identity - so
       you can present it anywhere it's trusted without showing the underlying
       documents, and without anyone tracking where you show it.
-    </MailText>
+    </EmailText>
 
-    <MailDivider />
+    <EmailDivider />
 
-    <MailText variant="muted" mb="4px">
+    <EmailText
+      variant="muted"
+      style={{ marginBottom: MAIL_SPACE.xs }}
+    >
       Credential ID
-    </MailText>
-    <MailText variant="small" mb="0">
-      <span style={{ fontFamily: t.font.mono, wordBreak: "break-all" }}>
+    </EmailText>
+
+    <EmailText variant="small" style={{ marginBottom: 0 }}>
+      <span
+        style={{
+          fontFamily: MAIL_FONT.mono,
+          fontSize: MAIL_FONT.sizeXs,
+          wordBreak: "break-all",
+        }}
+      >
         {credentialId}
       </span>
-    </MailText>
-  </MailLayout>
+    </EmailText>
+  </EmailLayout>
 );
 
 export default CredentialIssuedMail;

@@ -7,6 +7,7 @@ import {
   importSPKI,
   type JWTPayload,
 } from "jose";
+import { ApiError } from "@/core/errors";
 
 // Helper to resolve key content
 function getFileContent(keyOrPath: string): string {
@@ -16,7 +17,7 @@ function getFileContent(keyOrPath: string): string {
   try {
     return readFileSync(resolve(process.cwd(), keyOrPath), "utf-8");
   } catch (e) {
-    throw new Error(`Failed to load key from path: ${keyOrPath}`);
+    throw ApiError.internal(`Failed to load key from path: ${keyOrPath}`);
   }
 }
 
@@ -42,13 +43,13 @@ export async function signJwt(
 
   if (alg === "HS256") {
     const secretKey = options.secret ?? options.privateKeyOrSecret;
-    if (!secretKey) throw new Error("Missing HS256 secret");
+    if (!secretKey) throw ApiError.internal("Missing HS256 secret");
     return jwt.sign(new TextEncoder().encode(secretKey));
   } else {
     // RS256 path
     const keySource = options.privateKeyOrSecret;
     if (!keySource)
-      throw new Error("RS256 signing requires a private key/path");
+      throw ApiError.internal("RS256 signing requires a private key/path");
 
     const pemContent = getFileContent(keySource);
     const privateKey = await importPKCS8(pemContent, "RS256");

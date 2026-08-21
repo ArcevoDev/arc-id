@@ -17,6 +17,6 @@ export function presentCredential(vc: VerifiableCredential) {
     schemaId: vc.schemaId,
     issuedAt: vc.issuedAt,
     expiresAt: vc.expiresAt,
-    createdAt: vc.createdAt,
+    createdAt: vc.createdAt.toISOString(),
   };
 }

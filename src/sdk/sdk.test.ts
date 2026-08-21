@@ -42,3 +42,33 @@ describe("client token integration", () => {
     expect(arcIdClient.getAccessToken()).toBeNull();
   });
 });
+
+describe("tenant SDK method delegation", () => {
+  it("tenants.create() delegates to POST /tenants with name and slug", async () => {
+    const mockTenant = { id: "tenant-1", name: "Test Org", slug: "test-org" };
+    const postSpy = vi.spyOn(arcIdClient, "post").mockResolvedValue({
+      data: mockTenant,
+      error: null,
+    });
+
+    const result = await tenants.create({ name: "Test Org", slug: "test-org" });
+
+    expect(postSpy).toHaveBeenCalledWith("/tenants", { name: "Test Org", slug: "test-org" });
+    expect(result.data).toEqual(mockTenant);
+    postSpy.mockRestore();
+  });
+
+  it("tenants.acceptInvite() delegates to POST /invites/accept with token", async () => {
+    const mockResult = { ok: true };
+    const postSpy = vi.spyOn(arcIdClient, "post").mockResolvedValue({
+      data: mockResult,
+      error: null,
+    });
+
+    const result = await tenants.acceptInvite({ token: "invite-token-123" });
+
+    expect(postSpy).toHaveBeenCalledWith("/invites/accept", { token: "invite-token-123" });
+    expect(result.data).toEqual(mockResult);
+    postSpy.mockRestore();
+  });
+});

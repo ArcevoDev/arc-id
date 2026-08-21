@@ -139,9 +139,3 @@ fs.writeFileSync(
 console.log(
   "✨ Success! Structure and all contents written to arcid_codebase_snapshot.txt",
 );
-
-// ── Report only - gen-output.js no longer overwrites .agent/output.txt
-// (that file is the manual session tracker; see its header).
-import("./gen-output.js")
-  .then(() => console.log("ℹ️  gen-output.js ran in report-only mode (tracker untouched)"))
-  .catch(() => console.log("⚠️  gen-output.js skipped (report not printed)"));

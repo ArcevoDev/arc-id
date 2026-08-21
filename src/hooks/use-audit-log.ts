@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore } from "@arcevo/facet-store";
 import { audit } from "@/sdk";
 import type { AuditListParams } from "@/sdk";
 

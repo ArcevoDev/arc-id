@@ -12,6 +12,7 @@
 // skips the resolution check entirely. Runtime behaviour is identical.
 
 import type { KmsEnvelope } from "./kms.interface";
+import { ApiError } from "@/core/errors";
 
 async function getKmsClient(): Promise<any> {
   try {
@@ -22,7 +23,7 @@ async function getKmsClient(): Promise<any> {
     const client = new KMSClient({});
     return { client, EncryptCommand, DecryptCommand };
   } catch {
-    throw new Error(
+    throw ApiError.internal(
       "@aws-sdk/client-kms is not installed. " +
         "Run: pnpm add @aws-sdk/client-kms",
     );
@@ -31,7 +32,7 @@ async function getKmsClient(): Promise<any> {
 
 export function createAwsKms(keyId: string): KmsEnvelope {
   if (!keyId) {
-    throw new Error("AWS_KMS_KEY_ID is required for AWS KMS mode");
+    throw ApiError.internal("AWS_KMS_KEY_ID is required for AWS KMS mode");
   }
 
   return {

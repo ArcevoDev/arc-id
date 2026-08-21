@@ -27,6 +27,7 @@ vi.mock("../services/membership.service", () => ({
         status: "PENDING",
         identityId: "invitee-id",
         tenantId: "tenant-1",
+        createdAt: new Date(),
       }),
     };
   }),

@@ -8,7 +8,7 @@ export function presentSubscription(sub: Subscription) {
     status: sub.status,
     startedAt: sub.startedAt,
     endsAt: sub.endsAt,
-    createdAt: sub.createdAt,
-    updatedAt: sub.updatedAt,
+    createdAt: sub.createdAt.toISOString(),
+    updatedAt: sub.updatedAt.toISOString(),
   };
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useAuthStore } from "@/store/auth.store";
-import { useTenantStore } from "@/store/tenant.store";
+import { useAuthStore, useTenantStore } from "@arcevo/facet-store";
 import { tenants, arcIdClient } from "@/sdk";
 
 /**

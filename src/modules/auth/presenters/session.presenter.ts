@@ -11,7 +11,7 @@ export function presentSession(session: Session) {
     authLevel: session.authLevel,
     elevatedAt: session.elevatedAt,
     valid: session.valid,
-    createdAt: session.createdAt,
+    createdAt: session.createdAt.toISOString(),
     expiresAt: session.expiresAt,
   };
 }

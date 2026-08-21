@@ -43,7 +43,7 @@ import {
 import { healthRoute } from "@/api/routes/health.route";
 import { openIdConfigurationRoute } from "@/api/routes/openid-configuration.route";
 import { didDocumentRoute } from "@/api/routes/did-document.route";
-import { mailPreviewRoute } from "@/api/routes/mail-preview.route";
+import { startMailPreviewServer, stopMailPreviewServer } from "@/core/mail/preview/template-registry";
 
 import { authPlugin } from "@/modules/auth/auth.plugin";
 import { oauthPlugin } from "@/modules/oauth/oauth.plugin";
@@ -57,6 +57,7 @@ import { idpPlugin } from "@/modules/idp/idp.plugin";
 
 export async function buildServer() {
   const server = Fastify({
+    pluginTimeout: 60000,
     logger: config.base.isProduction
       ? { level: config.base.logLevel }
       : {
@@ -115,12 +116,6 @@ export async function buildServer() {
     exposedHeaders: ["X-Request-ID", "Retry-After"],
   });
 
-  await server.register(underPressure, {
-    maxEventLoopDelay: 1000,
-    maxHeapUsedBytes: 1_000_000_000,
-    exposeStatusRoute: "/health/pressure",
-  });
-
   await server.register(cookie, {
     secret: config.security.cookieSecret,
     parseOptions: {},
@@ -146,7 +141,10 @@ export async function buildServer() {
   await server.register(didDocumentRoute);
 
   if (!config.base.isProduction) {
-    await server.register(mailPreviewRoute);
+    await startMailPreviewServer();
+    server.addHook("onClose", async () => {
+      await stopMailPreviewServer();
+    });
   }
 
   // ── Versioned API ──────────────────────────────────────────────────────────
@@ -166,6 +164,24 @@ export async function buildServer() {
   );
 
   await server.register(swaggerUiPlugin);
+
+  // Under-pressure is registered AFTER swaggerUiPlugin so that docs/static
+  // asset routes exist before pressure checking applies.
+  //
+  // In development, under-pressure is skipped entirely: the event loop
+  // blocks during Prisma init + plugin loading, which trips the
+  // maxEventLoopDelay threshold on every /docs/static/* request during
+  // first boot. Dev does not need health monitoring.
+  //
+  // In production, real thresholds apply (registered last, after all
+  // plugins and routes are loaded).
+  if (config.base.isProduction) {
+    await server.register(underPressure, {
+      maxEventLoopDelay: 1000,
+      maxHeapUsedBytes: 1_000_000_000,
+      exposeStatusRoute: "/health/pressure",
+    });
+  }
 
   return server;
 }

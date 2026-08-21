@@ -2,20 +2,17 @@
  * ArcID Navigation Configuration
  *
  * Single source of truth for the sidebar nav tree.
- * The Sidebar component reads this - not hardcoded JSX.
+ * The facet-ConsoleLayout's Sidebar reads this - not hardcoded JSX.
  *
  * Permission gating (requiredPermission) is defined here but
  * is NOT enforced in v1. All nav items are shown to authenticated
  * users. The backend is the real enforcement boundary.
- *
- * When GET /identity/profile exposes the caller's permissions, set
- * requiredPermission and filter in the Sidebar.
  */
 
 import type { IconName } from "@arcevo/facet-components";
 
 export interface NavItem {
-  /** Full route path e.g. "/security/sessions" */
+  /** Full route path e.g. "/console/security/sessions" */
   href: string;
   /** Display label */
   label: string;
@@ -37,55 +34,57 @@ export interface NavSection {
 export const navConfig: NavSection[] = [
   {
     title: "Overview",
-    items: [{ href: "/dashboard", label: "Dashboard", icon: "chart-column" }],
+    items: [{ href: "/console", label: "Dashboard", icon: "chart-column" }],
   },
   {
     title: "Identity",
     items: [
-      { href: "/admin", label: "Admin", icon: "shield", requiredPermission: "admin:system" },
-      { href: "/identities", label: "Identities", icon: "users", requiredPermission: "admin:system" },
-      { href: "/tenants", label: "Tenants", icon: "building-2" },
+      { href: "/console/admin", label: "Admin", icon: "shield", requiredPermission: "admin:system" },
+      { href: "/console/identities", label: "Identities", icon: "users", requiredPermission: "admin:system" },
+      { href: "/console/tenants", label: "Tenants", icon: "building-2" },
     ],
   },
   {
     title: "Billing",
-    items: [{ href: "/billing", label: "Billing", icon: "credit-card" }],
+    items: [{ href: "/console/billing", label: "Billing", icon: "credit-card" }],
   },
   {
     title: "Credentials",
-    items: [{ href: "/credentials", label: "Credentials", icon: "file-check" }],
+    items: [{ href: "/console/credentials", label: "Credentials", icon: "file-check" }],
   },
   {
     title: "Security",
     items: [
-      { href: "/security/sessions", label: "Sessions", icon: "monitor" },
-      { href: "/security/passkeys", label: "Passkeys", icon: "key" },
-      { href: "/security/mfa", label: "Two-Factor", icon: "lock" },
-      { href: "/security/audit", label: "Audit Log", icon: "scroll-text", requiredPermission: "audit:read:any" },
+      { href: "/console/security/sessions", label: "Sessions", icon: "monitor" },
+      { href: "/console/security/passkeys", label: "Passkeys", icon: "key" },
+      { href: "/console/security/mfa", label: "Two-Factor", icon: "lock" },
+      { href: "/console/security/audit", label: "Audit Log", icon: "scroll-text", requiredPermission: "audit:read:any" },
     ],
   },
   {
     title: "Developers",
     items: [
       {
-        href: "/oauth/applications",
+        href: "/console/oauth/applications",
         label: "OAuth Applications",
         icon: "globe",
       },
-      { href: "/oauth/tokens", label: "OAuth Tokens", icon: "key" },
-      { href: "/developer/api-keys", label: "API Keys", icon: "code" },
-      { href: "/developer/webhooks", label: "Webhooks", icon: "send" },
+      { href: "/console/oauth/tokens", label: "OAuth Tokens", icon: "key" },
+      { href: "/console/webhooks", label: "Webhooks", icon: "send" },
     ],
   },
   {
     title: "Organization",
-    items: [{ href: "/organization", label: "Organization", icon: "building" }],
+    items: [
+      { href: "/console/organization", label: "Organization", icon: "building" },
+      { href: "/console/organization/members", label: "Members", icon: "users", requiredPermission: "tenant.membership.manage" },
+    ],
   },
   {
     title: "Account",
     items: [
-      { href: "/user", label: "Account", icon: "user" },
-      { href: "/settings/profile", label: "Profile settings", icon: "settings" },
+      { href: "/console/user", label: "Account", icon: "user" },
+      { href: "/console/user/security", label: "Security", icon: "shield" },
     ],
   },
 ];

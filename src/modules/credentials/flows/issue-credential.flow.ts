@@ -1,6 +1,8 @@
 // src/modules/credentials/flows/issue-credential.flow.ts
 import { z } from "zod";
 import type { Flow, FlowContext } from "@/core/flows";
+import type { IsolatedPrismaClient } from "@/core/db";
+import type { DbClient } from "@/lib/db-client";
 import { config } from "@/core/config";
 import { IssueCredentialSchema } from "../validators/credential.schemas";
 import { DidService } from "../services/did.service";
@@ -16,7 +18,7 @@ type Input = z.infer<typeof IssueCredentialSchema>;
 
 type Output = {
   credentialId: string;
-  credential: string | Record<string, any>;
+  credential: string | Record<string, unknown>;
 };
 
 export const issueCredentialFlow: Flow<Input, Output> = {
@@ -39,7 +41,41 @@ export const issueCredentialFlow: Flow<Input, Output> = {
       throw ApiError.notFound("Tenant DID not configured");
     }
 
-    await didService.resolveOrThrow(input.subjectDid);
+    const resolvedSubjectDid = await didService.resolveOrThrow(input.subjectDid);
+
+    if (!resolvedSubjectDid.identityId) {
+      throw ApiError.forbidden(
+        `Subject DID is not bound to an identity: ${input.subjectDid}`,
+      );
+    }
+
+    const hasVerifiedIdentifier = await ctx.db.externalIdentifier.findFirst({
+      where: { identityId: resolvedSubjectDid.identityId, verified: true },
+      select: { id: true },
+    });
+    if (!hasVerifiedIdentifier) {
+      throw ApiError.forbidden(
+        "Subject identity must have at least one verified external identifier",
+      );
+    }
+
+    const policy = await ctx.db.tenantPolicy.findUnique({
+      where: { tenantId: ctx.tenantId },
+      select: { requireLegalConsent: true },
+    });
+
+    if (policy?.requireLegalConsent) {
+      const holderId = input.holderId ?? resolvedSubjectDid.identityId;
+      const hasLegalConsent = await ctx.db.legalConsent.findFirst({
+        where: { identityId: holderId },
+        select: { id: true },
+      });
+      if (!hasLegalConsent) {
+        throw ApiError.forbidden(
+          "Identity must accept legal consent before credentials can be issued",
+        );
+      }
+    }
 
     const vcId = `urn:uuid:${randomUUID()}`;
     const baseApiUrl = config.base.apiUrl;
@@ -47,13 +83,13 @@ export const issueCredentialFlow: Flow<Input, Output> = {
     // Allocation + VC creation now share a single database transaction.
     // If the process crashes or an error throws mid-flight (e.g. during sign),
     // the allocated index rolls back automatically, eliminating dead slots.
-    const result = await (ctx.db as any).$transaction(
-      async (tx: any) => {
+    const result = await (ctx.db as unknown as IsolatedPrismaClient).$transaction(
+      async (tx) => {
         // Pass the transaction client 'tx' down to enforce the optimistic locking guard
         const { listId, index } = await statusListService.allocateIndex(
           "REVOCATION",
           ctx.tenantId,
-          tx,
+          tx as unknown as DbClient,
         );
 
         const payload = {
@@ -93,8 +129,8 @@ export const issueCredentialFlow: Flow<Input, Output> = {
             issuerDid: tenantDid.id,
             subjectDid: input.subjectDid,
             holderId: input.holderId,
-            credentialSubject: input.credentialSubject as any,
-            proof: proof as any,
+            credentialSubject: input.credentialSubject,
+            proof: proof,
             statusListId: listId,
             statusListIndex: index,
             schemaId: input.schemaId,
