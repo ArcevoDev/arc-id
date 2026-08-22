@@ -1,18 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader } from "@arcevo/facet-layout";
-import {
-  Button,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@arcevo/facet-components";
+import { Button } from "@arcevo/facet-components";
+import { PageShell } from "@/components/page-shell";
+import { ConsoleDataTable } from "@/components/console-data-table";
 import { useSessions } from "@/hooks/use-sessions";
 
 interface Session {
@@ -30,65 +21,40 @@ export default function SessionsPage() {
 
   useEffect(() => {
     list().then((result) => {
-      const sessions = (result.data as Session[]) ?? [];
-      setItems(sessions);
+      setItems((result.data as Session[]) ?? []);
       setLoading(false);
     });
   }, [list]);
 
+  const columns = [
+    { key: "userAgent", header: "Device", cell: (s: Session) => s.userAgent ?? "Unknown" },
+    { key: "ip", header: "IP", cell: (s: Session) => s.ip ?? "-" },
+    {
+      key: "lastUsedAt",
+      header: "Last active",
+      cell: (s: Session) => new Date(s.lastUsedAt ?? s.createdAt).toLocaleString(),
+    },
+    {
+      key: "id",
+      header: "Actions",
+      cell: (s: Session) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            await revoke(s.id);
+            setItems((prev) => (prev ? prev.filter((x) => x.id !== s.id) : prev));
+          }}
+        >
+          Revoke
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <>
-      <PageHeader
-        title="Sessions"
-        description="Active sessions and devices."
-      />
-      <main className="p-6">
-        <Card>
-          <CardContent>
-            {loading && (
-              <p className="text-muted-foreground">Loading sessions...</p>
-            )}
-            {!loading && items?.length === 0 && (
-              <p className="text-muted-foreground">No active sessions.</p>
-            )}
-            {!loading && items && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Device</TableHead>
-                    <TableHead>IP</TableHead>
-                    <TableHead>Last active</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell>{s.userAgent}</TableCell>
-                      <TableCell>{s.ip}</TableCell>
-                      <TableCell>
-                        {new Date(s.lastUsedAt ?? s.createdAt).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            await revoke(s.id);
-                            setItems(items.filter((x) => x.id !== s.id));
-                          }}
-                        >
-                          Revoke
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </>
+    <PageShell title="Sessions" description="Active sessions and devices.">
+      <ConsoleDataTable<Session> data={items} columns={columns} loading={loading} />
+    </PageShell>
   );
 }
