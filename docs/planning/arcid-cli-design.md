@@ -1,6 +1,6 @@
 # ArcID CLI - Design & Onboarding Basis
 
-> Status: **Planned** (per `arcid-v1-roadmap.md`: "CLI + SDK packages - after frontend
+> Status: **Planned** (per `arcid-v2-roadmap.md`: "CLI package extraction"
 > rebuild stabilises API contract"). This doc is the initiated basis: the command
 > surface, the consumer-wiring detection, the scaffold safety model, and how it
 > reuses the facet CLI's shared command core. Code work starts once the API

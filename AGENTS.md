@@ -81,7 +81,7 @@ shipped. See `CLAUDE.md` for the full verified status table. Open work:
   use the facet SDKs. Pages still need final cleanup (some import
   SDK directly instead of through hooks - pragmatically acceptable).
   **Tenant list route (`GET /tenants`) + tenant switcher wired (2026-07-28).**
-- **Facet migration (`docs/migration/facet-migration-guide.md`)** - ✅
+- **Facet migration** - ✅
   **Phases 1–5 done.** Phase 1: SDK migrated to the published
   **`@arcevo/facet-sdk@1.1.0`** - `src/sdk/index.ts` is a thin
   singleton wiring that owns the `ArcIdClient` + 401 auto-refresh (wired

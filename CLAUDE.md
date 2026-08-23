@@ -70,8 +70,6 @@ arc-id/
 │   │   ├── arcid-cli-design.md       # CLI basis (planned)
 │   │   ├── client-core-architecture-analysis.md  # Canonical client-core conventions
 │   │   └── presentation-envelope-design.md       # Presentation endpoint design (built, ref)
-│   └── migration/    # Migration guides
-│       └── facet-migration-guide.md  # arc-id → @arcevo/facet-* migration
 ├── .github/workflows/
 │   ├── ci.yml         # PR push CI: lint, typecheck, test, build (api+web)
 │   ├── deploy-api.yml # Fastify API deploy (GHCR push → SSH Docker Compose)
@@ -329,7 +327,7 @@ Current: `0.1.0` (package.json). Pre-release - no stability promises.
 - `0.2.0` 🔄 **ACTIVE (v2)** - ArcWallet companion app integration (end-to-end), API key management backend (CRUD flows + routes), CLI package extraction, integration tests against real Postgres
 - `1.0.0` — Stable production milestone: full integration test suite, open-source release
 
-_The v1 roadmap (`docs/planning/arcid-v1-roadmap.md`) is deprecated — see `docs/planning/arcid-v2-roadmap.md`._
+_The v1 roadmap was closed (2026-08-22). Active track: `docs/planning/arcid-v2-roadmap.md`._
 
 
 ---

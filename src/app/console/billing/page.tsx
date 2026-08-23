@@ -81,7 +81,7 @@ const pricingPlans: BillingPlan[] = [
     customPriceLabel: "Contact",
     cta: {
       label: "Contact Sales",
-      href: "mailto:hello@arcevo.com",
+      href: "mailto:sales@arcevocirqle.com.ng",
       variant: "outline",
     },
   },

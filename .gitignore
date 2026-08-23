@@ -53,7 +53,7 @@ next-env.d.ts
 ArcevoCirqle_Design_Standards_Manual_v1.0..txt
 
 # agent state / scratch artifacts
-.agent/
+# .agent/
 
 # local e2e harness
 /scratch-e2e/
