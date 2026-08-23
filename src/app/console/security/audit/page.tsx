@@ -1,17 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader } from "@arcevo/facet-layout";
-import {
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@arcevo/facet-components";
+import { Badge } from "@arcevo/facet-components";
+import { PageShell } from "@/components/page-shell";
+import { ConsoleDataTable } from "@/components/console-data-table";
 import { useAuditLog } from "@/hooks/use-audit-log";
 
 interface AuditEvent {
@@ -21,6 +13,24 @@ interface AuditEvent {
   createdAt: string;
 }
 
+const columns = [
+  { key: "action", header: "Action" },
+  {
+    key: "targetType",
+    header: "Target",
+    cell: (e: AuditEvent) => (
+      <Badge variant="outline" className="text-xs">
+        {e.targetType ?? "-"}
+      </Badge>
+    ),
+  },
+  {
+    key: "createdAt",
+    header: "Time",
+    cell: (e: AuditEvent) => new Date(e.createdAt).toLocaleString(),
+  },
+];
+
 export default function AuditPage() {
   const [items, setItems] = useState<AuditEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,51 +38,25 @@ export default function AuditPage() {
 
   useEffect(() => {
     list().then((result) => {
-      const events =
-        (result.data as { data: AuditEvent[] })?.data ?? [];
+      const events = (result.data as { data: AuditEvent[] })?.data ?? [];
       setItems(events);
       setLoading(false);
     });
   }, [list]);
 
   return (
-    <>
-      <PageHeader
-        title="Audit Log"
-        description="Audit events for this tenant."
+    <PageShell
+      title="Audit Log"
+      description="Audit events for this tenant."
+    >
+      <ConsoleDataTable<AuditEvent>
+        data={items}
+        columns={columns}
+        loading={loading}
+        emptyTitle="No audit events"
+        emptyDescription="No audit events have been recorded for this tenant."
+        exportable
       />
-      <main className="p-6">
-        <Card>
-          <CardContent>
-            {loading && <p className="text-muted-foreground">Loading...</p>}
-            {!loading && items?.length === 0 && (
-              <p className="text-muted-foreground">No audit events found.</p>
-            )}
-            {!loading && items && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell>{e.action}</TableCell>
-                      <TableCell>{e.targetType ?? "-"}</TableCell>
-                      <TableCell>
-                        {new Date(e.createdAt).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </>
+    </PageShell>
   );
 }

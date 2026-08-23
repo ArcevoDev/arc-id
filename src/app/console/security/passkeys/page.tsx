@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader } from "@arcevo/facet-layout";
-import { Button, Card, CardContent } from "@arcevo/facet-components";
+import type { DataTableColumn } from "@arcevo/facet-components";
+import { Button } from "@arcevo/facet-components";
+import { PageShell } from "@/components/page-shell";
+import { ConsoleDataTable } from "@/components/console-data-table";
 import { usePasskeys } from "@/hooks/use-passkeys";
 
 interface Passkey {
@@ -24,55 +26,43 @@ export default function PasskeysPage() {
     });
   }, [list]);
 
+  const handleRemove = async (id: string) => {
+    await deregister(id);
+    setItems(items?.filter((p) => p.id !== id) ?? []);
+  };
+
+  const columns: DataTableColumn<Passkey>[] = [
+    {
+      key: "name",
+      header: "Name",
+      cell: (p) => p.name || "Unnamed passkey",
+    },
+    {
+      key: "createdAt",
+      header: "Added",
+      cell: (p) => new Date(p.createdAt).toLocaleDateString(),
+    },
+    {
+      key: "id",
+      header: "Actions",
+      sortable: false,
+      cell: (p) => (
+        <Button variant="outline" size="sm" onClick={() => handleRemove(p.id)}>
+          Remove
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <>
-      <PageHeader
-        title="Passkeys"
-        description="Manage your WebAuthn passkeys."
+    <PageShell title="Passkeys" description="Manage your WebAuthn passkeys.">
+      <ConsoleDataTable<Passkey>
+        data={items}
+        columns={columns}
+        loading={loading}
+        emptyTitle="No passkeys registered"
+        emptyDescription="Register a passkey from your device's security settings."
       />
-      <main className="p-6">
-        <Card>
-          <CardContent>
-            {loading && (
-              <p className="text-muted-foreground">Loading passkeys...</p>
-            )}
-            {!loading && items?.length === 0 && (
-              <p className="text-muted-foreground">
-                No passkeys registered.
-              </p>
-            )}
-            {!loading && items && (
-              <div className="space-y-2">
-                {items.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex justify-between items-center border-b py-2"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {p.name || "Unnamed passkey"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Added {new Date(p.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        await deregister(p.id);
-                        setItems(items.filter((x) => x.id !== p.id));
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </>
+    </PageShell>
   );
 }

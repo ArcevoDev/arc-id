@@ -1,12 +1,7 @@
 // src/modules/tenant/services/membership.service.ts
 import type { DbClient } from "@/lib/db-client";
 import { ApiError } from "@/core/errors";
-
-const MEMBER_CAPS: Record<string, number> = {
-  FREE: 3,
-  PRO: 50,
-  ENTERPRISE: Infinity,
-};
+import { getPlanCaps } from "@/config/plan-caps";
 
 export class MembershipService {
   constructor(private db: DbClient) {}
@@ -29,7 +24,7 @@ export class MembershipService {
       }
 
       if (!existing || existing.status !== "PENDING") {
-        const cap = MEMBER_CAPS[callerPlan] ?? MEMBER_CAPS.FREE;
+        const cap = getPlanCaps(callerPlan).members;
         if (cap !== Infinity) {
           const currentCount = await tx.tenantMembership.count({
             where: {
@@ -39,9 +34,8 @@ export class MembershipService {
           });
 
           if (currentCount >= cap) {
-            throw new ApiError(
+            throw ApiError.planLimitExceeded(
               `Your ${callerPlan} plan allows up to ${cap} members. Upgrade your plan to invite more members.`,
-              400,
               "MEMBER_CAP_REACHED",
             );
           }

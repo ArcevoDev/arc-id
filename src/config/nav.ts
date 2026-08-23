@@ -42,6 +42,7 @@ export const navConfig: NavSection[] = [
       { href: "/console/admin", label: "Admin", icon: "shield", requiredPermission: "admin:system" },
       { href: "/console/identities", label: "Identities", icon: "users", requiredPermission: "admin:system" },
       { href: "/console/tenants", label: "Tenants", icon: "building-2" },
+      { href: "/console/organization/members", label: "Members", icon: "badge-check" },
     ],
   },
   {
@@ -74,17 +75,9 @@ export const navConfig: NavSection[] = [
     ],
   },
   {
-    title: "Organization",
-    items: [
-      { href: "/console/organization", label: "Organization", icon: "building" },
-      { href: "/console/organization/members", label: "Members", icon: "users", requiredPermission: "tenant.membership.manage" },
-    ],
-  },
-  {
     title: "Account",
     items: [
       { href: "/console/user", label: "Account", icon: "user" },
-      { href: "/console/user/security", label: "Security", icon: "shield" },
     ],
   },
 ];

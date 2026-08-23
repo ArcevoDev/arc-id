@@ -8,6 +8,7 @@ interface ConsoleDataTableProps<T extends object> {
   columns: DataTableColumn<T>[];
   rowKey?: keyof T;
   loading?: boolean;
+  error?: string | null;
   emptyTitle?: string;
   emptyDescription?: string;
   searchable?: boolean;
@@ -23,6 +24,7 @@ export function ConsoleDataTable<T extends object>({
   columns,
   rowKey,
   loading,
+  error,
   emptyTitle = "No items found",
   emptyDescription = "There are no items to display.",
   searchable = true,
@@ -32,6 +34,12 @@ export function ConsoleDataTable<T extends object>({
   noDataMessage,
   className,
 }: ConsoleDataTableProps<T>) {
+  if (error) {
+    return (
+      <p className="text-sm text-destructive">{error}</p>
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -62,7 +70,7 @@ export function ConsoleDataTable<T extends object>({
       <DataTable
         columns={columns}
         data={data}
-        rowKey={rowKey ?? "id"}
+        rowKey={rowKey ?? ("id" as keyof T)}
         searchable={searchable}
         exportable={exportable}
         pagination={pagination}

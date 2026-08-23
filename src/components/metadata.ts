@@ -45,7 +45,7 @@ export const ArcMetadata = {
   },
 
   url: process.env.NEXT_PUBLIC_APP_URL ?? "https://arcid.arcevocirqle.com.ng",
-  ogImage: "/og-image.png",
+  ogImage: "/arcid-full.png",
   twitterHandle: "@arcevocirqle",
   locale: "en_NG",
 

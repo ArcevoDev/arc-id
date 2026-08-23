@@ -171,9 +171,12 @@ arc-id old → facet new mapping (as actually shipped):
 persistence through `useAuthStore`, keeping the Zustand store the single source
 of truth. `Providers` (in `src/providers/index.tsx`) wraps the app in
 `<ArcProvider client={arcIdClient} storage={zustandTokenStorage} …>` and keeps
-`user` in sync via `onSessionRestore`/`onAuthChange`. The old `src/components/auth/`
-`login-form`/`register-form`/`mfa-form` were deleted; `forgot-password-form`/
-`reset-password-form` remain and are still used by their pages.
+`user` in sync via `onSessionRestore`/`onAuthChange`. The old in-repo auth forms
+(`login-form` / `register-form` / `mfa-form` / `forgot-password-form` /
+`reset-password-form`) were all deleted; auth UI now comes from
+`@arcevo/facet-auth` (`SignIn`, `SignUp`, `MfaDialog`, `ForgotPasswordForm`,
+`ResetPasswordForm`). The `src/components/auth/` directory no longer exists (deleted
+2026-08-19 as part of Phase 6 purge).
 
 **MFA wiring**: `MfaDialog` is connected to the real `authSdk.verifyMfa()` flow
 via `arcIdClient`; on complete it routes through `resolvePostAuthRoute` (a
@@ -190,7 +193,7 @@ and `ConsoleLayout` (the `(dashboard)` group). In-repo
 
 ---
 
-### Phase 6 - Purge old files
+### Phase 6 - Purge old files - ✅ DONE (2026-08-19)
 
 After all phases are green across the full test suite:
 
@@ -200,10 +203,13 @@ git rm -r src/components/auth/
 # src/sdk/ - keep the client/orchestration, remove the individual .sdk.ts files
 ```
 
-**Current state**: `src/components/ui/` and the in-repo `login-form`/
-`register-form`/`mfa-form` are deleted. `src/components/auth/` still holds
-`forgot-password-form.tsx` + `reset-password-form.tsx`, which are used by
-their pages - delete them only when those pages move to `@arcevo/facet-auth`.
+**Current state**: `src/components/auth/` and the in-repo `login-form`/
+`register-form`/`mfa-form`/`forgot-password-form`/`reset-password-form` are all
+deleted and auth UI is fully on `@arcevo/facet-auth`. The `src/components/ui/`
+directory no longer holds shadcn primitives — it retains only three app-specific
+wrappers: `icon.tsx` (tree-shaken facet-icons bridge), `icons.generated.tsx`
+(auto-generated 68-icon subset), and `typewriter-text.tsx` (landing page animation).
+These are intentional app-local components, not framework primitives.
 
 ---
 

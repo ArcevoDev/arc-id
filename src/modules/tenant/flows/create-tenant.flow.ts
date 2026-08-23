@@ -6,6 +6,7 @@ import type { IsolatedPrismaClient } from "@/core/db";
 import { CreateTenantSchema } from "../validators/tenant.schemas";
 import { presentTenant } from "../presenters/tenant.presenter";
 import { ApiError } from "@/core/errors/api-error";
+import { getPlanCaps } from "@/config/plan-caps";
 import { auditService } from "@/modules/audit/services/audit.service";
 
 export const createTenantFlow: Flow<z.infer<typeof CreateTenantSchema>> = {
@@ -20,22 +21,17 @@ export const createTenantFlow: Flow<z.infer<typeof CreateTenantSchema>> = {
     });
     if (slugTaken) throw ApiError.conflict("This slug is already taken");
 
-    // Plan-based tenant cap enforcement
+    // Plan-based tenant cap enforcement — caps sourced from the central
+    // plan-caps config so the backend and billing UI stay in sync.
     const plan = ctx.plan ?? "FREE";
-    const tenantCaps: Record<string, number> = {
-      FREE: 1,
-      PRO: 5,
-      ENTERPRISE: Infinity,
-    };
-    const cap = tenantCaps[plan] ?? 1;
+    const cap = getPlanCaps(plan).tenants;
     const currentTenantCount = await ctx.db.tenantMembership.count({
       where: { identityId: ctx.identityId },
     });
     if (currentTenantCount >= cap) {
       const label = cap === 1 ? "tenant" : "tenants";
-      throw new ApiError(
+      throw ApiError.planLimitExceeded(
         `Your ${plan} plan allows up to ${cap} ${label}. Upgrade your plan to create more.`,
-        400,
         "TENANT_CAP_REACHED",
       );
     }

@@ -1,17 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader } from "@arcevo/facet-layout";
-import {
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@arcevo/facet-components";
+import Link from "next/link";
+import { Button } from "@arcevo/facet-components";
+import { PageShell } from "@/components/page-shell";
+import { ConsoleDataTable } from "@/components/console-data-table";
 import { useOAuth } from "@/hooks/use-oauth";
 
 interface OAuthClient {
@@ -21,6 +14,37 @@ interface OAuthClient {
   redirectUris: string[];
   createdAt: string;
 }
+
+const columns = [
+  { key: "name", header: "Name" },
+  {
+    key: "clientId",
+    header: "Client ID",
+    cell: (c: OAuthClient) => (
+      <code className="text-xs">{c.clientId}</code>
+    ),
+  },
+  {
+    key: "redirectUris",
+    header: "Redirect URIs",
+    cell: (c: OAuthClient) => c.redirectUris.length,
+  },
+  {
+    key: "createdAt",
+    header: "Created",
+    cell: (c: OAuthClient) => new Date(c.createdAt).toLocaleDateString(),
+  },
+  {
+    key: "id",
+    header: "Actions",
+    sortable: false,
+    cell: (c: OAuthClient) => (
+      <Button size="sm" variant="outline" asChild>
+        <Link href={`/console/oauth/applications/${c.id}`}>Edit</Link>
+      </Button>
+    ),
+  },
+];
 
 export default function OAuthApplicationsPage() {
   const [items, setItems] = useState<OAuthClient[] | null>(null);
@@ -36,49 +60,17 @@ export default function OAuthApplicationsPage() {
   }, [listClients]);
 
   return (
-    <>
-      <PageHeader
-        title="OAuth Applications"
-        description="Registered OAuth/OIDC clients."
+    <PageShell
+      title="OAuth Applications"
+      description="Registered OAuth/OIDC clients."
+    >
+      <ConsoleDataTable<OAuthClient>
+        data={items}
+        columns={columns}
+        loading={loading}
+        emptyTitle="No OAuth clients"
+        emptyDescription="No OAuth clients have been registered for this tenant."
       />
-      <main className="p-6">
-        <Card>
-          <CardContent>
-            {loading && <p className="text-muted-foreground">Loading...</p>}
-            {!loading && items?.length === 0 && (
-              <p className="text-muted-foreground">
-                No OAuth clients registered.
-              </p>
-            )}
-            {!loading && items && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Client ID</TableHead>
-                    <TableHead>Redirect URIs</TableHead>
-                    <TableHead>Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell>{c.name}</TableCell>
-                      <TableCell>
-                        <code className="text-xs">{c.clientId}</code>
-                      </TableCell>
-                      <TableCell>{c.redirectUris.length}</TableCell>
-                      <TableCell>
-                        {new Date(c.createdAt).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </>
+    </PageShell>
   );
 }

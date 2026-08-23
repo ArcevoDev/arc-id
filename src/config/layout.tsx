@@ -29,6 +29,7 @@ export function buildLayoutConfig(): LayoutConfig {
   return {
     brand: {
       name: "ArcID",
+      logo: <img src="/arcid-flat.png" alt="ArcID" className="h-8 w-auto" />,
       tagline: "Sovereign Identity Engine",
       benefits: [
         "Passkey-native authentication",

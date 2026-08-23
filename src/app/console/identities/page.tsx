@@ -1,18 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader } from "@arcevo/facet-layout";
-import {
-  Badge,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@arcevo/facet-components";
+import { Badge } from "@arcevo/facet-components";
+import { PageShell } from "@/components/page-shell";
+import { ConsoleDataTable } from "@/components/console-data-table";
 import { useIdentities } from "@/hooks/use-identities";
 
 interface Identity {
@@ -36,50 +27,31 @@ export default function IdentitiesPage() {
     });
   }, [list]);
 
+  const columns = [
+    { key: "name", header: "Name", cell: (row: Identity) => row.name ?? "-" },
+    { key: "email", header: "Email" },
+    {
+      key: "status",
+      header: "Status",
+      cell: (row: Identity) => <Badge>{row.status}</Badge>,
+    },
+    {
+      key: "createdAt",
+      header: "Created",
+      cell: (row: Identity) => new Date(row.createdAt).toLocaleDateString(),
+    },
+  ];
+
   return (
-    <>
-      <PageHeader
-        title="Identities"
-        description="Manage user identities in this tenant."
+    <PageShell title="Identities" description="Manage user identities in this tenant.">
+      <ConsoleDataTable<Identity>
+        data={items}
+        columns={columns}
+        loading={loading}
+        emptyTitle="No identities"
+        emptyDescription="No user identities have been created for this tenant."
+        exportable
       />
-      <main className="p-6">
-        <Card>
-          <CardContent>
-            {loading && (
-              <p className="text-muted-foreground">Loading identities...</p>
-            )}
-            {!loading && items?.length === 0 && (
-              <p className="text-muted-foreground">No identities found.</p>
-            )}
-            {!loading && items && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((id) => (
-                    <TableRow key={id.id}>
-                      <TableCell>{id.name ?? "-"}</TableCell>
-                      <TableCell>{id.email}</TableCell>
-                      <TableCell>
-                        <Badge>{id.status}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(id.createdAt).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </>
+    </PageShell>
   );
 }

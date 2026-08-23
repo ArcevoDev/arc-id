@@ -77,8 +77,8 @@ shipped. See `CLAUDE.md` for the full verified status table. Open work:
   `AuthSdk`/`TenantSdk`/etc.) - `src/sdk/index.ts` is now a thin singleton wiring
   that owns the `ArcIdClient` + 401 auto-refresh (wired to the Zustand auth
   store) and re-exports the facet domain SDKs. The old in-repo factory-pattern
-  `src/sdk/*.sdk.ts` files are deleted. Hooks for credentials, MFA, webhooks,
-  and API keys use the facet SDKs. Pages still need final cleanup (some import
+  `src/sdk/*.sdk.ts` files are deleted. Hooks for credentials, MFA, webhooks
+  use the facet SDKs. Pages still need final cleanup (some import
   SDK directly instead of through hooks - pragmatically acceptable).
   **Tenant list route (`GET /tenants`) + tenant switcher wired (2026-07-28).**
 - **Facet migration (`docs/migration/facet-migration-guide.md`)** - ✅
@@ -89,7 +89,7 @@ shipped. See `CLAUDE.md` for the full verified status table. Open work:
   old in-repo factory-pattern `src/sdk/*.sdk.ts` files are deleted.
   Phase 2: `@arcevo/facet-tokens/tokens.css` imported before
   `globals.css` in `layout.tsx`; `:root` token block removed from
-  globals.css. Phase 3: `src/components/ui/*` deleted and all consumers
+  globals.css. Phase 3: `src/components/ui/` shadcn/ui primitives purged (3 app-specific wrappers `icon.tsx`, `typewriter-text.tsx`, `icons.generated.tsx` retained); all consumers
   switched to **`@arcevo/facet-components@1.10.0`** (icons use the
   package's native `<Icon name="…" />` registry - no local icon registry).
   Phase 4: auth pages on **`@arcevo/facet-auth@1.2.2`** via `ArcProvider` +

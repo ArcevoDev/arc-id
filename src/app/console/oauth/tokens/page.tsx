@@ -1,18 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader } from "@arcevo/facet-layout";
-import {
-  Button,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@arcevo/facet-components";
+import type { DataTableColumn } from "@arcevo/facet-components";
+import { Button } from "@arcevo/facet-components";
+import { PageShell } from "@/components/page-shell";
+import { ConsoleDataTable } from "@/components/console-data-table";
 import { useOAuth } from "@/hooks/use-oauth";
 
 interface Token {
@@ -38,61 +30,52 @@ export default function OAuthTokensPage() {
     });
   }, [listTokens]);
 
+  const handleRevoke = async (tokenId: string) => {
+    await revokeToken(tokenId);
+    setItems(items?.filter((t) => t.id !== tokenId) ?? []);
+  };
+
+  const columns: DataTableColumn<Token>[] = [
+    {
+      key: "clientId",
+      header: "Client",
+      cell: (t) => t.clientName ?? t.clientId,
+    },
+    {
+      key: "createdAt",
+      header: "Created",
+      cell: (t) => new Date(t.createdAt).toLocaleString(),
+    },
+    {
+      key: "expiresAt",
+      header: "Expires",
+      cell: (t) =>
+        t.expiresAt ? new Date(t.expiresAt).toLocaleDateString() : "Never",
+    },
+    {
+      key: "id",
+      header: "Actions",
+      sortable: false,
+      cell: (t) => (
+        <Button variant="outline" size="sm" onClick={() => handleRevoke(t.id)}>
+          Revoke
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <>
-      <PageHeader
-        title="OAuth Tokens"
-        description="Active personal access tokens."
+    <PageShell
+      title="OAuth Tokens"
+      description="Active personal access tokens."
+    >
+      <ConsoleDataTable<Token>
+        data={items}
+        columns={columns}
+        loading={loading}
+        emptyTitle="No tokens found"
+        emptyDescription="No personal access tokens have been issued."
       />
-      <main className="p-6">
-        <Card>
-          <CardContent>
-            {loading && <p className="text-muted-foreground">Loading...</p>}
-            {!loading && items?.length === 0 && (
-              <p className="text-muted-foreground">No tokens found.</p>
-            )}
-            {!loading && items && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Expires</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell>{t.clientName ?? t.clientId}</TableCell>
-                      <TableCell>
-                        {new Date(t.createdAt).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        {t.expiresAt
-                          ? new Date(t.expiresAt).toLocaleDateString()
-                          : "Never"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            await revokeToken(t.id);
-                            setItems(items.filter((x) => x.id !== t.id));
-                          }}
-                        >
-                          Revoke
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </>
+    </PageShell>
   );
 }

@@ -41,6 +41,11 @@ export class ApiError extends Error {
     return new ApiError(msg, 500, "INTERNAL_SERVER_ERROR");
   }
 
+  /** Plan-based resource cap reached — 400 with a descriptive code. */
+  static planLimitExceeded(msg: string, code: string) {
+    return new ApiError(msg, 400, code);
+  }
+
   // ── OAuth2 / RFC 6749 ──────────────────────────────────────────────────────
   static invalidGrant(msg = "Invalid or expired grant") {
     return new ApiError(msg, 400, "invalid_grant");

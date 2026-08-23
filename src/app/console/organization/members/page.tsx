@@ -1,18 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader } from "@arcevo/facet-layout";
-import {
-  Badge,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@arcevo/facet-components";
+import { Badge } from "@arcevo/facet-components";
+import { PageShell } from "@/components/page-shell";
+import { ConsoleDataTable } from "@/components/console-data-table";
 import { useTenantStore } from "@arcevo/facet-store";
 import { useTenant } from "@/hooks/use-tenant";
 
@@ -52,49 +43,27 @@ export default function OrganizationMembersPage() {
       });
   }, [activeTenant, listMembers]);
 
+  const columns = [
+    { key: "name", header: "Name", cell: (m: Member) => m.name ?? "-" },
+    { key: "email", header: "Email", cell: (m: Member) => m.email ?? "-" },
+    { key: "role", header: "Role" },
+    {
+      key: "status",
+      header: "Status",
+      cell: (m: Member) => <Badge>{m.status}</Badge>,
+    },
+  ];
+
   return (
-    <>
-      <PageHeader
-        title="Members"
-        description="People with access to this organization."
+    <PageShell title="Members" description="People with access to this organization.">
+      <ConsoleDataTable<Member>
+        data={items}
+        columns={columns}
+        loading={loading}
+        error={error}
+        emptyTitle="No members"
+        emptyDescription="No members have been added to this organization yet."
       />
-      <main className="p-6">
-        <Card>
-          <CardContent>
-            {loading && <p className="text-muted-foreground">Loading...</p>}
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-            {!loading && !error && items?.length === 0 && (
-              <p className="text-muted-foreground">No members found.</p>
-            )}
-            {!loading && !error && items && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell>{m.name ?? "-"}</TableCell>
-                      <TableCell>{m.email ?? "-"}</TableCell>
-                      <TableCell>{m.role}</TableCell>
-                      <TableCell>
-                        <Badge>{m.status}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </>
+    </PageShell>
   );
 }

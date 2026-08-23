@@ -16,9 +16,9 @@ Fastify + Prisma + Next.js 16 monorepo (pnpm, ESM-only).
 - WebAuthn passkeys, TOTP MFA (setup/verify/recovery), magic-link auth, social login (Google/GitHub/Apple/Microsoft), SAML2 + OIDC federation
 - SD-JWT Verifiable Credentials - issue/verify/revoke, W3C BitstringStatusList, did:web + did:key
 - Presentation endpoint (challenge-response verification protocol) - jws-proof: 6 tests, verify-session: 5, verify-present: 9
-- Multi-tenant: tenant CRUD + TenantPolicy (5 enforced fields) + RBAC (16 permissions, requirePermission()) + signing keys (KMS-encrypted)
+- Multi-tenant: tenant CRUD + TenantPolicy (6 enforced fields) + RBAC (19 permissions, requirePermission()) + signing keys (KMS-encrypted)
 - Webhook delivery engine (Postgres queue, FOR UPDATE SKIP LOCKED, retry/backoff, dead-letter)
-- Rate limiting (per-route, per-IP), audit logging (40+ action enum values), JTI blocklist (Redis two-tier + DB fallback)
+- Rate limiting (per-route, per-IP), audit logging (51 action enum values), JTI blocklist (Redis two-tier + DB fallback)
 - KMS encryption for signing keys at rest (AES-256-GCM, key rotation script, encrypt/decrypt passthrough)
 - Email via Resend (13 templates, React Email components; static template gallery at :3888, auth emails delivered to recipient inbox)
 - SMS via Brevo (transactional SMS for MFA codes + security alerts)
@@ -61,11 +61,11 @@ arc-id/
 │   └── types/         # Shared TypeScript types
 ├── prisma/
 │   ├── schema.prisma  # Single source of truth - 50+ models
-│   ├── seed.ts        # SYSTEM tenant, admin user, 16 roles/permissions
+│   ├── seed.ts        # SYSTEM tenant, admin user, 19 permissions
 │   └── migrations/    # Never hand-edit - always `pnpm prisma:migrate`
 ├── docs/
 │   ├── planning/     # Planning documents
-│   │   ├── arcid-v1-roadmap.md       # Operative roadmap
+│   │   ├── arcid-v2-roadmap.md       # Operative roadmap (v2)
 │   │   ├── testing-guide.MD          # Manual API test matrix (65 checks)
 │   │   ├── arcid-cli-design.md       # CLI basis (planned)
 │   │   ├── client-core-architecture-analysis.md  # Canonical client-core conventions
@@ -210,8 +210,8 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 | Presentation endpoint | ✅ 100% | `jws-proof` (6), `verify-session.route` (5), `verify-present.route` (9) - **20 tests total** |
 | Credential offers | ✅ 100% | `offer-credential.flow` (8) + `offer.route` (5) = **13 tests** |
 | Multi-tenant CRUD | ✅ 100% | `create-tenant.flow` (7), `add-member.flow` (2), policy enforcement |
-| TenantPolicy enforcement | ✅ 5/5 fields | requireMfa, maxSessionsPerUser, sessionTtlMinutes, allowedEmailDomains, allowPasskeys |
-| RBAC (requirePermission) | ✅ 100% | `rbac` (5 tests), 16 permissions, 0 `role.name === "ADMIN"` in new code |
+| TenantPolicy enforcement | ✅ 6/6 fields | requireMfa, maxSessionsPerUser, sessionTtlMinutes, allowedEmailDomains, allowPasskeys, requireLegalConsent |
+| RBAC (requirePermission) | ✅ 100% | `rbac` (5 tests), 19 permissions, 0 `role.name === "ADMIN"` in new code |
 | ExternalIdentifier | ✅ 100% | `link/list/unlink` (9 tests), SHA-256 hashed |
 | Wallet + identity-owned DID | ✅ 100% | `register-wallet-did.flow` - did:key + Wallet row in same tx |
 | KMS (signing key encryption) | ✅ Wired | `kms` (13 tests), called by `key-encryption.ts` → `signing.service.ts` + `provision-tenant-did.flow.ts` |
@@ -224,7 +224,7 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 | CI pipeline | ✅ 3 workflows (rewritten 2026-07-28) | `ci.yml` (self-hosted Postgres 17 service, no external DB), `deploy-api.yml` (GHCR push → SSH Docker Compose on target VM), `deploy-web.yml` (SSH git pull → pnpm build:web → PM2 restart) |
 | `GET /tenants` route | ✅ 100% | `list-tenants.route.ts` - returns all tenants the user has ACTIVE membership in, with role + plan |
 | SDK layer | ✅ **Migrated to `@arcevo/facet-sdk@1.1.0`** | `src/sdk/` is now `index.ts` only - an `ArcIdClient` singleton (401 auto-refresh wired to the Zustand auth store) re-exporting the facet domain SDK classes (`AuthSdk`, `TenantSdk`, `VcSdk`, …). Old factory-pattern `src/sdk/*.sdk.ts` deleted (2026-08-05). |
-| UI components | ✅ **Migrated to `@arcevo/facet-components@1.10.0`** | `src/components/ui/` deleted; all consumers import from the facet package. Icons use the package's native `<Icon name="…" />` registry (`getIcon`/`lucideIconMap`); `src/lib/ui/icon-registry.ts` + `navigation.ts` deleted as duplicates. `cn` re-exported from `@/lib/utils`. Verified typecheck + 342 tests green (2026-08-20). |
+| UI components | ✅ **Migrated to `@arcevo/facet-components@1.10.0`** | shadcn/ui primitives purged; `src/components/ui/` retains 3 app-specific wrappers (`icon.tsx` tree-shaken `<Icon>`, `typewriter-text.tsx`, `icons.generated.tsx`). `src/lib/ui/icon-registry.ts` + `navigation.ts` deleted as duplicates. `cn` re-exported from `@/lib/utils`. Verified typecheck + 342 tests green (2026-08-20). |
 | Auth UI | ✅ **Migrated to `@arcevo/facet-auth@1.2.2`** | Login/register/mfa pages use `SignIn`/`SignUp`/`MfaDialog`; `ArcProvider` bridged to the Zustand store via `zustandTokenStorage` (commit `d6f6707`). In-repo `login-form`/`register-form`/`mfa-form` deleted; forgot/reset password forms now on `@arcevo/facet-auth` (ForgotPasswordForm/ResetPasswordForm). |
 | Layout | ✅ **Migrated to `@arcevo/facet-layout@1.4.1`** | `(auth)` group uses `AuthLayout`, `console/` directory uses `ConsoleLayout`; in-repo sidebar/topbar/tenant-switcher deleted. |
 | CSS tokens | ✅ **Migrated to `@arcevo/facet-tokens@1.1.4`** | `tokens.css` imported before `globals.css` in `layout.tsx`; `:root` block removed from globals.css; arc-id keeps its indigo primary via override. |
@@ -237,15 +237,15 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 
 | Priority | Item | Why now |
 |----------|------|---------|
-| **P0** | Facet migration Phases 4–6 | **Phases 0–8 + Phase E done (2026-08-19).** Phase 1: `src/sdk/` is a thin `ArcIdClient` singleton wiring over `@arcevo/facet-sdk@1.1.0`. Phase 2: `@arcevo/facet-tokens/tokens.css` imported before `globals.css` in `layout.tsx`. Phase 3: `src/components/ui/` deleted - all consumers import `@arcevo/facet-components@1.10.0`. Phase 4: auth pages on `@arcevo/facet-auth@1.2.2` via `ArcProvider` + `zustandTokenStorage` bridge (commit `d6f6707`). Phase 5: layouts on `@arcevo/facet-layout@1.4.1`. **Done:** Phase 6 purge FULLY complete — forgot/reset password forms now on `@arcevo/facet-auth`; in-repo forms + `src/components/{auth,ui,layout}/` deleted (2026-08-19). |
+| **P0** | Facet migration Phases 4–6 | **Phases 0–8 + Phase E done (2026-08-19).** Phase 1: `src/sdk/` is a thin `ArcIdClient` singleton wiring over `@arcevo/facet-sdk@1.1.0`. Phase 2: `@arcevo/facet-tokens/tokens.css` imported before `globals.css` in `layout.tsx`. Phase 3: shadcn/ui primitives purged from `src/components/ui/` (3 app-specific wrappers retained); all consumers import `@arcevo/facet-components@1.10.0`. Phase 4: auth pages on `@arcevo/facet-auth@1.2.2` via `ArcProvider` + `zustandTokenStorage` bridge (commit `d6f6707`). Phase 5: layouts on `@arcevo/facet-layout@1.4.1`. **Done:** Phase 6 purge FULLY complete — forgot/reset password forms now on `@arcevo/facet-auth`; `src/components/auth/` + `src/components/layout/` deleted; shadcn/ui primitives purged from `src/components/ui/` (3 app-specific wrappers retained) (2026-08-19). |
 | **P1** | Phase 3 - Security hardening | **✅ Closed (2026-07-28).** SSRF (4/4 fixed), CSRF review complete, Redis-backed distributed revocation wired. **Per-session access token revocation**: `AccessToken.sessionId` column + migration + `DELETE /sessions/:id` revokes bound access tokens + blocks JTIs in Redis. Full kill chain: session → refresh → access tokens. JTI blocklist (14 tests, 3 files): in-memory Map fallback, retries every call. Introspect route: Redis + DB dual check. |
 | **P2** | Phase 4 - Observability | **✅ Shipped (2026-07-28).** `requestId` in all error responses + audit log metadata. `@fastify-metrics` at `GET /metrics`. Correlation IDs flow through FlowContext.requestId → auditService.log → DB. Pino structured logs carry traceId on every flow init/ok/fail. |
 | **P3** | CLI + SDK packages | `packages/cli/` extraction after frontend rebuild stabilises API contract. Design basis: `docs/planning/arcid-cli-design.md`. |
 | **P4** | LegalConsent → wire to flow | **✅ Done (2026-08-19).** LegalConsent gate wired into `issue-credential.flow.ts` (E2, lines 62-78) — checks `TenantPolicy.requireLegalConsent` + `legalConsent` table before issuing; throws 403 if no consent recorded. |
 | **P5** | ExternalIdentifier.verified → VC issuance | **✅ Done (2026-08-19).** Verified-identifier gate wired into `issue-credential.flow.ts` (E1, lines 52-60) — subject DID must resolve to an `Identity` with ≥1 verified external identifier (`where: { identityId, verified: true }`). |
-| **P4.1** | Dead audit enum values | **⚠️ Partial.** `ROLE_CREATED`/`ROLE_UPDATED`/`ROLE_ASSIGNED` removed from `AuditLogAction` enum (2026-08-19). `OAUTH_CLIENT_UPDATED` now produced by `clients.route.ts` (UPDATE endpoint). Still dead: `DELEGATION_GRANTED`/`DELEGATION_REVOKED` — `delegation.route.ts` emits no audit events. Remove these 2 or wire delegation audit. |
+| **P4.1** | Dead audit enum values | **✅ Done (2026-08-22).** `ROLE_*` + `DELEGATION_*` removed from `AuditLogAction` enum (53 → 51 values); migration `20260822000000_remove_dead_audit_enum_values`. `OAUTH_CLIENT_UPDATED` audit call wired in `clients.route.ts`. 100% call-site coverage. |
 | **P4.2** | CI secret + dependency scanning | **✅ Done (2026-08-19).** `scan-secrets.ts` wired to CI (`pnpm scan:secrets` in ci.yml); Trivy dependency/vuln scan added to ci.yml. Secrets/PII-in-logs now scanned in CI. |
-| **P4.3** | SDK `TenantSdk.create()` coverage | `sdk.test.ts` (6 tests) doesn't cover `TenantSdk.create()` or its token-injection fix; no changeset. |
+| **P4.3** | SDK `TenantSdk.create()` coverage | ⏸️ **Carried to v2.** `sdk.test.ts` (6 tests) doesn't cover `TenantSdk.create()` or its token-injection fix; no changeset. Low-risk gap, not blocking v1. |
 | **P4.4** | Frontend chain-rule violations | **✅ Done (2026-08-21).** Verified: NO `src/app` page imports the arc-id SDK (`@/sdk`) directly - only `use-*` hooks + `facet-store` hooks + facet UI (`login`/`register` on `@arcevo/facet-auth`, `billing` via `useBilling()`). `src/components/` purged to facet (no frontend `as any`). Chain rule (page → hook → store → SDK) enforced. |
 
 ### 🔶 Deferred (do not start early)
@@ -305,7 +305,7 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 |-------|--------|--------|
 | Cross-tenant isolation (HTTP + unit) | ✅ **Verified** | `cross-tenant-http.test.ts` - 3 HTTP-layer tests. `cross-tenant-isolation.test.ts` - 3 flow-level unit tests (mock fixed: `upsert`/`findMany`/`findUniqueOrThrow` + `auditLog.create`). All 6 tests pass clean with no audit-noise errors. |
 | Rate limiting per route | ✅ Verified | Every auth-sensitive route has `config: { rateLimit }` - login (10/min), register (5/hr), magic-link (3/15min), MFA (5/5min), password (5/15min), step-up (5/5min), verify-session (30/min), verify-present (30/min) |
-| Audit logging - called actions | ⚠️ Partial (2 missing call sites fixed) | 53 enum values in `AuditLogAction` (ROLE_* removed 2026-08-19). Call sites verified for all but `DELEGATION_*` (exhaustive grep 2026-08-20). Only truly unused: `DELEGATION_GRANTED` / `DELEGATION_REVOKED` (`delegation.route.ts` is audit-free). `OAUTH_CLIENT_UPDATED` now produced by `clients.route.ts`. `PASSWORD_RESET_REQUESTED` audit call was missing - added. `magic-link.flow.ts` had zero audit calls - `SESSION_CREATED` + `USER_LOGIN_SUCCESS` added. |
+| Audit logging - called actions | ✅ 100% | 51 enum values in `AuditLogAction` (ROLE_* + DELEGATION_* removed). Call sites verified for all actions. `OAUTH_CLIENT_UPDATED` audit call wired in `clients.route.ts`. `PASSWORD_RESET_REQUESTED` audit call was missing - added. `magic-link.flow.ts` had zero audit calls - `SESSION_CREATED` + `USER_LOGIN_SUCCESS` added. |
 | Secrets/PII in logs | ✅ **Verified** | `scan-secrets.ts` runs in CI (`pnpm scan:secrets`) - scans source/log strings for plaintext credentials and PII |
 | CORS config | ✅ Verified | Restricted to `config.base.allowedOrigins` (env-driven), not wildcard |
 | Token revocation (blockJti + revokedJti) | ✅ **Verified** | Both called together in all revoke paths. Introspect route now checks Redis + DB (was DB-only). |
@@ -325,9 +325,12 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 
 Current: `0.1.0` (package.json). Pre-release - no stability promises.
 
-- `0.1.0` (current) - Backend complete: all Phase 0–8 + Phase E shipped; 61 test files / 342 tests, 0 code failures
-- `0.2.0` - Frontend rebuilt, ArcWallet integration working end-to-end
-- `1.0.0` - Stable production-ready milestone with Phase 3+4 hardening
+- `0.1.0` ✅ **COMPLETE** (v1) - Backend complete: all Phase 0–8 + Phase E shipped; 61 test files / 342 tests, 0 code failures. Docker, security hardening, observability, LegalConsent + ExternalIdentifier gates all shipped.
+- `0.2.0` 🔄 **ACTIVE (v2)** - ArcWallet companion app integration (end-to-end), API key management backend (CRUD flows + routes), CLI package extraction, integration tests against real Postgres
+- `1.0.0` — Stable production milestone: full integration test suite, open-source release
+
+_The v1 roadmap (`docs/planning/arcid-v1-roadmap.md`) is deprecated — see `docs/planning/arcid-v2-roadmap.md`._
+
 
 ---
 
@@ -358,6 +361,4 @@ SMS: transactional MFA codes + security alerts via Brevo (`sendMfaCodeSms`, `sen
 ---
 
 _Keep this file current. Any session that closes an item or discovers a new one
-updates CLAUDE.md and arcid-v1-roadmap.md in the same commit._
-a new one
-updates CLAUDE.md and arcid-v1-roadmap.md in the same commit._
+updates CLAUDE.md and docs/planning/arcid-v2-roadmap.md in the same commit._

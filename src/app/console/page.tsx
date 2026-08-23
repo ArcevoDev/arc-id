@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@arcevo/facet-components";
+import { ActivityFeed, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@arcevo/facet-components";
 import { StatCard, PageHeader } from "@arcevo/facet-components";
 import { useAuthStore, useTenantStore } from "@arcevo/facet-store";
 import { useRouter } from "next/navigation";
@@ -125,21 +125,19 @@ export default function ConsoleDashboardPage() {
                 <CardDescription>Latest audit events for this tenant.</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? <p className="text-muted-foreground">Loading activity...</p>
-                 : events.length === 0 ? <p className="text-muted-foreground">No recent activity.</p>
-                 : (
-                  <table className="w-full text-sm">
-                    <thead><tr><th className="text-left font-medium text-muted-foreground pb-2">Action</th><th className="text-left font-medium text-muted-foreground pb-2">Target</th><th className="text-right font-medium text-muted-foreground pb-2">Time</th></tr></thead>
-                    <tbody>
-                      {events.map((e) => (
-                        <tr key={e.id} className="border-t">
-                          <td className="py-2">{e.action}</td>
-                          <td className="py-2"><Badge variant="outline" className="text-xs">{e.targetType ?? "-"}</Badge></td>
-                          <td className="py-2 text-right text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                {loading ? (
+                  <p className="text-muted-foreground">Loading activity...</p>
+                ) : (
+                  <ActivityFeed
+                    items={events.map((e) => ({
+                      id: e.id,
+                      title: e.action,
+                      description: e.targetType,
+                      timestamp: e.createdAt,
+                    }))}
+                    groupByDay={false}
+                    emptyText="No recent activity."
+                  />
                 )}
               </CardContent>
             </Card>
