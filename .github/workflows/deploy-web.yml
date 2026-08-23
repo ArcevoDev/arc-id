@@ -1,15 +1,7 @@
 name: Deploy Web
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "next.config.ts"
-      - "public/**"
-      - "messages/**"
+  workflow_dispatch: {}
   workflow_run:
     workflows: ["Deploy API"]
     types: [completed]

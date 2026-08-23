@@ -1,20 +1,7 @@
 name: Deploy API
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/api/**"
-      - "src/core/**"
-      - "src/modules/**"
-      - "src/lib/**"
-      - "src/jobs/**"
-      - "prisma/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "tsconfig.api.json"
-      - "Dockerfile"
-      - "docker-compose.yml"
+  workflow_dispatch: {}
 
 concurrency:
   group: deploy-api-production
