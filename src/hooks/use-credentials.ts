@@ -3,8 +3,7 @@
 import { useCallback } from "react";
 import { useAuthStore } from "@arcevo/facet-store";
 import { credentials } from "@/sdk";
-
-type IssueCredentialParams = Parameters<typeof credentials.issue>[0];
+import type { IssueCredentialParams } from "@arcevo/facet-sdk";
 
 export function useCredentials() {
   const accessToken = useAuthStore((s) => s.accessToken);
