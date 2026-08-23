@@ -55,7 +55,7 @@ contract stabilized for the CLI package.
 | 1 | ArcWallet companion app — end-to-end wallet issuance/verify/presentation flow (separate package) | P0 | ⏳ Not started |
 | 2 | API key management backend — CRUD flows + routes (OAuth2 bearer-token style keys) | P1 | ⏳ Frontend was a stub (stub removed Aug 2026); backend not started |
 | 3 | CLI package extraction — move `packages/cli` to published `@arcevo/arcid-cli` npm package | P1 | ⏸️ Scaffolded; pending API contract stability |
-| 4 | Integration tests against real Postgres (`pnpm test:rollback`) | P2 | ⏸️ Opt-in; needs Postgres 17 service |
+| 4 | Integration tests against real Postgres (`pnpm test:rollback`) | P2 | ✅ Unblocked (facet shipped 2026-08-19); needs Postgres 17 service |
 | 5 | SDK `TenantSdk.create()` test coverage gap (P4.3) | P2 | ⏸️ Not blocking; 6-test `sdk.test.ts` passes |
 | 6 | Console dashboard — final cleanup (remaining SDK-direct imports in pages) | P3 | ⏸️ Pragmatically acceptable |
 | 7 | Billing UI — pricing from `src/config/plan-caps.ts` displayed via `BillingPage` (facet-components) | P2 | ✅ In progress (working tree) |
@@ -110,7 +110,7 @@ contract stabilized for the CLI package.
 - **SDK** — published `@arcevo/facet-sdk@1.1.0` (class-based `AuthSdk`,
   `TenantSdk`, `OAuthSdk`, `CredentialSdk`, `WebhookSdk`). `src/sdk/index.ts`
   is a thin singleton that owns the `ArcIdClient` + 401 auto-refresh (wired to
-  the Zestand auth store) and re-exports the facet domain SDKs.
+  the Zustand auth store) and re-exports the facet domain SDKs.
 - **CLI** — `packages/cli` scaffolded on `@arcevo/facet-cli@0.8.0`. Pending API
   contract stability before extracting to its own npm package.
 
