@@ -14,11 +14,7 @@ export function useAuth() {
       if (result.data.accessToken) {
         useAuthStore.getState().setAuth(result.data.identity, result.data.accessToken, result.data.refreshToken ?? "");
         arcIdClient.setAccessToken(result.data.accessToken);
-        persistSession(
-          result.data.identity,
-          result.data.accessToken,
-          result.data.refreshToken ?? "",
-        );
+        persistSession(result.data.identity);
       }
     }
     return result;
@@ -60,10 +56,10 @@ export function useAuth() {
       // Fetch the full profile so the store has both user + tokens.
       const me = await auth.me();
       if (me.data) {
-        useAuthStore.getState().setAuth(me.data, accessToken, refreshToken);
-        persistSession(me.data, accessToken, refreshToken);
+        useAuthStore.getState().setAuth(me.data, accessToken, refreshToken ?? "");
+        persistSession(me.data);
       } else {
-        useAuthStore.getState().setTokens(accessToken, refreshToken);
+        useAuthStore.getState().setTokens(accessToken, refreshToken ?? "");
       }
       arcIdClient.setAccessToken(accessToken);
     }
@@ -71,14 +67,13 @@ export function useAuth() {
   }, []);
 
   const refreshAuth = useCallback(async () => {
-    const state = useAuthStore.getState();
-    if (!state.refreshToken) return;
-    const result = await auth.refresh(state.refreshToken);
+    const result = await auth.refresh("");
     if (result.data) {
-      useAuthStore.getState().setTokens(result.data.accessToken, result.data.refreshToken);
+      useAuthStore.getState().setTokens(result.data.accessToken, result.data.refreshToken ?? "");
       arcIdClient.setAccessToken(result.data.accessToken);
-      if (state.user) {
-        persistSession(state.user, result.data.accessToken, result.data.refreshToken ?? state.refreshToken);
+      const { user } = useAuthStore.getState();
+      if (user) {
+        persistSession(user);
       }
     } else {
       arcIdClient.setAccessToken(null);
@@ -97,7 +92,7 @@ export function useAuth() {
       const { identity, accessToken, refreshToken } = result.data;
       useAuthStore.getState().setAuth(identity, accessToken, refreshToken ?? "");
       arcIdClient.setAccessToken(accessToken);
-      persistSession(identity, accessToken, refreshToken ?? "");
+      persistSession(identity);
     }
     return result;
   }, []);

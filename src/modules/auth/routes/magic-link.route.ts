@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import { flowExecutor } from "@/core/flows";
 import { magicLinkFlow } from "../flows/magic-link.flow";
 import { z } from "zod";
+import { setRefreshCookie } from "@/lib/refresh-cookies";
 
 export async function magicLinkRoute(fastify: FastifyInstance) {
   // POST /auth/magic-link/request
@@ -68,7 +69,13 @@ export async function magicLinkRoute(fastify: FastifyInstance) {
         ip: req.ip,
         userAgent: req.headers["user-agent"],
       });
-      return reply.send({ success: true, data: result });
+
+      if (result.refreshToken) {
+        setRefreshCookie(reply, result.refreshToken);
+      }
+      const { refreshToken: _, ...safeData } = result;
+
+      return reply.send({ success: true, data: safeData });
     },
   );
 }

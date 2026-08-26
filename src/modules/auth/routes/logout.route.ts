@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { flowExecutor } from "@/core/flows";
 import { logoutFlow } from "../flows/logout.flow";
+import { clearRefreshCookie } from "@/lib/refresh-cookies";
 
 const SessionIdSchema = z.string().min(40).max(128);
 
@@ -52,6 +53,8 @@ export async function logoutRoute(fastify: FastifyInstance) {
           ip: req.ip,
         },
       );
+
+      clearRefreshCookie(reply);
 
       return reply.send({
         success: true,

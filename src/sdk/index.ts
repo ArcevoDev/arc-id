@@ -1,5 +1,5 @@
 /**
- * ArcID SDK — singleton wiring for @arcevo/facet-sdk.
+ * ArcID SDK - singleton wiring for @arcevo/facet-sdk.
  *
  * The domain SDKs live in the published `@arcevo/facet-sdk` package
  * (class-based: `new AuthSdk(client)`). This module owns the single
@@ -26,20 +26,21 @@ import {
   type User,
 } from "@arcevo/facet-sdk";
 import { useAuthStore, useTenantStore } from "@arcevo/facet-store";
+import {
+  REFRESH_COOKIE_NAME,
+  REFRESH_COOKIE_OPTIONS,
+} from "@/lib/refresh-cookies";
 
 // ── Client singleton ─────────────────────────────────────────────────────────
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
-const AUTH_STORAGE_KEY = "arcid-auth";
+const AUTH_STORAGE_KEY = "arcid-session";
 
-/** Persist the current session so AuthProvider can restore it on page load. */
-export function persistSession(user: User, accessToken: string, refreshToken: string) {
+/** Persist the current user so AuthProvider can restore identity on page load. */
+export function persistSession(user: User) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(
-    AUTH_STORAGE_KEY,
-    JSON.stringify({ user, accessToken, refreshToken }),
-  );
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user }));
 }
 
 /** Remove the persisted session (logout, refresh failure, auth cleared). */
@@ -57,7 +58,7 @@ function onAuthCleared() {
 // Re-entrancy guard: the client's request() retries with a fresh token after
 // onTokenRefresh resolves, but the refresh call itself goes through the same
 // client. If POST /oauth/token ever 401s, request() would call onTokenRefresh
-// again — recursing forever. The flag short-circuits the second entry so the
+// again - recursing forever. The flag short-circuits the second entry so the
 // original failure path (onAuthCleared) runs instead.
 let refreshInFlight = false;
 
@@ -70,18 +71,20 @@ let authSdk: AuthSdk;
 const client: ArcIdClient = new ArcIdClient({
   baseUrl: BASE_URL,
   onTokenRefresh: async (): Promise<string | null> => {
-    const state = useAuthStore.getState();
-    if (!state.refreshToken || refreshInFlight) return null;
+    if (refreshInFlight) return null;
 
     refreshInFlight = true;
     try {
-      const { data, error } = await authSdk.refresh(state.refreshToken);
+      // The refresh token lives in an httpOnly cookie (set by the backend).
+      // Pass an empty string — the /oauth/token endpoint reads from the
+      // cookie when the body value is empty.
+      const { data, error } = await authSdk.refresh("");
       if (error || !data?.accessToken) {
         onAuthCleared();
         return null;
       }
 
-      useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+      useAuthStore.getState().setTokens(data.accessToken, data.refreshToken ?? "");
       return data.accessToken;
     } finally {
       refreshInFlight = false;
@@ -107,6 +110,9 @@ export const idp = new IdpSdk(client);
 
 // Re-export the client so providers can push token updates.
 export const arcIdClient = client;
+
+// Re-export cookie constants (single source of truth: src/lib/refresh-cookies.ts).
+export { REFRESH_COOKIE_NAME, REFRESH_COOKIE_OPTIONS };
 
 // Re-export shared types for consumers.
 export type { AuditListParams, ApiError, ApiResponse };

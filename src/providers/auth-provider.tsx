@@ -5,7 +5,7 @@ import { useAuthStore, useTenantStore } from "@arcevo/facet-store";
 import { tenants, arcIdClient } from "@/sdk";
 
 /**
- * AuthProvider — reads stored tokens on mount and restores session.
+ * AuthProvider - reads stored tokens on mount and restores session.
  * After session restoration, hydrates the tenant store with the user's
  * organisations.
  */
@@ -17,29 +17,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     async function init() {
-      // Attempt to restore session from storage
+           // Attempt to restore user identity from storage.
+      // Tokens are NO LONGER persisted to localStorage — the refresh token
+      // lives in an httpOnly cookie. We set isAuthenticated=true with empty
+      // tokens; the SDK's onTokenRefresh will fire on the first 401 and
+      // use the cookie to obtain a fresh access token.
       try {
-        const stored = localStorage.getItem("arcid-auth");
+        const stored = localStorage.getItem("arcid-session");
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed.accessToken && parsed.user) {
-            useAuthStore.getState().setAuth(
-              parsed.user,
-              parsed.accessToken,
-              parsed.refreshToken ?? "",
-            );
-            // Keep the facet client's bearer token in sync with the store.
-            arcIdClient.setAccessToken(parsed.accessToken);
+          if (parsed.user) {
+            useAuthStore.getState().setAuth(parsed.user, "", "");
           }
         }
       } catch {
-        // No stored session — user is unauthenticated
+        // No stored session - user is unauthenticated
       } finally {
         if (!cancelled) setLoading(false);
       }
 
       // Hydrate tenant store with user's organisations. hydrated.current is
-      // only set after a successful list — a transient network failure must
+      // only set after a successful list - a transient network failure must
       // not permanently disable tenant hydration for the whole session.
       if (!cancelled && useAuthStore.getState().isAuthenticated && !hydrated.current) {
         const result = await tenants.list();

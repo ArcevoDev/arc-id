@@ -19,7 +19,11 @@ export const zustandTokenStorage: TokenStorage = {
     arcIdClient.setAccessToken(accessToken);
   },
   clearTokens: () => {
-    useAuthStore.getState().clearAuth();
+    // ArcProvider calls this during its init session-check when me() fails
+    // (e.g. expired token). We must NOT wipe the Zustand store here - that
+    // would erase the auth state AuthProvider just restored from localStorage.
+    // The SDK's onAuthCleared (triggered after a failed token refresh) is the
+    // correct place for full cleanup.
     arcIdClient.setAccessToken(null);
   },
 };

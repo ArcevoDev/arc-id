@@ -62,7 +62,7 @@
     overflow-y: scroll;
   }
 
-  /* Mono text — API keys, JWTs, DIDs, credential IDs */
+  /* Mono text - API keys, JWTs, DIDs, credential IDs */
   code,
   kbd,
   samp,

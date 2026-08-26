@@ -6,6 +6,7 @@ import { flowExecutor } from "@/core/flows";
 import { switchContextFlow } from "../flows/switch-context.flow";
 import { SwitchContextSchema } from "../validators/auth.schemas";
 import { z } from "zod";
+import { setRefreshCookie } from "@/lib/refresh-cookies";
 
 export async function switchContextRoute(fastify: FastifyInstance) {
   fastify.post(
@@ -27,7 +28,6 @@ export async function switchContextRoute(fastify: FastifyInstance) {
             success: z.boolean(),
             data: z.object({
               accessToken: z.string(),
-              refreshToken: z.string(),
               idToken: z.string().nullable(),
               expiresIn: z.number(),
             }),
@@ -54,7 +54,13 @@ export async function switchContextRoute(fastify: FastifyInstance) {
           userAgent: req.headers["user-agent"],
         },
       );
-      return reply.send({ success: true, data: result });
+
+      if (result.refreshToken) {
+        setRefreshCookie(reply, result.refreshToken);
+      }
+      const { refreshToken: _, ...safeData } = result;
+
+      return reply.send({ success: true, data: safeData });
     },
   );
 }

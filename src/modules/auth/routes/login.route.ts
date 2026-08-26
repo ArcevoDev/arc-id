@@ -10,6 +10,7 @@ import { flowExecutor } from "@/core/flows";
 import { loginFlow } from "../flows/login.flow";
 import { LoginSchema, IdentityDtoSchema } from "../validators/auth.schemas";
 import { z } from "zod";
+import { setRefreshCookie } from "@/lib/refresh-cookies";
 
 // Mirrors loginFlow Output type exactly — keeps Swagger example accurate.
 const LoginResponseSchema = z.object({
@@ -20,8 +21,8 @@ const LoginResponseSchema = z.object({
     requiresMfa: z.boolean(),
     mfaTypes: z.array(z.string()),
     // Present when requiresMfa === false (fully authenticated)
+    // refreshToken is set as an httpOnly cookie, never in the JSON body
     accessToken: z.string().optional(),
-    refreshToken: z.string().optional(),
     idToken: z.string().nullable().optional(),
     expiresIn: z.number().int().optional(),
   }),
@@ -55,7 +56,13 @@ export async function loginRoute(fastify: FastifyInstance) {
         { transaction: false },
       );
 
-      return reply.send({ success: true, data: result });
+      // The refresh token lives in an httpOnly cookie — never expose it in JSON.
+      if (result.refreshToken) {
+        setRefreshCookie(reply, result.refreshToken);
+      }
+      const { refreshToken, ...safeData } = result;
+
+      return reply.send({ success: true, data: safeData });
     },
   );
 }

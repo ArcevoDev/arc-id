@@ -43,17 +43,17 @@ export function useTenant() {
         if (target) localStorage.setItem("arcid-active-tenant", JSON.stringify(target));
 
         // switch-context returns a fresh token bundle scoped to the new
-        // tenant — push it into the auth store + client or every subsequent
+        // tenant - push it into the auth store + client or every subsequent
         // call keeps using the old tenant's token.
         const { accessToken, refreshToken } = result.data;
         const { user } = useAuthStore.getState();
         if (user) {
-          useAuthStore.getState().setAuth(user, accessToken, refreshToken);
+          useAuthStore.getState().setAuth(user, accessToken, refreshToken ?? "");
         } else {
-          useAuthStore.getState().setTokens(accessToken, refreshToken);
+          useAuthStore.getState().setTokens(accessToken, refreshToken ?? "");
         }
         arcIdClient.setAccessToken(accessToken);
-        if (user) persistSession(user, accessToken, refreshToken);
+        if (user) persistSession(user);
       }
       return result;
     },

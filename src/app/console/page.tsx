@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ActivityFeed, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@arcevo/facet-components";
-import { StatCard, PageHeader } from "@arcevo/facet-components";
+import { ActivityFeed, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, GlowCard, HoverScaleCard, StatCard } from "@arcevo/facet-components";
+import { PageHeader } from "@arcevo/facet-components";
 import { useAuthStore, useTenantStore } from "@arcevo/facet-store";
 import { useRouter } from "next/navigation";
 import { useCredentials } from "@/hooks/use-credentials";
@@ -109,17 +109,17 @@ export default function ConsoleDashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
               {quickActions.map((a) => (
                 <Link key={a.href} href={a.href}>
-                  <Card className="transition-shadow hover:shadow-md">
+                  <HoverScaleCard className="h-full">
                     <CardHeader>
                       <CardTitle>{a.label}</CardTitle>
                       <CardDescription>{a.desc}</CardDescription>
                     </CardHeader>
-                  </Card>
+                  </HoverScaleCard>
                 </Link>
               ))}
             </div>
 
-            <Card>
+            <GlowCard>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>Latest audit events for this tenant.</CardDescription>
@@ -140,7 +140,7 @@ export default function ConsoleDashboardPage() {
                   />
                 )}
               </CardContent>
-            </Card>
+            </GlowCard>
           </>
         )}
       </main>

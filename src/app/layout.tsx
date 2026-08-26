@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   authors: [{ name: ArcMetadata.org.name, url: ArcMetadata.org.url }],
   creator: ArcMetadata.org.name,
   publisher: ArcMetadata.org.name,
-  icons: [{ rel: "icon", url: "/arcid-flat.png" }],
+  icons: [{ rel: "icon", url: "/arcid-bw.png" }],
   openGraph: {
     type: "website",
     locale: ArcMetadata.locale,

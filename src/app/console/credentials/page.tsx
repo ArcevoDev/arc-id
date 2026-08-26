@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@arcevo/facet-components";
+import { AnimatedButton, Button } from "@arcevo/facet-components";
 import { PageShell } from "@/components/page-shell";
 import { ConsoleDataTable } from "@/components/console-data-table";
 import { useCredentials } from "@/hooks/use-credentials";
@@ -51,9 +51,14 @@ export default function CredentialsPage() {
       title="Credentials"
       description="Verifiable credentials issued to your organization."
       actions={
-        <Button size="sm" asChild>
-          <Link href="/console/credentials/create">Issue</Link>
-        </Button>
+        <AnimatedButton
+          animation="sparkle"
+          renderButton={(props) => (
+            <Button {...props} size="sm" asChild>
+              <Link href="/console/credentials/create">Issue</Link>
+            </Button>
+          )}
+        />
       }
     >
       <ConsoleDataTable<VC> data={items} columns={columns} loading={loading} />

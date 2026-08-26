@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@arcevo/facet-components";
+import { AnimatedButton, Button } from "@arcevo/facet-components";
 import { PageShell } from "@/components/page-shell";
 import { ConsoleDataTable } from "@/components/console-data-table";
 import { useSessions } from "@/hooks/use-sessions";
@@ -38,16 +38,22 @@ export default function SessionsPage() {
       key: "id",
       header: "Actions",
       cell: (s: Session) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={async () => {
-            await revoke(s.id);
-            setItems((prev) => (prev ? prev.filter((x) => x.id !== s.id) : prev));
-          }}
-        >
-          Revoke
-        </Button>
+        <AnimatedButton
+          animation="dissolve"
+          renderButton={(props) => (
+            <Button
+              {...props}
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await revoke(s.id);
+                setItems((prev) => (prev ? prev.filter((x) => x.id !== s.id) : prev));
+              }}
+            >
+              Revoke
+            </Button>
+          )}
+        />
       ),
     },
   ];

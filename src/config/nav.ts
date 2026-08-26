@@ -46,10 +46,6 @@ export const navConfig: NavSection[] = [
     ],
   },
   {
-    title: "Billing",
-    items: [{ href: "/console/billing", label: "Billing", icon: "credit-card" }],
-  },
-  {
     title: "Credentials",
     items: [{ href: "/console/credentials", label: "Credentials", icon: "file-check" }],
   },

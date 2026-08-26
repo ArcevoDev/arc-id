@@ -9,6 +9,7 @@ import {
 import { revokeTokenByIdFlow } from "../flows/revoke-token-by-id.flow";
 import { commonErrorSchema } from "@/core/errors/error-schemas";
 import { z } from "zod";
+import { setRefreshCookie } from "@/lib/refresh-cookies";
 
 export async function tokensRoute(fastify: FastifyInstance) {
   fastify.post(
@@ -28,6 +29,7 @@ export async function tokensRoute(fastify: FastifyInstance) {
         }),
         response: {
           200: z.record(z.string(), z.any()),
+          400: commonErrorSchema,
         },
       },
     },
@@ -36,7 +38,22 @@ export async function tokensRoute(fastify: FastifyInstance) {
       let result;
 
       if (body?.grant_type === "refresh_token") {
-        result = await flowExecutor.run(tokenRefreshFlow, body, {
+        // When refresh_token is empty (first-party browser SDK), read the
+        // refresh token from the httpOnly cookie instead — this keeps the
+        // token out of localStorage and unreachable by JS.
+        const refreshToken =
+          body?.refresh_token || (req.cookies as any)?.arcid_refresh_token;
+        if (!refreshToken) {
+          return reply.code(400).send({
+            success: false,
+            error: "invalid_grant",
+            error_description: "Refresh token is required",
+          });
+        }
+        result = await flowExecutor.run(tokenRefreshFlow, {
+          ...body,
+          refresh_token: refreshToken,
+        }, {
           tenantId: null,
           ip: req.ip,
         });
@@ -47,7 +64,12 @@ export async function tokensRoute(fastify: FastifyInstance) {
         });
       }
 
-      return reply.send(presentTokenResponse(result as any));
+      const response = presentTokenResponse(result as any);
+      // Set refresh token as httpOnly cookie on every token issuance.
+      if (response.refresh_token) {
+        setRefreshCookie(reply, response.refresh_token);
+      }
+      return reply.send(response);
     },
   );
 

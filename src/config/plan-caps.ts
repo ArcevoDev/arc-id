@@ -1,8 +1,8 @@
 /**
  * Centralized per-plan capability caps.
  *
- * Enforced at runtime in flows/services — not persisted in the Prisma
- * schema — so limits can be adjusted per tenant or over time without a
+ * Enforced at runtime in flows/services - not persisted in the Prisma
+ * schema - so limits can be adjusted per tenant or over time without a
  * migration.  The backend is the real enforcement boundary; the billing
  * UI imports this same file so the two never drift.
  */

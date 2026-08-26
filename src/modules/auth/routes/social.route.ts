@@ -28,7 +28,7 @@
 // Install deps: pnpm add arctic
 // arctic provides lightweight, spec-correct OAuth2 clients for all four providers.
 
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import {
   Google,
@@ -43,6 +43,7 @@ import { TokenService } from "@/modules/oauth/services/token.service";
 import { presentTokenResponse } from "@/modules/oauth/presenters/token.presenter";
 import { config } from "@/core/config";
 import { ApiError } from "@/core/errors";
+import { setRefreshCookie } from "@/lib/refresh-cookies";
 import { auditService } from "@/modules/audit/services/audit.service";
 
 // ── Provider factory ──────────────────────────────────────────────────────────
@@ -118,6 +119,7 @@ interface GoogleUserInfo {
 }
 
 async function handleCallback(
+  reply: FastifyReply,
   fastify: FastifyInstance,
   profile: ProviderProfile,
   provider: string,
@@ -246,7 +248,9 @@ async function handleCallback(
     })
     .catch(() => {});
 
-  return presentTokenResponse(bundle);
+  setRefreshCookie(reply, bundle.refreshToken);
+  const { refresh_token, ...safeTokenData } = presentTokenResponse(bundle);
+  return safeTokenData;
 }
 
 // ── Route registration ────────────────────────────────────────────────────────
@@ -338,6 +342,7 @@ export async function socialRoute(instance: FastifyInstance) {
       const profile: GoogleUserInfo = await resp.json();
 
       const tokenData = await handleCallback(
+        reply,
         instance,
         {
           providerUserId: profile.sub,
@@ -429,6 +434,7 @@ export async function socialRoute(instance: FastifyInstance) {
         null;
 
       const tokenData = await handleCallback(
+        reply,
         instance,
         {
           providerUserId: String(user.id),
@@ -516,6 +522,7 @@ export async function socialRoute(instance: FastifyInstance) {
       ) as any;
 
       const tokenData = await handleCallback(
+        reply,
         instance,
         {
           providerUserId: claims.sub,
@@ -615,6 +622,7 @@ export async function socialRoute(instance: FastifyInstance) {
       const email = user.mail ?? user.userPrincipalName ?? null;
 
       const tokenData = await handleCallback(
+        reply,
         instance,
         {
           providerUserId: user.id,

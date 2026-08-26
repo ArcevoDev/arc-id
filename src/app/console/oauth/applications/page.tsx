@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@arcevo/facet-components";
+import { AnimatedButton, Button } from "@arcevo/facet-components";
 import { PageShell } from "@/components/page-shell";
 import { ConsoleDataTable } from "@/components/console-data-table";
 import { useOAuth } from "@/hooks/use-oauth";
@@ -39,9 +39,14 @@ const columns = [
     header: "Actions",
     sortable: false,
     cell: (c: OAuthClient) => (
-      <Button size="sm" variant="outline" asChild>
-        <Link href={`/console/oauth/applications/${c.id}`}>Edit</Link>
-      </Button>
+      <AnimatedButton
+        animation="ripple"
+        renderButton={(props) => (
+          <Button {...props} size="sm" variant="outline" asChild>
+            <Link href={`/console/oauth/applications/${c.id}`}>Edit</Link>
+          </Button>
+        )}
+      />
     ),
   },
 ];

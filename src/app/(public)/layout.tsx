@@ -1,42 +1,33 @@
 "use client";
 
-import Link from "next/link";
 import { LandingLayout } from "@arcevo/facet-layout";
-import { Navbar, Footer, Button } from "@arcevo/facet-components";
+import { Footer } from "@arcevo/facet-components";
+import { PublicNavbar } from "@/components/public-navbar";
 import { HomeHero } from "./home/_components/home-hero";
-
-const navLinks = [
-  { label: "Features", href: "#features" },
-  {
-    label: "Documentation",
-    href: "https://docs.arcevo.id",
-    external: true,
-  },
-];
 
 const footerColumns = [
   {
     title: "Product",
     links: [
       { label: "Console", href: "/console" },
-      { label: "WebAuthn", href: "#features" },
-      { label: "Credentials", href: "#features" },
+      { label: "WebAuthn", href: "/home" },
+      { label: "Credentials", href: "/home" },
     ],
   },
   {
     title: "Developers",
     links: [
-      { label: "Docs", href: "https://docs.arcevo.id" },
+      { label: "Docs", href: "/docs" },
       { label: "GitHub", href: "https://github.com/arcevo", external: true },
-      { label: "API Reference", href: "https://docs.arcevo.id/api" },
+      { label: "API Reference", href: "/docs/api" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "Blog", href: "https://blog.arcevo.id" },
+      { label: "Blog", href: "/blog" },
       { label: "Contact", href: "/feedback" },
-      { label: "Status", href: "https://status.arcevo.id" },
+      { label: "Status", href: "/feedback" },
     ],
   },
 ];
@@ -48,21 +39,7 @@ export default function PublicRootLayout({
 }) {
   return (
     <LandingLayout
-      nav={
-        <Navbar
-          variant="pill"
-          brand="ArcID"
-          showThemeToggle
-          links={navLinks}
-          actions={
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Login
-              </Button>
-            </Link>
-          }
-        />
-      }
+      nav={<PublicNavbar />}
       hero={<HomeHero />}
       footer={
         <Footer

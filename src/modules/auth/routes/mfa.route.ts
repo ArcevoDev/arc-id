@@ -13,6 +13,7 @@ import { MfaService } from "../services/mfa.service";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { config } from "@/core/config";
 import { ApiError } from "@/core/errors";
+import { setRefreshCookie } from "@/lib/refresh-cookies";
 
 const SessionIdSchema = z.string().min(40).max(128);
 const DEFAULT_SCOPES = ["openid", "profile", "email", "offline_access"];
@@ -39,7 +40,13 @@ export async function mfaRoute(fastify: FastifyInstance) {
         ip: req.ip,
         userAgent: req.headers["user-agent"],
       });
-      return reply.send({ success: true, data: result });
+
+      if (result.refreshToken) {
+        setRefreshCookie(reply, result.refreshToken);
+      }
+      const { refreshToken: _, ...safeData } = result;
+
+      return reply.send({ success: true, data: safeData });
     },
   );
 
@@ -110,12 +117,13 @@ export async function mfaRoute(fastify: FastifyInstance) {
         })
         .catch(() => {});
 
+      setRefreshCookie(reply, tokens.refreshToken);
+
       return reply.send({
         success: true,
         data: {
           sessionId: session.id,
           accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
           idToken: tokens.idToken,
           expiresIn: tokens.expiresIn,
         },

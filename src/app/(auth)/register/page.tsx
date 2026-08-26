@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SignUp } from "@arcevo/facet-auth";
+import { SignUp, enterprisePreset } from "@arcevo/facet-auth";
 
 export default function RegisterPage() {
   const router = useRouter();
 
   return (
     <SignUp
+      config={enterprisePreset}
       onSuccess={() => router.replace("/console")}
       slots={{
         footer: (

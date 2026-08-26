@@ -7,6 +7,7 @@ import { PasskeyService } from "../services/passkey.service";
 import { storeChallenge } from "@/lib/challenge-store";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { ApiError } from "@/core/errors";
+import { setRefreshCookie } from "@/lib/refresh-cookies";
 import { z } from "zod";
 
 export async function passkeyRoute(fastify: FastifyInstance) {
@@ -127,7 +128,13 @@ export async function passkeyRoute(fastify: FastifyInstance) {
         ip: req.ip,
         userAgent: req.headers["user-agent"],
       });
-      return reply.send({ success: true, data: result });
+
+      if (result.refreshToken) {
+        setRefreshCookie(reply, result.refreshToken);
+      }
+      const { refreshToken: _, ...safeData } = result;
+
+      return reply.send({ success: true, data: safeData });
     },
   );
 

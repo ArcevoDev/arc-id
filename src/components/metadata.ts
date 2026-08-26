@@ -1,6 +1,6 @@
 // src/lib/ui/metadata.ts
 //
-// Single source of truth for ArcID's identity strings — name, tagline,
+// Single source of truth for ArcID's identity strings - name, tagline,
 // description, OG/Twitter defaults, brand URLs. `src/app/layout.tsx` derives
 // its root `Metadata` export from this. Per-page `generateMetadata()` should
 // use `buildMetadata({ title, description, path })` rather than redefining
@@ -14,12 +14,12 @@ export const ArcMetadata = {
   description:
     "Enterprise identity, credentials, and access management for Web2 and Web3.",
 
-  // Longer-form description used for SEO/OG — keep description short
+  // Longer-form description used for SEO/OG - keep description short
   // (used in <head> meta + UI copy), this is for social previews.
   longDescription:
     "ArcID is a sovereign identity infrastructure platform. Multi-tenant " +
     "OAuth2/OIDC, W3C Verifiable Credentials, DID:web, passkeys, and " +
-    "enterprise SSO — built for African and global deployments.",
+    "enterprise SSO - built for African and global deployments.",
 
   keywords: [
     "identity platform",
@@ -59,12 +59,12 @@ export const ArcMetadata = {
 //     return buildMetadata({ title: "Sessions", description: "Manage your active sessions." });
 //   }
 //
-// `title` is run through the root `template: "%s · ArcID"` automatically —
+// `title` is run through the root `template: "%s · ArcID"` automatically -
 // don't append "· ArcID" yourself.
 interface BuildMetadataOptions {
   title?: string;
   description?: string;
-  path?: string; // e.g. "/security/sessions" — used for canonical/OG url
+  path?: string; // e.g. "/security/sessions" - used for canonical/OG url
 }
 
 export function buildMetadata({

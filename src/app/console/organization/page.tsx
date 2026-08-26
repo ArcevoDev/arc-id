@@ -56,22 +56,6 @@ export default function OrganizationPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing</CardTitle>
-              <CardDescription>
-                Subscription and payment details.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link
-                href="/console/billing"
-                className="text-sm underline"
-              >
-                Manage billing
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </main>
     </>
