@@ -54,6 +54,7 @@ import { billingPlugin } from "@/modules/billing/billing.plugin";
 import { auditPlugin } from "@/modules/audit/audit.plugin";
 import { webhooksPlugin } from "@/modules/webhooks/webhooks.plugin";
 import { idpPlugin } from "@/modules/idp/idp.plugin";
+import { apiKeyPlugin } from "@/modules/api-key/api-key.plugin";
 
 export async function buildServer() {
   const server = Fastify({
@@ -159,6 +160,7 @@ export async function buildServer() {
       await api.register(auditPlugin);
       await api.register(webhooksPlugin);
       await api.register(idpPlugin);
+      await api.register(apiKeyPlugin);
     },
     { prefix: "/api/v1" },
   );

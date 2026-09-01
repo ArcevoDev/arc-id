@@ -145,6 +145,8 @@ enum AuditLogAction {
   SESSION_ELEVATED
   EXTERNAL_IDENTIFIER_VERIFICATION_SENT
   EXTERNAL_IDENTIFIER_VERIFIED
+  API_KEY_CREATED
+  API_KEY_REVOKED
 }
 
 // CENTRAL CORE: IDENTITY (INDIVIDUAL ACCOUNT HOLDERS)
@@ -185,6 +187,7 @@ model Identity {
   idTokens           IdToken[]
   oauthConsents      OAuthConsent[]
   legalConsents      LegalConsent[]
+  apiKeys            ApiKey[]
 
   delegationsGranted  AccessDelegation[] @relation("DelegationGrantor")
   delegationsReceived AccessDelegation[] @relation("DelegationGrantee")
@@ -193,6 +196,34 @@ model Identity {
 
   @@index([primaryEmail])
   @@index([status])
+}
+
+// API KEY MANAGEMENT (MACHINE-TO-MACHINE AUTHENTICATION)
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+}
+
+model ApiKey {
+  id         String       @id @default(cuid())
+  tenantId   String?
+  identityId String?
+  name       String
+  keyHash    String       @unique // SHA-256 hex of full key
+  keyPrefix  String // first 12 chars of full key for display
+  scopes     Json // string[] — what the key can do
+  status     ApiKeyStatus @default(ACTIVE)
+  lastUsedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  tenant   Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  identity Identity? @relation(fields: [identityId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([identityId])
+  @@index([keyHash])
 }
 
 // DECENTRALIZED IDENTIFIER (DID) LAYER
@@ -253,20 +284,20 @@ model VerifiableCredential {
 }
 
 model CredentialOffer {
-  id                 String                @id @default(cuid())
-  token              String                @unique
-  issuerDid          String
-  subjectDid         String
-  holderId           String?
-  format             VcFormat              @default(JWT)
-  credentialSubject  Json
-  schemaId           String?
+  id                  String                @id @default(cuid())
+  token               String                @unique
+  issuerDid           String
+  subjectDid          String
+  holderId            String?
+  format              VcFormat              @default(JWT)
+  credentialSubject   Json
+  schemaId            String?
   credentialExpiresAt DateTime?
-  expiresAt          DateTime
-  status             CredentialOfferStatus @default(PENDING)
-  consumed           Boolean               @default(false)
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
+  expiresAt           DateTime
+  status              CredentialOfferStatus @default(PENDING)
+  consumed            Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 
   @@index([token])
   @@index([expiresAt])
@@ -332,6 +363,7 @@ model Tenant {
 
   // Handled structurally at the organization scale
   subscription Subscription?
+  apiKeys      ApiKey[]
 
   @@index([slug])
 }
@@ -646,7 +678,7 @@ model AccessToken {
   token      String   @unique
   clientId   String
   identityId String
-  sessionId  String?  // Allows per-session access token revocation
+  sessionId  String? // Allows per-session access token revocation
   scopes     Json
   audience   Json?
   issuedAt   DateTime @default(now())
@@ -812,16 +844,16 @@ model Wallet {
 }
 
 model ExternalIdentifier {
-  id           String   @id @default(cuid())
-  identityId   String
-  type         String
-  valueHash    String
-  displayValue String?
-  verified              Boolean @default(false)
+  id                    String    @id @default(cuid())
+  identityId            String
+  type                  String
+  valueHash             String
+  displayValue          String?
+  verified              Boolean   @default(false)
   verificationCode      String?
   verificationExpiresAt DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
 

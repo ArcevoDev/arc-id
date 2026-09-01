@@ -16,6 +16,8 @@ import { ApiError } from "@/core/errors";
 import type { SubscriptionPlan } from "@prisma-client";
 import { isJtiBlocked } from "@/lib/security/jti-blocklist";
 import { hasPermission } from "@/lib/security/rbac";
+import { ApiKeyService } from "@/modules/api-key/services/api-key.service";
+import { ApiKeyRepository } from "@/modules/api-key/repositories/api-key.repository";
 
 const STEP_UP_WINDOW_MS = 15 * 60 * 1000;
 
@@ -63,6 +65,41 @@ export const authGuardPlugin = fp(
       reply: FastifyReply,
     ): Promise<void> => {
       try {
+        const authHeader = req.headers.authorization;
+        if (authHeader?.startsWith("Bearer ")) {
+          const token = authHeader.slice(7);
+          if (token.startsWith("arc_sk_")) {
+            const service = new ApiKeyService();
+            const repo = new ApiKeyRepository(fastify.db);
+            const record = await repo.findApiKey(service.hash(token));
+
+            if (!record || record.status === "REVOKED") {
+              throw ApiError.unauthorized("Invalid or revoked API key");
+            }
+
+            let plan: SubscriptionPlan = "FREE";
+            if (record.tenantId) {
+              const sub = await fastify.db.subscription.findUnique({
+                where: { tenantId: record.tenantId },
+                select: { plan: true, status: true },
+              });
+              if (sub?.status === "ACTIVE") {
+                plan = sub.plan as SubscriptionPlan;
+              }
+            }
+
+            req.identity = {
+              id: record.identityId ?? "",
+              tenantId: record.tenantId ?? null,
+              scope: (record.scopes as string[]) ?? [],
+              plan,
+            };
+
+            void repo.updateLastUsed(record.id).catch(() => {});
+            return;
+          }
+        }
+
         await req.jwtVerify();
         const payload = req.user as any;
 
@@ -248,6 +285,12 @@ export const authGuardPlugin = fp(
           requiredAction,
         );
         if (!ok) {
+          // API key-authenticated identities have no TenantMembership, so RBAC
+          // always returns false. Fall back to checking the identity's scopes
+          // (populated from the API key's `scopes` field).
+          if (req.identity.scope?.includes(requiredAction)) {
+            return;
+          }
           throw ApiError.forbidden(
             `Permission '${requiredAction}' is required`,
           );
