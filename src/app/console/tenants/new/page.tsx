@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@arcevo/facet-layout";
 import {
+  AnimatedButton,
   Button,
   Card,
   CardContent,
@@ -78,9 +79,14 @@ export default function CreateTenantPage() {
               {error && <p className="text-sm text-destructive">{error}</p>}
 
               <div className="flex gap-3">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating…" : "Create Tenant"}
-                </Button>
+                <AnimatedButton
+                  animation="sparkle"
+                  renderButton={(props) => (
+                    <Button {...props} type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Creating…" : "Create Tenant"}
+                    </Button>
+                  )}
+                />
                 <Button type="button" variant="outline" onClick={() => router.back()}>
                   Cancel
                 </Button>

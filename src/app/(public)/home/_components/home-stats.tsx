@@ -11,11 +11,15 @@ const stats = [
 
 export function HomeStats() {
   return (
-    <section className="border-t py-12">
+    <section id="stats" className="border-t py-12">
       <div className="container mx-auto px-4">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <StatCard key={stat.value} value={stat.value} label={stat.label} />
+            <StatCard
+              key={stat.value}
+              label={stat.label}
+              value={stat.value}
+            />
           ))}
         </div>
       </div>

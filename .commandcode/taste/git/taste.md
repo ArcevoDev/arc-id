@@ -12,3 +12,5 @@ older files rather than committing them. Confidence: 0.6
 - The user prefers to push to remote from their own terminal ("i will push from another terminal, independently"); the assistant should keep committing locally and not push, and not wait on the user's push to continue work. Confidence: 0.8
 
 - When committing close-out work while the user has unrelated uncommitted changes in the tree (e.g., their own in-progress mail templates, tsconfig, package.json), stage only the assistant's own files — never `git add -A` over the user's work — and leave their changes uncommitted. Confidence: 0.6
+- The user has explicitly overridden the earlier "leave pushing to my own terminal" preference and now directs the assistant to commit all changes and push directly to origin main ("commit all changes and push to main") — when the user instructs a push, perform it rather than leaving it for the user's own terminal. Confidence: 0.85
+- When committing repo-sweep work, explicitly unstage `.commandcode/taste/` files — they are owned by the taste learning system, not the codebase, so they should not be swept into regular feature/audit commits. Confidence: 0.85

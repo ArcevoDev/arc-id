@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@arcevo/facet-layout";
 import {
-  Card,
+  GlowCard,
   CardContent,
   CardDescription,
   CardHeader,
@@ -22,7 +22,7 @@ export default function OrganizationPage() {
       />
       <main className="p-6">
         <div className="grid gap-6 md:max-w-3xl">
-          <Card>
+          <GlowCard>
             <CardHeader>
               <CardTitle>Workspace</CardTitle>
               <CardDescription>
@@ -37,9 +37,9 @@ export default function OrganizationPage() {
                 Switch tenant
               </Link>
             </CardContent>
-          </Card>
+          </GlowCard>
 
-          <Card>
+          <GlowCard>
             <CardHeader>
               <CardTitle>Members</CardTitle>
               <CardDescription>
@@ -54,7 +54,7 @@ export default function OrganizationPage() {
                 Manage members
               </Link>
             </CardContent>
-          </Card>
+          </GlowCard>
 
         </div>
       </main>

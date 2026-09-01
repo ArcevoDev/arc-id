@@ -8,7 +8,7 @@ import type { RouterAdapter, RouterLinkProps } from "@arcevo/facet-layout";
 import { useAuth } from "@/hooks/use-auth";
 
 export const navLinks = [
-  { label: "Features", href: "/home" },
+  { label: "Features", href: "/home#features" },
   { label: "Console", href: "/console" },
   { label: "Pricing", href: "/pricing" },
 ];
@@ -40,10 +40,11 @@ export function PublicNavbar() {
       </Link>
     ),
     isActive: (href: string) => {
-      if (href === "/") return pathname === "/";
+      const route = href.split("#")[0];
+      if (route === "/") return pathname === "/";
       return (
-        pathname === href ||
-        pathname.startsWith(href.endsWith("/") ? href : href + "/")
+        pathname === route ||
+        pathname.startsWith(route.endsWith("/") ? route : route + "/")
       );
     },
   };
@@ -52,8 +53,9 @@ export function PublicNavbar() {
     <Navbar
       variant="pill"
       brand={
-        <Link href="/" className="font-display text-xl font-semibold">
-          ArcID
+        <Link href="/" className="flex items-center gap-2 font-display text-xl font-semibold">
+          <img src="/arcid-bw.png" alt="ArcID" className="h-7 w-auto dark:invert" />
+          <span>ArcID</span>
         </Link>
       }
       showThemeToggle

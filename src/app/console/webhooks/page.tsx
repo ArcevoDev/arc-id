@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { DataTableColumn } from "@arcevo/facet-components";
-import { Badge, Button } from "@arcevo/facet-components";
+import { AnimatedButton, Badge, Button } from "@arcevo/facet-components";
 import { PageShell } from "@/components/page-shell";
 import { ConsoleDataTable } from "@/components/console-data-table";
 import { useWebhooks } from "@/hooks/use-webhooks";
@@ -55,12 +55,22 @@ export default function WebhooksPage() {
       sortable: false,
       cell: (w) => (
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => test(w.id)}>
-            Test
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleRemove(w.id)}>
-            Delete
-          </Button>
+          <AnimatedButton
+            animation="sparkle"
+            renderButton={(props) => (
+              <Button {...props} variant="outline" size="sm" onClick={() => test(w.id)}>
+                Test
+              </Button>
+            )}
+          />
+          <AnimatedButton
+            animation="dissolve"
+            renderButton={(props) => (
+              <Button {...props} variant="outline" size="sm" onClick={() => handleRemove(w.id)}>
+                Delete
+              </Button>
+            )}
+          />
         </div>
       ),
     },

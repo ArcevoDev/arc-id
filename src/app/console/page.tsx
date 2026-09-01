@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ActivityFeed, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, GlowCard, HoverScaleCard, StatCard } from "@arcevo/facet-components";
-import { PageHeader } from "@arcevo/facet-components";
+import { ActivityFeed, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, GlowCard, HoverScaleCard, ShimmerText, StatCard } from "@arcevo/facet-components";
 import { useAuthStore, useTenantStore } from "@arcevo/facet-store";
 import { useRouter } from "next/navigation";
 import { useCredentials } from "@/hooks/use-credentials";
@@ -79,10 +78,16 @@ export default function ConsoleDashboardPage() {
 
   return (
     <>
-      <PageHeader
-        title={`Welcome, ${user?.name ?? "there"}`}
-        description={activeTenant ? `${activeTenant.name} Console` : "Select a tenant to get started"}
-      />
+      <header className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Welcome, <ShimmerText text={user?.name ?? "there"} />
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {activeTenant ? `${activeTenant.name} Console` : "Select a tenant to get started"}
+          </p>
+        </div>
+      </header>
       <main className="p-6">
         {!activeTenant && (
           <Card className="mb-6">

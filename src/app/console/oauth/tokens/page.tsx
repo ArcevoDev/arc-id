@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { DataTableColumn } from "@arcevo/facet-components";
-import { Button } from "@arcevo/facet-components";
+import { AnimatedButton, Button } from "@arcevo/facet-components";
 import { PageShell } from "@/components/page-shell";
 import { ConsoleDataTable } from "@/components/console-data-table";
 import { useOAuth } from "@/hooks/use-oauth";
@@ -57,9 +57,14 @@ export default function OAuthTokensPage() {
       header: "Actions",
       sortable: false,
       cell: (t) => (
-        <Button variant="outline" size="sm" onClick={() => handleRevoke(t.id)}>
-          Revoke
-        </Button>
+<AnimatedButton
+            animation="dissolve"
+            renderButton={(props) => (
+              <Button {...props} variant="outline" size="sm" onClick={() => handleRevoke(t.id)}>
+                Revoke
+              </Button>
+            )}
+          />
       ),
     },
   ];

@@ -18,3 +18,4 @@ See [git/taste.md](git/taste.md)
 # security
 - When revoking access tokens, always pair the blocklist call (blockJti) with the revocation DB write (revokedJti create/upsert) — never one without the other — and compute the TTL from the token's actual expiresAt (e.g., `Math.max(Math.ceil((expiresAt - now)/1000), 1)`), not a flat default. Confidence: 0.75
 - Supply-chain policy verification on lockfiles is part of the standard `pnpm install` workflow — the user's environment automatically runs "Lockfile passes supply-chain policies" checks during installs and does not bypass these security gates. Confidence: 0.6
+- When generating long-lived machine secrets (API keys, tokens), store only the SHA-256 hash (`@unique` for fast DB lookup) plus a short display prefix — never the plaintext; return plaintext only once at creation time, and authenticate by hash lookup on every subsequent request. Confidence: 0.8

@@ -1,68 +1,87 @@
 "use client";
 
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@arcevo/facet-components";
-import Icon, { type IconProps } from "@/components/ui/icon";
+import { Badge, CardContent, CardDescription, CardHeader, CardTitle, GlowCard, Icon } from "@arcevo/facet-components";
 
-const steps = [
+const benefits = [
   {
-    title: "Discover",
+    title: "Passkey-first authentication",
+    description:
+      "Modern, phishing-resistant auth with WebAuthn passkeys as the default. No password database to steal.",
+    icon: "lock",
+  },
+  {
+    title: "Multi-tenant from day one",
+    description:
+      "Isolate identities, policies, and credentials per organisation. Each tenant gets its own OIDC issuer, branding, and RBAC rules.",
+    icon: "users",
+  },
+  {
+    title: "Verifiable credentials",
+    description:
+      "Issue and verify W3C Verifiable Credentials with SD-JWT selective disclosure. Let users prove who they are without oversharing data.",
+    icon: "shield",
+  },
+  {
+    title: "Global and sovereign",
+    description:
+      "Deploy anywhere - on-prem, in your cloud account, or at the edge. You own the data, the keys, and the identity layer.",
     icon: "globe",
-    desc: "GET /.well-known/openid-configuration — pull authorization_endpoint, token_endpoint and jwks_uri. code_challenge_methods_supported includes S256.",
   },
-  {
-    title: "Authorize",
-    icon: "shield-check",
-    desc: "Redirect to /oauth/authorize?response_type=code&client_id=...&code_challenge=...&code_challenge_method=S256 (PKCE enforced).",
-  },
-  {
-    title: "Token",
-    icon: "key-round",
-    desc: "POST /oauth/token with the code + code_verifier → access_token, id_token, refresh_token.",
-  },
-  {
-    title: "Verify",
-    icon: "badge-check",
-    desc: "Verify the id_token against /oauth/jwks — read kid from the JWT header, never hardcode the algorithm.",
-  },
+];
+
+const standards = [
+  "OAuth 2.0",
+  "OpenID Connect",
+  "WebAuthn",
+  "TOTP / HOTP",
+  "FIDO2",
+  "W3C Verifiable Credentials",
+  "did:web",
+  "SD-JWT",
 ];
 
 export function HomeDevelop() {
   return (
-    <section id="develop" className="border-t py-24">
-      <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center">
-          <Badge variant="outline" className="mb-4">
-            OAuth2 / OIDC provider
-          </Badge>
-          <h2 className="text-center text-3xl font-bold text-foreground mb-4">
-            Consume arc-id like any 3rd-party
+    <section id="benefits" className="py-20">
+      <div className="container mx-auto max-w-7xl px-4">
+        <div className="mb-12 text-center">
+          <h2 className="text-3xl font-bold tracking-tight">
+            Built for developers who ship real products
           </h2>
-          <p className="text-muted-foreground mb-12">
-            arc-id publishes a standard OpenID Connect discovery document.
-            Point any OIDC library at it and authenticate with PKCE (S256) —
-            no bespoke protocol.
+          <p className="mt-4 text-lg text-muted-foreground">
+            ArcID handles the identity complexity so your team can focus on
+            building. No vendor lock-in, no black-box SDKs - just standards you
+            can read and trust.
           </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {steps.map((step, i) => (
-            <Card key={step.title} className="flex flex-col overflow-hidden">
+          {benefits.map((b) => (
+            <GlowCard key={b.title} className="border-0 bg-muted/30">
               <CardHeader>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-primary">
-                    0{i + 1}
-                  </span>
-                  <Icon name={step.icon as IconProps["name"]} className="h-5 w-5" />
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <Icon name={b.icon} className="h-5 w-5 text-primary" />
                 </div>
-                <CardTitle className="text-base">{step.title}</CardTitle>
+                <CardTitle className="text-base">{b.title}</CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription className="break-words">
-                  {step.desc}
-                </CardDescription>
+                <CardDescription>{b.description}</CardDescription>
               </CardContent>
-            </Card>
+            </GlowCard>
           ))}
+        </div>
+
+        <div className="mt-16 text-center">
+          <p className="text-sm font-medium text-muted-foreground">
+            Built on open standards
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {standards.map((s) => (
+              <Badge key={s} variant="secondary">
+                {s}
+              </Badge>
+            ))}
+          </div>
         </div>
       </div>
     </section>

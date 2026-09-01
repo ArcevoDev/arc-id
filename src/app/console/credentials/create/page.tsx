@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@arcevo/facet-layout";
 import {
+  AnimatedButton,
   Button,
   Card,
   CardContent,
@@ -134,9 +135,14 @@ export default function CreateCredentialPage() {
               )}
 
               <div className="flex gap-3">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Issuing…" : "Issue Credential"}
-                </Button>
+                <AnimatedButton
+                  animation="sparkle"
+                  renderButton={(props) => (
+                    <Button {...props} type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Issuing…" : "Issue Credential"}
+                    </Button>
+                  )}
+                />
                 <Button type="button" variant="outline" onClick={() => router.back()}>
                   Cancel
                 </Button>

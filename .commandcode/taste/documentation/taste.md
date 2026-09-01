@@ -23,3 +23,7 @@
 
 - Don't guess when fixing documentation that depends on a pending infrastructure decision (e.g., the dev mail-sink approach); wait for the concrete decision before rewriting the dependent sections, since guessing produces docs that go stale the moment the decision lands. Confidence: 0.7
 - When documenting a blocker, don't trust a prior session's blame/root-cause attribution — re-verify the actual root cause directly against the current state and document the accurate root cause; a prior session's "THE ONE PROBLEM" diagnosis can be stale (e.g., blamed facet-auth + react-hook-form when the real failure is the bundled Form in facet-components importing react-hook-form against the wrong entry point). Confidence: 0.85
+
+- Episodes live as a paired set: `.agent/episodes.md` (technical) + `.agent/episodes-plain.md` (plain-English), kept in sync at a 1:1 episode-to-chapter ratio; the count is not fixed (the 24 seen in facet is just an example — more is fine, but the two files must stay in sync). Confidence: 0.9
+- Each episode is an architectural diary entry that asks the hard questions ("the whys, hows, whats") — diagnosing a drift or process decision traced back to its git-history evidence — and covers the full project arc from inception ("drifts and processes since the inception of this project"), not just a pull of the latest work. Confidence: 0.9
+- Episodes are intentionally concise — short enough to be "played on a graphics" — favoring brevity and scannability over exhaustive detail. Confidence: 0.9

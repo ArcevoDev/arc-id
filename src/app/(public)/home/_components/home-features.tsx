@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@arcevo/facet-components";
-import Icon, { type IconProps } from "@/components/ui/icon";
+import { CardContent, CardDescription, CardHeader, CardTitle, GlowCard, Icon, type IconProps } from "@arcevo/facet-components";
 
 const features = [
   {
@@ -62,7 +55,7 @@ export function HomeFeatures() {
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
-            <Card key={feature.title} className="flex flex-col overflow-hidden">
+            <GlowCard key={feature.title} className="flex flex-col overflow-hidden">
               <CardHeader>
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -79,7 +72,7 @@ export function HomeFeatures() {
                   {feature.description}
                 </CardDescription>
               </CardContent>
-            </Card>
+            </GlowCard>
           ))}
         </div>
       </div>

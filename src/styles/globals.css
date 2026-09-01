@@ -48,6 +48,7 @@
 
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
     /* Improve font rendering and layout scaling across browsers */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { PageHeader } from "@arcevo/facet-layout";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@arcevo/facet-components";
+import { AnimatedButton, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, HoverScaleCard } from "@arcevo/facet-components";
 import { useTenantStore } from "@arcevo/facet-store";
 import { useTenant } from "@/hooks/use-tenant";
 import Link from "next/link";
@@ -21,9 +21,14 @@ export default function TenantsPage() {
       <main className="p-6">
         <div className="mb-4 flex justify-between items-center">
           <h2 className="text-lg font-semibold">Workspaces</h2>
-          <Button asChild>
-            <Link href="/console/tenants/new">New Tenant</Link>
-          </Button>
+          <AnimatedButton
+            animation="sparkle"
+            renderButton={(props) => (
+              <Button {...props} asChild>
+                <Link href="/console/tenants/new">New Tenant</Link>
+              </Button>
+            )}
+          />
         </div>
 
         <div className="space-y-4">
