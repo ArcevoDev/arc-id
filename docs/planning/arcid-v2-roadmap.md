@@ -1,7 +1,7 @@
 # ArcID v2 Roadmap
 
 > **Status**: Active development. v1 (0.1.0 backend) is **COMPLETE**.
-> Last updated: 2026-08-22.
+> Last updated: 2026-09-01.
 > Companion to CLAUDE.md (canonical handbook, single source of truth for
 > status tables and rationale).
 
@@ -9,7 +9,7 @@
 
 ## 🟢 v1 — COMPLETE (0.1.0)
 
-Backend complete. All Phase 0–8 + Phase E shipped. 61 test files / 342 tests / 0 code failures. Typecheck clean on `tsc --noEmit`.
+Backend complete. All Phase 0–8 + Phase E shipped. 62 test files / 358 tests / 0 code failures. Typecheck clean on `tsc --noEmit`.
 
 | Area | Status | Notes |
 |------|--------|-------|
@@ -53,7 +53,7 @@ contract stabilized for the CLI package.
 | # | Item | Priority | Status |
 |---|------|----------|--------|
 | 1 | ArcWallet companion app — end-to-end wallet issuance/verify/presentation flow (separate package) | P0 | ⏳ Not started |
-| 2 | API key management backend — CRUD flows + routes (OAuth2 bearer-token style keys) | P1 | ⏳ Frontend was a stub (stub removed Aug 2026); backend not started |
+| 2 | API key management backend — CRUD flows + routes (OAuth2 bearer-token style keys) | P1 | ✅ Done — `ApiKey` model + migration, CRUD flows/routes, SHA-256 hashed tokens, auth guard bearer detection + `requirePermission` scope fallback, 16 unit tests + Tier 1 migration check |
 | 3 | CLI package extraction — move `packages/cli` to published `@arcevo/arcid-cli` npm package | P1 | ⏸️ Scaffolded; pending API contract stability |
 | 4 | Integration tests against real Postgres (`pnpm test:rollback`) | P2 | ✅ Unblocked (facet shipped 2026-08-19); needs Postgres 17 service |
 | 5 | SDK `TenantSdk.create()` test coverage gap (P4.3) | P2 | ⏸️ Not blocking; 6-test `sdk.test.ts` passes |

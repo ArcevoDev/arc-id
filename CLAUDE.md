@@ -23,7 +23,7 @@ Fastify + Prisma + Next.js 16 monorepo (pnpm, ESM-only).
 - Email via Resend (13 templates, React Email components; static template gallery at :3888, auth emails delivered to recipient inbox)
 - SMS via Brevo (transactional SMS for MFA codes + security alerts)
 
-**Test suite: 61 files / 342 tests / 0 code failures** - all passing clean, ~90s runtime on Windows (route-level + Prisma import chains dominate). Updated 2026-08-20.
+**Test suite: 62 files / 358 tests / 0 code failures** - all passing clean, ~90s runtime on Windows (route-level + Prisma import chains dominate). Updated 2026-09-01.
 
 ---
 
@@ -45,7 +45,7 @@ arc-id/
 │   │   ├── kms/       # AES-256-GCM key encryption/decryption + rotation
 │   │   ├── security/  # rbac, jws-proof, jti-blocklist, password-rules, login-attempt
 │   │   └── webhooks/  # webhook-dispatcher (fan-out), webhook-worker (delivery)
-│   ├── modules/       # 9 domain modules
+│   ├── modules/       # 10 domain modules
 │   │   ├── auth/      # login, register, MFA, passkey, magic-link, sessions, step-up, social
 │   │   ├── audit/     # audit log write + query
 │   │   ├── billing/   # subscription (Paystack/Stripe webhooks)
@@ -55,6 +55,7 @@ arc-id/
 │   │   ├── oauth/     # authorize, token, revoke, introspect, userinfo, clients, consent
 │   │   ├── tenant/    # CRUD, policy, members, signing keys, projects, onboarding
 │   │   └── webhooks/  # endpoint config + delivery event routes
+│   │   ├── api-key/   # CRUD flows + routes, SHA-256 hashed bearer tokens
 │   ├── providers/     # React context - ThemeProvider, AuthProvider
 │   ├── sdk/           # Thin singleton wiring over @arcevo/facet-sdk (index.ts only)
 │   ├── store/         # Zustand stores - auth, tenant, ui
@@ -95,7 +96,7 @@ pnpm dev:workers         # Background workers only
 pnpm typecheck
 pnpm lint
 pnpm format
-pnpm test                # 342 tests, 61 files, all passing
+pnpm test                # 358 tests, 62 files, all passing
 pnpm test:watch
 pnpm test:coverage
 pnpm build:api
@@ -323,8 +324,8 @@ Every `src/modules/<n>/` owns: `flows/` `routes/` `services/` `repositories/` `v
 
 Current: `0.1.0` (package.json). Pre-release - no stability promises.
 
-- `0.1.0` ✅ **COMPLETE** (v1) - Backend complete: all Phase 0–8 + Phase E shipped; 61 test files / 342 tests, 0 code failures. Docker, security hardening, observability, LegalConsent + ExternalIdentifier gates all shipped.
-- `0.2.0` 🔄 **ACTIVE (v2)** - ArcWallet companion app integration (end-to-end), API key management backend (CRUD flows + routes), CLI package extraction, integration tests against real Postgres
+- `0.1.0` ✅ **COMPLETE** (v1) - Backend complete: all Phase 0–8 + Phase E shipped; 62 test files / 358 tests, 0 code failures. Docker, security hardening, observability, LegalConsent + ExternalIdentifier gates all shipped.
+- `0.2.0` 🔄 **ACTIVE (v2)** - ArcWallet companion app integration (end-to-end), CLI package extraction, integration tests against real Postgres. **API key management backend ✅ Done** (CRUD flows + routes, SHA-256 hashed bearer tokens, auth guard extension, migration + Tier 1 rollback tests).
 - `1.0.0` — Stable production milestone: full integration test suite, open-source release
 
 _The v1 roadmap was closed (2026-08-22). Active track: `docs/planning/arcid-v2-roadmap.md`._
