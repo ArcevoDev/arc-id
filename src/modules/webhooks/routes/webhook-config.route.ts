@@ -64,7 +64,7 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
       }
 
       // SSRF defence — rejects private IPs, cloud metadata, non-HTTP(S) schemes.
-      assertSafeUrl(body.url);
+      await assertSafeUrl(body.url);
 
       // Cap endpoints per tenant to prevent abuse
       const count = await fastify.db.webhookEndpoint.count({
@@ -185,7 +185,7 @@ export async function webhookConfigRoute(fastify: FastifyInstance) {
       if (!endpoint) throw ApiError.notFound("Webhook endpoint not found");
 
       // SSRF check on new URL if provided
-      if (body.url) assertSafeUrl(body.url);
+      if (body.url) await assertSafeUrl(body.url);
 
       const updated = await fastify.db.webhookEndpoint.update({
         where: { id },

@@ -8,6 +8,7 @@ import { notificationService } from "@/lib/notifications/notification.service";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { ApiError } from "@/core/errors";
 import { z } from "zod";
+import { blockJti } from "@/lib/security/jti-blocklist";
 
 export async function passwordRoute(fastify: FastifyInstance) {
   // ── POST /password/reset — unauthenticated reset request ─────────────────
@@ -151,18 +152,56 @@ export async function passwordRoute(fastify: FastifyInstance) {
       if (otherSessions.length > 0) {
         const otherSessionIds = otherSessions.map((s) => s.id);
 
+        // Collect live access tokens for the other sessions to blocklist
+        // their JTIs — auth guard checks revokedJti + Redis, not
+        // accessToken.revoked.
+        const liveAccessTokens = await fastify.db.accessToken.findMany({
+          where: {
+            sessionId: { in: otherSessionIds },
+            identityId: req.identity.id,
+            revoked: false,
+            jti: { not: null },
+          },
+          select: { jti: true, expiresAt: true },
+        });
+
         await fastify.db.$transaction([
+          // Revoke all access tokens bound to the other sessions
+          fastify.db.accessToken.updateMany({
+            where: {
+              sessionId: { in: otherSessionIds },
+              identityId: req.identity.id,
+              revoked: false,
+            },
+            data: { revoked: true },
+          }),
           // Revoke all refresh tokens for the other sessions
           fastify.db.refreshToken.updateMany({
             where: { sessionId: { in: otherSessionIds }, revoked: false },
             data: { revoked: true, rotatedAt: new Date() },
           }),
-          // Then invalidate the sessions
+          // Then invalidate the sessions themselves
           fastify.db.session.updateMany({
             where: { id: { in: otherSessionIds } },
             data: { valid: false },
           }),
+          // Record revoked JTIs for DB-backed fallback
+          ...liveAccessTokens.map((t) =>
+            fastify.db.revokedJti.create({
+              data: { jti: t.jti!, expiresAt: t.expiresAt },
+            }),
+          ),
         ]);
+
+        // Redis blocklist — non-blocking, runs outside the tx
+        for (const t of liveAccessTokens) {
+          const remainingTtlMs = t.expiresAt.getTime() - Date.now();
+          const remainingTtlSec = Math.max(
+            Math.ceil(remainingTtlMs / 1000),
+            1,
+          );
+          void blockJti(t.jti!, remainingTtlSec).catch(() => {});
+        }
       }
 
       // 6. Notify

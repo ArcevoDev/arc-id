@@ -54,6 +54,7 @@ function setupHappy(ctx: ReturnType<typeof createMockFlowCtx>) {
     authLevel: "aal1",
   });
   ctx.db.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+  ctx.db.accessToken.findMany.mockResolvedValue([]);
 }
 
 beforeEach(() => {
@@ -129,6 +130,8 @@ describe("switchContextFlow — tenant-scoped token issuance", () => {
       refreshTokenId: "rt-1",
       authLevel: "aal1",
     });
+    // accessToken.findMany runs before the refresh-token race check
+    ctx.db.accessToken.findMany.mockResolvedValue([]);
     // 0 rows updated → concurrent rotation detected
     ctx.db.refreshToken.updateMany.mockResolvedValue({ count: 0 });
 

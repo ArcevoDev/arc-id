@@ -55,11 +55,12 @@ export async function idpRoute(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       const body = req.body as CreateConnectionInput;
+      const targetTenantId = body.tenantId ?? req.identity.tenantId ?? "SYSTEM";
       if (
         !(await hasPermission(
           fastify.db,
           req.identity.id,
-          body.tenantId,
+          targetTenantId,
           "idp:manage",
         ))
       ) {
@@ -68,7 +69,7 @@ export async function idpRoute(fastify: FastifyInstance) {
 
       const connection = await fastify.db.idpConnection.create({
         data: {
-          tenantId: body.tenantId,
+          tenantId: targetTenantId,
           name: body.name,
           protocol: body.type,
           enabled: true,
@@ -85,7 +86,7 @@ export async function idpRoute(fastify: FastifyInstance) {
         .log({
           action: "IDP_CONNECTION_CREATED",
           identityId: req.identity.id,
-          tenantId: body.tenantId,
+          tenantId: targetTenantId,
           ip: req.ip,
           metadata: { connectionId: connection.id, type: body.type },
         })
@@ -296,7 +297,7 @@ export async function idpRoute(fastify: FastifyInstance) {
 
       const xml =
         connection?.cert && connection?.entryPoint
-          ? generateSamlMetadata(connection, tenantSlug)
+          ? await generateSamlMetadata(connection, tenantSlug)
           : generateMinimalSamlMetadata(tenantSlug);
 
       return reply.type("application/xml").send(xml);
@@ -337,7 +338,7 @@ export async function idpRoute(fastify: FastifyInstance) {
         );
       }
 
-      const saml = buildSamlInstance(connection, tenantSlug);
+      const saml = await buildSamlInstance(connection, tenantSlug);
 
       let profile: Awaited<ReturnType<typeof saml.validatePostResponseAsync>>;
       try {
@@ -367,7 +368,7 @@ export async function idpRoute(fastify: FastifyInstance) {
 
       const tokenData = await federatedLogin(
         fastify,
-        { nameID, email, name },
+        { nameID, email, name, emailVerified: false },
         `saml:${connection.id}`,
         tenant.id,
         req.ip,
@@ -449,7 +450,7 @@ export async function idpRoute(fastify: FastifyInstance) {
       // SSRF hardening: discoveryUrl is admin-configured (connection.issuer /
       // metadataUrl) but still an outbound fetch — guard it like every other
       // outbound call per the security invariant ("no exceptions").
-      assertSafeUrl(discoveryUrl);
+      await assertSafeUrl(discoveryUrl);
       const discoveryResp = await fetch(discoveryUrl);
       if (!discoveryResp.ok) {
         throw ApiError.badRequest("Failed to fetch OIDC discovery document");
@@ -473,7 +474,7 @@ export async function idpRoute(fastify: FastifyInstance) {
       // ── 2. Exchange authorization code for tokens ──────────────────────────
       const callbackUrl = `${config.base.apiUrl}/api/v1/idp/oidc/${tenantSlug}/callback`;
 
-      assertSafeUrl(discovery.token_endpoint);
+      await assertSafeUrl(discovery.token_endpoint);
       const tokenResp = await fetch(discovery.token_endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -527,6 +528,7 @@ export async function idpRoute(fastify: FastifyInstance) {
           nameID: sub,
           email: (claims.email as string | undefined) ?? null,
           name: (claims.name as string | undefined) ?? null,
+          emailVerified: claims.email_verified === true,
         },
         `oidc:${connection.id}`,
         tenant.id,

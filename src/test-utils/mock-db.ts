@@ -27,6 +27,7 @@ export function createMockDb() {
     accessToken: modelProxy("accessToken"),
     idToken: modelProxy("idToken"),
     client: modelProxy("client"),
+    apiKey: modelProxy("apiKey"),
     subscription: modelProxy("subscription"),
     localAccount: modelProxy("localAccount"),
     oAuthAccount: modelProxy("oAuthAccount"),

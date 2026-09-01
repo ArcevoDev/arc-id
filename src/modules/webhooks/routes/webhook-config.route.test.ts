@@ -47,7 +47,8 @@ vi.mock("@/modules/audit/services/audit.service", () => ({
   auditService: { log: mockAuditLog },
 }));
 vi.mock("@/lib/url-safety", () => ({
-  assertSafeUrl: vi.fn(),
+  assertSafeUrl: vi.fn().mockResolvedValue(undefined),
+  fetchWithSsrfGuard: vi.fn(),
 }));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ export interface FederatedProfile {
   nameID: string;
   email: string | null;
   name: string | null;
+  emailVerified: boolean;
 }
 
 // ── OpenID Connect / Metadata Discovery Helper ───────────────────────────────
@@ -24,7 +25,7 @@ export interface FederatedProfile {
 export async function fetchDiscoveryMetadata(
   discoveryUrl: string,
 ): Promise<Record<string, any>> {
-  assertSafeUrl(discoveryUrl);
+  await assertSafeUrl(discoveryUrl);
   const discoveryResp = await fetch(discoveryUrl);
   if (!discoveryResp.ok) {
     throw ApiError.badRequest(
@@ -40,14 +41,14 @@ export async function fetchDiscoveryMetadata(
  * Builds a @node-saml/node-saml SAML instance from a stored IdP connection row.
  * Assigning connection.cert to both properties satisfies types and guarantees validation.
  */
-export function buildSamlInstance(
+export async function buildSamlInstance(
   connection: {
     entryPoint: string | null;
     issuer: string | null;
     cert: string | null;
   },
   tenantSlug: string,
-): SAML {
+): Promise<SAML> {
   if (!connection.entryPoint) {
     throw ApiError.badRequest("IdP entryPoint (SSO URL) is not configured");
   }
@@ -58,7 +59,7 @@ export function buildSamlInstance(
   const callbackUrl = `${config.base.apiUrl}/api/v1/idp/saml/${tenantSlug}/callback`;
   const entityId = `${config.base.apiUrl}/api/v1/idp/saml/${tenantSlug}/metadata`;
 
-  assertSafeUrl(connection.entryPoint);
+  await assertSafeUrl(connection.entryPoint);
 
   return new SAML({
     entryPoint: connection.entryPoint,
@@ -76,15 +77,15 @@ export function buildSamlInstance(
 /**
  * Returns SAML SP metadata XML for the given tenant.
  */
-export function generateSamlMetadata(
+export async function generateSamlMetadata(
   connection: {
     entryPoint: string | null;
     issuer: string | null;
     cert: string | null;
   },
   tenantSlug: string,
-): string {
-  const saml = buildSamlInstance(connection, tenantSlug);
+): Promise<string> {
+  const saml = await buildSamlInstance(connection, tenantSlug);
   return saml.generateServiceProviderMetadata(null, null);
 }
 
@@ -169,7 +170,7 @@ export async function federatedLogin(
             primaryEmail: profile.email,
             name: profile.name,
             status: "ACTIVE",
-            emailVerified: Boolean(profile.email),
+            emailVerified: profile.emailVerified,
           },
         });
 

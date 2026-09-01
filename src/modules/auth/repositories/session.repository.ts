@@ -1,6 +1,7 @@
 // src/modules/auth/repositories/session.repository.ts
 import type { DbClient } from "@/lib/db-client";
 import { ApiError } from "@/core/errors";
+import { blockJti } from "@/lib/security/jti-blocklist";
 
 export class SessionRepository {
   constructor(private db: DbClient) {}
@@ -48,8 +49,20 @@ export class SessionRepository {
 
     const sessionIds = sessions.map((s) => s.id);
 
-    // 2. Atomically revoke both sessions and their refresh tokens
+    // Collect live access tokens to blocklist their JTIs (auth guard checks
+    // revokedJti table + Redis, NOT accessToken.revoked).
+    const liveAccessTokens = await this.db.accessToken.findMany({
+      where: { identityId, revoked: false, jti: { not: null } },
+      select: { jti: true, expiresAt: true },
+    });
+
+    // 2. Atomically revoke sessions, refresh tokens, AND access tokens
     await this.db.$transaction([
+      // Block every access token for this identity
+      this.db.accessToken.updateMany({
+        where: { identityId, revoked: false },
+        data: { revoked: true },
+      }),
       // Revoke all refresh tokens whose sessionId is in the set
       this.db.refreshToken.updateMany({
         where: { sessionId: { in: sessionIds }, revoked: false },
@@ -60,6 +73,20 @@ export class SessionRepository {
         where: { id: { in: sessionIds } },
         data: { valid: false },
       }),
+      // Record revoked JTIs for DB-backed fallback (auth guard consults
+      // this table when Redis is unavailable).
+      ...liveAccessTokens.map((t) =>
+        this.db.revokedJti.create({
+          data: { jti: t.jti!, expiresAt: t.expiresAt },
+        }),
+      ),
     ]);
+
+    // Redis blocklist — non-blocking, runs outside the tx
+    for (const t of liveAccessTokens) {
+      const remainingTtlMs = t.expiresAt.getTime() - Date.now();
+      const remainingTtlSec = Math.max(Math.ceil(remainingTtlMs / 1000), 1);
+      void blockJti(t.jti!, remainingTtlSec).catch(() => {});
+    }
   }
 }

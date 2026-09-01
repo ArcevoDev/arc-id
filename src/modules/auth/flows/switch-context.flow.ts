@@ -36,6 +36,7 @@ import { ApiError } from "@/core/errors/api-error";
 import { TokenService } from "@/modules/oauth/services/token.service";
 import { auditService } from "@/modules/audit/services/audit.service";
 import { config } from "@/core/config";
+import { blockJti } from "@/lib/security/jti-blocklist";
 import { SwitchContextSchema } from "../validators/auth.schemas";
 
 type Output = {
@@ -85,6 +86,20 @@ export const switchContextFlow: Flow<
     // ── 3. Atomically revoke the session's current refresh token ──────────────
     // Conditional WHERE revoked = false makes this idempotent and race-safe.
     // If count = 0, a concurrent request already rotated this token — abort.
+
+    // Collect live access tokens for this session before revoking — auth
+    // guard checks revokedJti + Redis, not accessToken.revoked. Without
+    // this, old-context access tokens remain valid after the context switch.
+    const liveAccessTokens = await ctx.db.accessToken.findMany({
+      where: {
+        sessionId: session.id,
+        identityId: ctx.identityId,
+        revoked: false,
+        jti: { not: null },
+      },
+      select: { jti: true, expiresAt: true },
+    });
+
     if (session.refreshTokenId) {
       const { count: revokedCount } = await ctx.db.refreshToken.updateMany({
         where: { id: session.refreshTokenId, revoked: false },
@@ -108,6 +123,31 @@ export const switchContextFlow: Flow<
         throw ApiError.conflict(
           "Context switch failed — concurrent session mutation detected. Please log in again.",
         );
+      }
+    }
+
+    // Block all access tokens bound to this session (blocklist JTIs in Redis
+    // + DB-durable revokedJti rows) so they can't be used in the old context.
+    if (liveAccessTokens.length > 0) {
+      await ctx.db.accessToken.updateMany({
+        where: {
+          sessionId: session.id,
+          identityId: ctx.identityId,
+          revoked: false,
+        },
+        data: { revoked: true },
+      });
+
+      for (const t of liveAccessTokens) {
+        const remainingTtlMs = t.expiresAt.getTime() - Date.now();
+        const remainingTtlSec = Math.max(
+          Math.ceil(remainingTtlMs / 1000),
+          1,
+        );
+        void blockJti(t.jti!, remainingTtlSec).catch(() => {});
+        void ctx.db.revokedJti
+          .create({ data: { jti: t.jti!, expiresAt: t.expiresAt } })
+          .catch(() => {});
       }
     }
 

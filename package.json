@@ -42,14 +42,14 @@
     "scan:secrets": "tsx scripts/scan-secrets.ts"
   },
   "dependencies": {
-    "@arcevo/facet-auth": "1.2.2",
-    "@arcevo/facet-cli": "^0.8.0",
-    "@arcevo/facet-components": "1.10.0",
-    "@arcevo/facet-docs": "1.4.6",
+    "@arcevo/facet-auth": "1.2.3",
+    "@arcevo/facet-cli": "^2.0.0",
+    "@arcevo/facet-components": "1.11.0",
+    "@arcevo/facet-docs": "1.4.7",
     "@arcevo/facet-emails": "^1.1.1",
-    "@arcevo/facet-layout": "1.4.1",
-    "@arcevo/facet-sdk": "1.1.0",
-    "@arcevo/facet-store": "^0.1.0",
+    "@arcevo/facet-layout": "1.4.2",
+    "@arcevo/facet-sdk": "1.2.0",
+    "@arcevo/facet-store": "^2.0.0",
     "@arcevo/facet-tokens": "1.1.4",
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
@@ -111,5 +111,5 @@
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   },
-  "packageManager": "pnpm@11.21.0"
+  "packageManager": "pnpm@11.24.0"
 }

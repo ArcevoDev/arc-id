@@ -8,7 +8,7 @@ import { z } from "zod";
 // ── Connection management ─────────────────────────────────────────────────────
 
 export const CreateConnectionSchema = z.object({
-  tenantId: z.string().cuid("Invalid tenant ID"),
+  tenantId: z.string().cuid("Invalid tenant ID").optional(),
   type: z.enum(["SAML2", "OIDC", "OAUTH2"]),
   name: z.string().min(1).max(100),
   domain: z.string().optional(),
